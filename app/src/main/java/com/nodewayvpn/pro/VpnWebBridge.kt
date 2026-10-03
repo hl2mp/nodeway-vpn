@@ -44,6 +44,35 @@ class VpnWebBridge(private val host: Host) {
 
         /** Полный снимок профилей, подписок и активного подключения. */
         fun uiState(): String
+
+        /** Текущий режим и набор пакетов раздельного туннелирования. */
+        // ai-generated
+        fun onGetSplitTunnelSettings(): String
+
+        /** Сохраняет режим раздельного туннелирования. */
+        // ai-generated
+        fun onSetSplitTunnelModeRequested(mode: String): String
+
+        /** Добавляет или убирает пакет из набора раздельного туннелирования. */
+        // ai-generated
+        fun onSetPackageSelectedRequested(packageName: String, selected: Boolean): String
+
+        /**
+         * Сохраняет весь список приложений раздельного туннелирования разом.
+         *
+         * Список приходит JSON-массивом. Отмечать по одному нельзя: туннель
+         * пересоздаётся на каждое изменение и рвёт активное соединение.
+         */
+        // ai-generated
+        fun onSetSelectedPackagesRequested(packagesJson: String): String
+
+        /** Список установленных приложений для выбора в настройках туннелирования. */
+        // ai-generated
+        fun onListInstalledAppsRequested(includeSystem: Boolean, query: String): String
+
+        /** Иконка приложения в виде data-URL для WebView. */
+        // ai-generated
+        fun onGetAppIconRequested(packageName: String): String
     }
 
     @JavascriptInterface
@@ -69,6 +98,33 @@ class VpnWebBridge(private val host: Host) {
 
     @JavascriptInterface
     fun requestDisconnect() = host.onDisconnectRequested()
+
+    // ai-generated
+    @JavascriptInterface
+    fun getSplitTunnelSettings(): String = host.onGetSplitTunnelSettings()
+
+    // ai-generated
+    @JavascriptInterface
+    fun setSplitTunnelMode(mode: String): String = host.onSetSplitTunnelModeRequested(mode)
+
+    // ai-generated
+    @JavascriptInterface
+    fun setPackageSelected(packageName: String, selected: Boolean): String =
+        host.onSetPackageSelectedRequested(packageName, selected)
+
+    // ai-generated
+    @JavascriptInterface
+    fun setSelectedPackages(packagesJson: String): String =
+        host.onSetSelectedPackagesRequested(packagesJson)
+
+    // ai-generated
+    @JavascriptInterface
+    fun listInstalledApps(includeSystem: Boolean, query: String): String =
+        host.onListInstalledAppsRequested(includeSystem, query)
+
+    // ai-generated
+    @JavascriptInterface
+    fun getAppIcon(packageName: String): String = host.onGetAppIconRequested(packageName)
 
     private fun uiState(): String = JSONObject().apply {
         put("state", JSONObject(host.uiState()))

@@ -354,6 +354,152 @@
 
     /* Раскладка страницы задана выше: display у .page переключается через .active. */
 
+    /* Атрибут hidden должен побеждать display из классов: иначе он не прячет. */
+    [hidden] { display: none !important; }
+
+    /* ---------- раздельное туннелирование ---------- */
+
+    .mode-row { align-items: flex-start; }
+
+    .mode-copy { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+
+    .mode-copy small {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.3;
+    }
+
+    /* Кружок выбора режима: как в iOS, пустой или с точкой. */
+    .mark {
+        flex: none;
+        position: relative;
+        width: 22px;
+        height: 22px;
+        margin-top: 3px;
+        border: 2px solid var(--line);
+        border-radius: 50%;
+    }
+
+    .mode-row.on .mark { border-color: var(--blue); }
+
+    .mode-row.on .mark::after {
+        content: "";
+        position: absolute;
+        inset: 3px;
+        border-radius: 50%;
+        background: var(--blue);
+    }
+
+    /* ---------- лист выбора приложений ---------- */
+
+    .picker {
+        position: fixed;
+        inset: 0;
+        z-index: 45;
+        display: none;
+        flex-direction: column;
+        background: var(--bg);
+    }
+
+    .picker.open { display: flex; }
+
+    .picker-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 10px) 8px 10px;
+        background: var(--card);
+        border-bottom: 1px solid var(--line);
+    }
+
+    .picker-title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; }
+
+    .nav-link.accent { color: var(--blue); font-weight: 600; }
+
+    .picker-tools {
+        padding: 10px 16px;
+        background: var(--card);
+        border-bottom: 1px solid var(--line);
+    }
+
+    .picker-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: none;
+        border-radius: 10px;
+        background: var(--bg);
+        color: inherit;
+        font: inherit;
+        font-size: 16px;
+    }
+
+    .picker-switch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-top: 10px;
+        font-size: 14px;
+        color: var(--muted);
+    }
+
+    .picker-switch input { width: 18px; height: 18px; accent-color: var(--blue); }
+
+    .picker-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    .picker-group {
+        padding: 14px 16px 6px;
+        font-size: 13px;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+
+    .app-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        text-align: left;
+        padding: 9px 16px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .app-icon {
+        flex: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 9px;
+        background: var(--line);
+    }
+
+    .app-copy { flex: 1; min-width: 0; }
+
+    .app-name { display: block; font-size: 16px; overflow-wrap: anywhere; }
+    .app-pkg { display: block; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+
+    .app-box {
+        flex: none;
+        position: relative;
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+    }
+
+    .app-row.on .app-box { border-color: var(--blue); background: var(--blue); }
+
+    .app-row.on .app-box::after {
+        content: "";
+        position: absolute;
+        left: 6px;
+        top: 2px;
+        width: 5px;
+        height: 10px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
     /* ---------- шторка действий ---------- */
 
     .scrim {
@@ -530,6 +676,32 @@
         <button class="settings-row center" id="importProfiles">Добавить из буфера</button>
     </div>
 
+    <h3 class="section-title">Раздельное туннелирование</h3>
+    <div class="group" id="splitGroup">
+        <button class="settings-row mode-row" id="splitAll">
+            <span class="mode-copy">
+                <span class="mode-title">Все приложения</span>
+                <small>Все приложения идут через туннель</small>
+            </span>
+            <span class="mark" id="markAll"></span>
+        </button>
+        <button class="settings-row mode-row" id="splitAllow">
+            <span class="mode-copy">
+                <span class="mode-title">Приложения через VPN</span>
+                <small>Только выбранные приложения идут через туннель, остальные напрямую</small>
+            </span>
+            <span class="mark" id="markAllow"></span>
+        </button>
+        <button class="settings-row mode-row" id="splitExclude">
+            <span class="mode-copy">
+                <span class="mode-title">Приложения в обход VPN</span>
+                <small>Выбранные приложения идут напрямую, остальные через туннель</small>
+            </span>
+            <span class="mark" id="markExclude"></span>
+        </button>
+        <button class="settings-row center" id="splitPick" hidden>Выбрать приложения</button>
+    </div>
+
     <h3 class="section-title">О приложении</h3>
     <div class="group">
         <div class="settings-row">
@@ -564,6 +736,21 @@
         <button class="alert-btn" id="alertCancel">Отмена</button>
         <button class="alert-btn danger" id="alertOk">Удалить</button>
     </div>
+</div>
+
+<!-- Выбор приложений: полноэкранный лист с поиском и закреплённым списком выбранных -->
+<div class="picker" id="appPicker">
+    <div class="picker-bar">
+        <button class="nav-link" id="pickerClose">Отмена</button>
+        <span class="picker-title" id="pickerTitle">Приложения</span>
+        <button class="nav-link accent" id="pickerDone">Готово</button>
+    </div>
+    <div class="picker-tools">
+        <input class="picker-input" id="pickerQuery" type="text" placeholder="Поиск приложения"
+               aria-label="Поиск приложения" autocomplete="off">
+        <label class="picker-switch"><input type="checkbox" id="pickerSystem"><span>Показывать системные</span></label>
+    </div>
+    <div class="picker-list" id="pickerList"></div>
 </div>
 
 <!-- Мок моста для отладки в браузере: работает только при ?demo=1, в приложении безвреден. -->
@@ -1024,6 +1211,171 @@
         el.alertCancel.onclick = closeOverlays;
     }
 
+    // ------------------------------------------------- раздельное туннелирование
+
+    var splitMode = 'all';
+    /** Выбранные пакеты как объект-ключ: проверка в O(1) без пересборки массивов. */
+    var splitPackages = {};
+
+    var elSplit = {
+        all: document.getElementById('splitAll'),
+        allow: document.getElementById('splitAllow'),
+        exclude: document.getElementById('splitExclude'),
+        pick: document.getElementById('splitPick'),
+        picker: document.getElementById('appPicker'),
+        list: document.getElementById('pickerList'),
+        query: document.getElementById('pickerQuery'),
+        system: document.getElementById('pickerSystem'),
+        title: document.getElementById('pickerTitle')
+    };
+
+    /** ai-generated: загрузка текущего режима и набора пакетов из настроек. */
+    function loadSplit() {
+        var data = parse(bridge.getSplitTunnelSettings());
+        if (!data) return;
+        splitMode = data.mode || 'all';
+        splitPackages = {};
+        (data.packages || []).forEach(function (pkg) { splitPackages[pkg] = true; });
+        renderSplit();
+    }
+
+    /** ai-generated: отметка выбранного режима и счётчика в кнопке выбора. */
+    function renderSplit() {
+        elSplit.all.classList.toggle('on', splitMode === 'all');
+        elSplit.allow.classList.toggle('on', splitMode === 'allow');
+        elSplit.exclude.classList.toggle('on', splitMode === 'exclude');
+        var count = Object.keys(splitPackages).length;
+        elSplit.pick.hidden = splitMode === 'all';
+        elSplit.pick.textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
+    }
+
+    /** ai-generated: смена режима. При отказе ядра список остаётся прежним. */
+    function setSplitMode(mode) {
+        if (mode === splitMode) return;
+        var reply = parse(bridge.setSplitTunnelMode(mode)) || {};
+        if (reply.ok === false) {
+            log(reply.error || 'не удалось сменить режим');
+            return;
+        }
+        splitMode = mode;
+        renderSplit();
+    }
+
+    /** ai-generated: открытие листа выбора и первая загрузка списка. */
+    function openPicker() {
+        elSplit.title.textContent = splitMode === 'allow'
+            ? 'Приложения через VPN'
+            : 'Приложения в обход';
+        elSplit.query.value = '';
+        elSplit.system.checked = false;
+        elSplit.picker.classList.add('open');
+        requestApps();
+    }
+
+    function closePicker() {
+        elSplit.picker.classList.remove('open');
+    }
+
+    /** ai-generated: запрос списка приложений с текущим поиском и фильтром. */
+    function requestApps() {
+        var reply = parse(bridge.listInstalledApps(elSplit.system.checked, elSplit.query.value.trim()));
+        renderApps(reply || []);
+    }
+
+    /** ai-generated: список, где отмеченные приложения закреплены сверху. */
+    function renderApps(apps) {
+        clear(elSplit.list);
+        var chosen = apps.filter(function (app) { return splitPackages[app.pkg]; });
+        var rest = apps.filter(function (app) { return !splitPackages[app.pkg]; });
+
+        if (chosen.length) {
+            elSplit.list.appendChild(pickerGroup('Выбранные'));
+            chosen.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
+        }
+        if (rest.length) {
+            if (chosen.length) elSplit.list.appendChild(pickerGroup('Остальные'));
+            rest.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
+        }
+        if (!apps.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = elSplit.query.value.trim()
+                ? 'Ничего не найдено'
+                : 'Нет приложений для выбора';
+            elSplit.list.appendChild(empty);
+        }
+    }
+
+    function pickerGroup(title) {
+        var node = document.createElement('div');
+        node.className = 'picker-group';
+        node.textContent = title;
+        return node;
+    }
+
+    /** ai-generated: строка приложения с иконкой и галочкой. */
+    function appRow(app) {
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'app-row' + (splitPackages[app.pkg] ? ' on' : '');
+
+        var icon = document.createElement('img');
+        icon.className = 'app-icon';
+        icon.alt = '';
+        var iconUrl = bridge.getAppIcon(app.pkg);
+        if (iconUrl) icon.src = iconUrl;
+        row.appendChild(icon);
+
+        var copy = document.createElement('span');
+        copy.className = 'app-copy';
+        var name = document.createElement('span');
+        name.className = 'app-name';
+        name.textContent = app.label || app.pkg;
+        var pkg = document.createElement('span');
+        pkg.className = 'app-pkg';
+        pkg.textContent = app.pkg;
+        copy.appendChild(name);
+        copy.appendChild(pkg);
+        row.appendChild(copy);
+
+        row.appendChild(document.createElement('span')).className = 'app-box';
+
+        // Отметка меняется локально: к ядру уходит только по кнопке «Готово».
+        row.onclick = function () {
+            if (splitPackages[app.pkg]) delete splitPackages[app.pkg];
+            else splitPackages[app.pkg] = true;
+            requestApps();
+            renderSplit();
+        };
+
+        return row;
+    }
+
+    elSplit.all.onclick = function () { setSplitMode('all'); };
+    elSplit.allow.onclick = function () { setSplitMode('allow'); };
+    elSplit.exclude.onclick = function () { setSplitMode('exclude'); };
+    elSplit.pick.onclick = openPicker;
+    document.getElementById('pickerClose').onclick = closePicker;
+    elSplit.system.onchange = requestApps;
+
+    /* Поиск ждёт паузу в наборе: запрос на каждый символ лишний. */
+    var searchTimer = null;
+    elSplit.query.oninput = function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(requestApps, 250);
+    };
+
+    document.getElementById('pickerDone').onclick = function () {
+        var packages = Object.keys(splitPackages);
+        var reply = parse(bridge.setSelectedPackages(JSON.stringify(packages))) || {};
+        if (reply.ok === false) {
+            log(reply.error || 'не удалось сохранить список');
+            return;
+        }
+        closePicker();
+        log('в списке приложений: ' + packages.length);
+    };
+
     // ------------------------------------------------------------------ события
 
     var lastMessage = '';
@@ -1166,6 +1518,7 @@
         logCollapsed = collapsed.log;
         el.logBody.style.display = logCollapsed ? 'none' : 'block';
         el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
+        loadSplit();
         log('интерфейс готов');
     } else {
         log('Android-мост недоступен');

@@ -6,13 +6,18 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Base64
 import android.util.Log
+import android.util.LruCache
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -24,7 +29,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.util.Collections
 import java.util.concurrent.Executors
 import kotlin.math.roundToInt
@@ -42,6 +49,18 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     private lateinit var store: ProfileStore
 
     private val network = Executors.newSingleThreadExecutor()
+
+    /** Пользовательские настройки: последняя ссылка и раздельное туннелирование. */
+    private lateinit var prefs: Prefs
+
+    /** Список установленных приложений, пересчитывается только после смены настроек. */
+    @Volatile
+    private var installedAppsCache: List<InstalledApp>? = null
+
+    /** Иконки приложений в base64, чтобы не перерисовывать их при каждом показе. */
+    private val iconCache = object : LruCache<String, String>(ICON_CACHE_SIZE) {
+        override fun sizeOf(key: String, value: String): Int = value.length
+    }
 
     /** Высота статус-бара и нижней панели навигации в CSS-пикселях. */
     private var insetTop = 0
@@ -107,6 +126,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         super.onCreate(savedInstanceState)
 
         store = ProfileStore(this)
+        prefs = Prefs(this)
         webView = WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -291,6 +311,167 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     override fun appVersion(): String = BuildConfig.VERSION_NAME
 
     override fun uiState(): String = store.toUiModel(activeProfileId).toString()
+
+    // ai-generated
+    override fun onGetSplitTunnelSettings(): String = JSONObject().apply {
+        put("mode", prefs.tunnelMode)
+        put("packages", JSONArray(prefs.splitPackages.toList()))
+        put("selfPackage", packageName)
+    }.toString()
+
+    // ai-generated
+    override fun onSetSplitTunnelModeRequested(mode: String): String {
+        val next = TunnelMode.fromCode(mode.trim())
+        // Пустой список в режиме allow отрезал бы трафик вообще, поэтому не пускаем.
+        if (next == TunnelMode.ALLOW && prefs.splitPackages.isEmpty()) {
+            return splitResult(ok = false, error = "Выберите хотя бы одно приложение")
+        }
+        prefs.tunnelMode = next.code
+        Log.i(TAG, "Split tunneling mode: ${next.code}")
+        restartTunnelWithSplitSettings()
+        return splitResult(ok = true)
+    }
+
+    // ai-generated
+    override fun onSetPackageSelectedRequested(packageName: String, selected: Boolean): String {
+        val pkg = packageName.trim()
+        if (pkg.isEmpty()) return splitResult(ok = false, error = "Пустое имя пакета")
+
+        val current = LinkedHashSet(prefs.splitPackages)
+        val changed = if (selected) current.add(pkg) else current.remove(pkg)
+        if (!changed) return splitResult(ok = true)
+
+        prefs.splitPackages = current
+        installedAppsCache = null
+        Log.i(TAG, "Split tunneling package ${if (selected) "added" else "removed"}: $pkg")
+        restartTunnelWithSplitSettings()
+        return splitResult(ok = true)
+    }
+
+    // ai-generated
+    override fun onSetSelectedPackagesRequested(packagesJson: String): String {
+        val array = runCatching { JSONArray(packagesJson) }.getOrNull()
+            ?: return splitResult(ok = false, error = "Не удалось разобрать список")
+
+        val packages = LinkedHashSet<String>()
+        for (index in 0 until array.length()) {
+            val pkg = array.optString(index).trim()
+            if (pkg.isNotEmpty()) packages.add(pkg)
+        }
+        if (packages == prefs.splitPackages) return splitResult(ok = true)
+
+        prefs.splitPackages = packages
+        installedAppsCache = null
+        Log.i(TAG, "Split tunneling packages saved: ${packages.size}")
+        restartTunnelWithSplitSettings()
+        return splitResult(ok = true)
+    }
+
+    // ai-generated
+    override fun onListInstalledAppsRequested(includeSystem: Boolean, query: String): String {
+        val selected = prefs.splitPackages
+        val needle = query.trim().lowercase()
+        val array = JSONArray()
+        installedApps().asSequence()
+            .filter { includeSystem || !it.system }
+            .filter {
+                needle.isEmpty() || it.label.lowercase().contains(needle) ||
+                    it.pkg.lowercase().contains(needle)
+            }
+            // Выбранные приложения показываем первыми, остальные - по алфавиту.
+            .sortedWith(
+                compareByDescending<InstalledApp> { it.pkg in selected }
+                    .thenBy { it.label.lowercase() },
+            )
+            .forEach { app ->
+                array.put(
+                    JSONObject().apply {
+                        put("pkg", app.pkg)
+                        put("label", app.label)
+                        put("system", app.system)
+                        put("selected", app.pkg in selected)
+                    },
+                )
+            }
+        return array.toString()
+    }
+
+    // ai-generated
+    override fun onGetAppIconRequested(packageName: String): String {
+        val pkg = packageName.trim()
+        if (pkg.isEmpty()) return ""
+        iconCache.get(pkg)?.let { return it }
+        val dataUrl = runCatching { encodeIcon(pkg) }.getOrDefault("")
+        if (dataUrl.isNotEmpty()) iconCache.put(pkg, dataUrl)
+        return dataUrl
+    }
+
+    // endregion
+
+    // region раздельное туннелирование
+
+    /** Приложение в том виде, в котором оно показано в настройках туннелирования. */
+    private data class InstalledApp(val pkg: String, val label: String, val system: Boolean)
+
+    /** Установленные приложения. Список кэшируется: он дорогой и меняется редко. */
+    // ai-generated
+    private fun installedApps(): List<InstalledApp> {
+        installedAppsCache?.let { return it }
+        val pm = packageManager
+        val apps = runCatching {
+            pm.getInstalledApplications(PackageManager.GET_META_DATA).map { info ->
+                InstalledApp(
+                    pkg = info.packageName,
+                    label = runCatching { info.loadLabel(pm).toString() }
+                        .getOrDefault(info.packageName),
+                    system = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                )
+            }
+        }.getOrDefault(emptyList())
+        installedAppsCache = apps
+        return apps
+    }
+
+    /** Иконка приложения как data-URL: WebView умеет показывать такие картинки напрямую. */
+    // ai-generated
+    private fun encodeIcon(packageName: String): String {
+        val drawable = packageManager.getApplicationIcon(packageName)
+        val width = drawable.intrinsicWidth
+        val height = drawable.intrinsicHeight
+        if (width <= 0 || height <= 0) return ""
+
+        val bitmap = Bitmap.createBitmap(ICON_SIZE_PX, ICON_SIZE_PX, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        // Масштабируем с сохранением пропорций и центрируем, иначе иконки будут растянуты.
+        val scale = maxOf(ICON_SIZE_PX.toFloat() / width, ICON_SIZE_PX.toFloat() / height)
+        canvas.translate((ICON_SIZE_PX - width * scale) / 2f, (ICON_SIZE_PX - height * scale) / 2f)
+        canvas.scale(scale, scale)
+        drawable.setBounds(0, 0, width, height)
+        drawable.draw(canvas)
+
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        bitmap.recycle()
+        return "data:image/png;base64," + Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
+    }
+
+    /** Пересоздаёт туннель с теми же настройками, если VPN уже поднят. */
+    // ai-generated
+    private fun restartTunnelWithSplitSettings() = runOnUiThread {
+        if (vpnState != VpnState.CONNECTED.code && vpnState != VpnState.CONNECTING.code) {
+            return@runOnUiThread
+        }
+        val profile = store.profile(activeProfileId) ?: return@runOnUiThread
+        Log.i(TAG, "Recreating tunnel with split tunneling settings")
+        NodewayVpnService.switchTo(this, profile.link, profile.id)
+    }
+
+    /** Ответ на изменение настроек раздельного туннелирования. */
+    // ai-generated
+    private fun splitResult(ok: Boolean, error: String = ""): String = JSONObject().apply {
+        put("ok", ok)
+        put("error", error)
+    }.toString()
 
     // endregion
 
@@ -512,6 +693,12 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         const val TAG = "MainActivity"
         const val BRIDGE_NAME = "NodewayVpn"
         const val BACKGROUND_COLOR = 0xFF0B0F14.toInt()
+
+        /** Сторона иконки приложения, отдаваемой в WebView. */
+        const val ICON_SIZE_PX = 96
+
+        /** Предельный объём кэша иконок в символах base64. */
+        const val ICON_CACHE_SIZE = 512 * 1024
 
         /** Как часто проверяем, не пора ли обновить подписку. */
         const val REFRESH_CHECK_INTERVAL_MS = 60_000L

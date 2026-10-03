@@ -132,10 +132,25 @@
     };
   }
 
+  /** Приложения для листа выбора: подборка для демо, не настоящий список пакетов. */
+  var mockApps = [
+    { pkg: 'com.example.browser', label: 'Браузер', system: false, color: '#007AFF' },
+    { pkg: 'com.example.chat', label: 'Мессенджер', system: false, color: '#34C759' },
+    { pkg: 'com.example.video', label: 'Видео', system: false, color: '#FF3B30' },
+    { pkg: 'com.example.bank', label: 'Банк', system: false, color: '#FF9500' },
+    { pkg: 'com.example.mail', label: 'Почта', system: false, color: '#5856D6' },
+    { pkg: 'com.example.cloud', label: 'Облако', system: false, color: '#8A8A8E' },
+    { pkg: 'com.android.settings', label: 'Настройки', system: true, color: '#636366' },
+    { pkg: 'com.android.chrome', label: 'Chrome', system: true, color: '#0F9D58' },
+    { pkg: 'com.android.vending', label: 'Play Маркет', system: true, color: '#00D0FF' }
+  ];
+
   var state = {
     model: scenarios.default(),
     vpnState: 'disconnected',
-    connectedAt: 0
+    connectedAt: 0,
+    splitMode: 'all',
+    splitPackages: new Set()
   };
 
   // ------------------------------------------------------------------ мост
@@ -161,6 +176,68 @@
     },
 
     uiState: function () { return this.getInitialState(); },
+
+    /* ---------- раздельное туннелирование ---------- */
+
+    getSplitTunnelSettings: function () {
+      return JSON.stringify({
+        mode: state.splitMode,
+        packages: Array.from(state.splitPackages),
+        selfPackage: 'com.nodewayvpn.pro'
+      });
+    },
+
+    setSplitTunnelMode: function (mode) {
+      if (mode === 'allow' && state.splitPackages.size === 0) {
+        return JSON.stringify({ ok: false, error: 'Выберите хотя бы одно приложение' });
+      }
+      state.splitMode = mode;
+      return JSON.stringify({ ok: true });
+    },
+
+    setPackageSelected: function (pkg, selected) {
+      if (selected) state.splitPackages.add(pkg);
+      else state.splitPackages.delete(pkg);
+      return JSON.stringify({ ok: true });
+    },
+
+    setSelectedPackages: function (packagesJson) {
+      var list;
+      try {
+        list = JSON.parse(packagesJson) || [];
+      } catch (e) {
+        return JSON.stringify({ ok: false, error: 'Не удалось разобрать список' });
+      }
+      state.splitPackages = new Set(list);
+      return JSON.stringify({ ok: true });
+    },
+
+    listInstalledApps: function (includeSystem, query) {
+      var needle = (query || '').trim().toLowerCase();
+      return JSON.stringify(
+        mockApps
+          .filter(function (app) { return includeSystem || !app.system; })
+          .filter(function (app) {
+            if (!needle) return true;
+            return app.label.toLowerCase().indexOf(needle) >= 0 || app.pkg.indexOf(needle) >= 0;
+          })
+          .sort(function (a, b) {
+            var sa = state.splitPackages.has(a.pkg) ? 0 : 1;
+            var sb = state.splitPackages.has(b.pkg) ? 0 : 1;
+            return sa - sb || a.label.localeCompare(b.label);
+          })
+      );
+    },
+
+    getAppIcon: function (pkg) {
+      var app = mockApps.filter(function (item) { return item.pkg === pkg; })[0];
+      if (!app) return '';
+      var mark = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">' +
+        '<rect width="96" height="96" rx="20" fill="' + app.color + '"/>' +
+        '<text x="48" y="65" font-family="sans-serif" font-size="46" fill="#fff" ' +
+        'text-anchor="middle">' + app.label.charAt(0).toUpperCase() + '</text></svg>';
+      return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(mark)));
+    },
 
     requestConnect: function (profileId) {
       if (!profileId) return;

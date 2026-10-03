@@ -39,6 +39,9 @@ class NodewayVpnService : VpnService() {
     /** Момент поднятия туннеля (мс) — по нему UI считает время подключения. */
     private var connectedAt: Long = 0L
 
+    /** Настройки раздельного туннелирования читаются на каждый establish. */
+    private val prefs by lazy { Prefs(this) }
+
     @Volatile
     var state: VpnState = VpnState.DISCONNECTED
         private set
@@ -194,6 +197,10 @@ class NodewayVpnService : VpnService() {
             .addAddress(TUN_ADDRESS, TUN_PREFIX_LENGTH)
             .addRoute("0.0.0.0", 0)
         XrayConfigBuilder.DNS_SERVERS.forEach { builder.addDnsServer(it) }
+
+        // Раздельное туннелирование: список приложений применяется к Builder до establish.
+        val tunnelMode = TunnelMode.fromCode(prefs.tunnelMode)
+        builder.applySplitTunnel(this, tunnelMode, splitPackages(this), packageName)
 
         val configureIntent = PendingIntent.getActivity(
             this,

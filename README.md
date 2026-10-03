@@ -8,6 +8,7 @@ Android-клиент для VLESS-подключений. Интерфейс ц�
 - Импорт ссылок `vless://` из буфера обмена и из списка ссылок.
 - Подписки: URL со списком ссылок, автообновление по расписанию, удаление с подтверждением.
 - Профили из подписок и локальные, сгруппированные по подписке.
+- Раздельное туннелирование: все приложения через туннель, только выбранные или выбранные в обход.
 - Журнал событий подключения.
 - Демо-режим без сервера и без ядра.
 
@@ -28,6 +29,8 @@ flowchart LR
 - `NodewayVpnService` поднимает TUN и передаёт дескриптор ядру через `env.xray.tun.fd`.
 - Xray-core принимает трафик из TUN, применяет routing и отправляет в VLESS.
 - UI не знает про ядро: всё общение с сервисом идёт через `VpnWebBridge`.
+
+Раздельное туннелирование делает не ядро, а `VpnService`: `SplitTunnel` вызывает `addAllowedApplication` или `addDisallowedApplication` при создании TUN. Изменение настроек на ходу пересоздаёт туннель, поэтому применяется один раз на кнопку «Готово».
 
 ## Сборка
 
@@ -77,6 +80,7 @@ gomobile bind -target android -androidapi 21 \
 | `NodewayVpnService.kt` | `VpnService`, foreground-уведомление, TUN, передача fd в ядро |
 | `XrayCore.kt` | фасад над `libXray.LibXray` |
 | `XrayConfigBuilder.kt` | сборка конфига Xray: TUN inbound, VLESS outbound, routing, dns |
+| `SplitTunnel.kt` | режимы раздельного туннелирования и их применение к `VpnService.Builder` |
 | `VlessProfile.kt` | разбор `vless://` в модель профиля |
 | `ProfileStore.kt` | хранение подписок и профилей |
 | `ProfileModels.kt` | модели для UI и JSON |
