@@ -1322,9 +1322,18 @@
         setTimeout(function () {
             // Быстрые переключения фильтра отменяют предыдущий запрос.
             if (token !== pickerRequest) return;
-            var reply = parse(bridge.listInstalledApps(elSplit.system.checked, elSplit.query.value.trim()));
+            var reply = bridge.listInstalledApps(elSplit.system.checked, elSplit.query.value.trim());
+            // Мок с задержкой отдаёт Promise, нативный мост — строку.
+            if (reply && typeof reply.then === 'function') {
+                reply.then(function (data) {
+                    if (token !== pickerRequest) return;
+                    hidePickerLoading();
+                    renderApps(parse(data) || []);
+                });
+                return;
+            }
             hidePickerLoading();
-            renderApps(reply || []);
+            renderApps(parse(reply) || []);
         }, 0);
     }
 
@@ -1457,8 +1466,21 @@
         setTimeout(function () {
             chunk.forEach(function (img) {
                 var pkg = img.getAttribute('data-pkg');
-                if (!hasIcon(pkg)) iconCache[pkg] = bridge.getAppIcon(pkg);
-                if (iconCache[pkg]) img.src = iconCache[pkg];
+                if (hasIcon(pkg)) {
+                    applyIcon(img, iconCache[pkg]);
+                    return;
+                }
+                var url = bridge.getAppIcon(pkg);
+                // Мок с задержкой отдаёт Promise, нативный мост — строку сразу.
+                if (url && typeof url.then === 'function') {
+                    url.then(function (data) {
+                        iconCache[pkg] = data;
+                        applyIcon(img, data);
+                    });
+                    return;
+                }
+                iconCache[pkg] = url;
+                applyIcon(img, url);
             });
             iconBusy = false;
             pumpIcons();
@@ -1468,6 +1490,10 @@
     /** ai-generated: был ли пакет запрошен раньше, даже если иконки у него нет. */
     function hasIcon(pkg) {
         return Object.prototype.hasOwnProperty.call(iconCache, pkg);
+    }
+
+    function applyIcon(img, url) {
+        if (url) img.src = url;
     }
 
     elSplit.all.onclick = function () { setSplitMode('all'); };

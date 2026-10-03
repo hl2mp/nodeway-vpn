@@ -9,6 +9,9 @@
  * интерфейс на демо-данных: можно смотреть вёрстку и все состояния
  * (подключение, ошибка, загрузка подписки, пустые списки) без сборки APK.
  *
+ * Дополнительно: index.html?demo=1&delay=800 добавляет задержку ответа,
+ * чтобы увидеть индикатор загрузки в списке приложений.
+ *
  * В приложении файл безвреден — там условие demo не выполняется,
  * нативный мост остаётся главным.
  */
@@ -19,6 +22,22 @@
   if (!params.has('demo')) return;
   // В приложении нативный мост важнее мока: не подменяем живое состояние.
   if (window.NodewayVpn) return;
+
+  /*
+   * Искусственная задержка ответа в миллисекундах: ?demo=1&delay=800
+   *
+   * Нужна, чтобы увидеть индикатор загрузки: без неё мок отвечает мгновенно
+   * и спиннер не успевает появиться. Ответ в этом случае уходит через Promise.
+   */
+  var delayMs = Math.max(0, parseInt(params.get('delay'), 10) || 0);
+
+  /** Возвращает значение сразу или через Promise, если задана задержка. */
+  function respond(value) {
+    if (!delayMs) return value;
+    return new Promise(function (resolve) {
+      setTimeout(function () { resolve(value); }, delayMs);
+    });
+  }
 
   // ------------------------------------------------------------------ данные
 
@@ -271,29 +290,28 @@
 
     listInstalledApps: function (includeSystem, query) {
       var needle = (query || '').trim().toLowerCase();
-      return JSON.stringify(
-        mockApps
-          .filter(function (app) { return includeSystem || !app.system; })
-          .filter(function (app) {
-            if (!needle) return true;
-            return app.label.toLowerCase().indexOf(needle) >= 0 || app.pkg.indexOf(needle) >= 0;
-          })
-          .sort(function (a, b) {
-            var sa = state.splitPackages.has(a.pkg) ? 0 : 1;
-            var sb = state.splitPackages.has(b.pkg) ? 0 : 1;
-            return sa - sb || a.label.localeCompare(b.label);
-          })
-      );
+      var apps = mockApps
+        .filter(function (app) { return includeSystem || !app.system; })
+        .filter(function (app) {
+          if (!needle) return true;
+          return app.label.toLowerCase().indexOf(needle) >= 0 || app.pkg.indexOf(needle) >= 0;
+        })
+        .sort(function (a, b) {
+          var sa = state.splitPackages.has(a.pkg) ? 0 : 1;
+          var sb = state.splitPackages.has(b.pkg) ? 0 : 1;
+          return sa - sb || a.label.localeCompare(b.label);
+        });
+      return respond(JSON.stringify(apps));
     },
 
     getAppIcon: function (pkg) {
       var app = mockApps.filter(function (item) { return item.pkg === pkg; })[0];
-      if (!app) return '';
+      if (!app) return respond('');
       var mark = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">' +
         '<rect width="96" height="96" rx="20" fill="' + app.color + '"/>' +
         '<text x="48" y="65" font-family="sans-serif" font-size="46" fill="#fff" ' +
         'text-anchor="middle">' + app.label.charAt(0).toUpperCase() + '</text></svg>';
-      return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(mark)));
+      return respond('data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(mark))));
     },
 
     requestConnect: function (profileId) {
