@@ -1,0 +1,15 @@
+*.iml
+.gradle
+.kotlin
+/local.properties
+/.idea
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Ядро собирается gomobile, см. раздел «Ядро Xray» в README
+/app/libs/*.aar
+/app/libs/*.jar

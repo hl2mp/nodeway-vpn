@@ -1,0 +1,14 @@
+# Add project specific R8 rules here.
+# AGP will combine all keep rule files in src/main/keepRules to pass to R8
+#
+# For more details, see
+#   https://d.android.com/r/tools/r8/keep-rules
+
+# JS bridge exposed to assets/index.html as window.NodewayVpn.
+-keepclassmembers class com.nodewayvpn.pro.VpnWebBridge {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# gomobile bindings (libXray / go.*).
+-keep class go.** { *; }
+-keep class libXray.** { *; }

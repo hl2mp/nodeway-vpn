@@ -1,0 +1,12 @@
+<resources>
+    <!-- The whole UI is rendered by assets/index.html inside a WebView. -->
+    <style name="Theme.NodewayVPN" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/nodeway_accent</item>
+        <item name="colorPrimaryVariant">@color/nodeway_accent_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/nodeway_accent</item>
+        <item name="android:windowBackground">@color/nodeway_background</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>

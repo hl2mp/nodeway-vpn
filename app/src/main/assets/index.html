@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nodeway VPN</title>
+<style>
+    :root {
+        --bg: #F2F2F7;
+        --card: #FFFFFF;
+        --line: #E3E3E8;
+        --text: #000000;
+        --muted: #8A8A8E;
+        --blue: #007AFF;
+        --yellow: #FFCC00;
+        --green: #34C759;
+        --red: #FF3B30;
+        /* Отступы под системные панели: приложение передаёт их из Kotlin (setInsets). */
+        --inset-top: 0px;
+        --inset-bottom: 0px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+        font-size: 17px;
+        line-height: 1.35;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /*
+     * Прокручивается весь документ, а не вложенный блок страницы.
+     * Иначе на части устройств жест «заедает»: начатый над шапкой или кнопкой
+     * питания, он не листает, и докрутив блок до конца, страница не идёт дальше.
+     */
+    html, body { height: auto; }
+
+    body {
+        display: block;
+        padding-bottom: var(--inset-bottom);
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+    svg { display: block; }
+
+    /* ---------- верхняя панель ---------- */
+
+    .navbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 18px 10px;
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+		padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px);
+    }
+
+    /* На «Настройках» верхние кнопки («+» и шестерёнка) не нужны. */
+    .navbar.hidden { display: none; }
+
+    /* Верхняя панель настроек: там живёт кнопка «Назад». */
+    .settings-bar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px) 18px 8px;
+        background: var(--bg);
+    }
+
+    .nav-link { color: var(--blue); font-size: 17px; padding: 4px 0; }
+    .nav-link.big { font-size: 28px; line-height: 1; padding: 0 4px; }
+    .nav-link svg { width: 24px; height: 24px; }
+
+    /* ---------- кнопка питания ---------- */
+
+    .power-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 14px 16px 26px;
+    }
+
+    .uptime {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+    .uptime-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+    }
+
+    .uptime-value {
+        margin-top: 2px;
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: .5px;
+    }
+
+    .power-box {
+        background: #E4E4EA;
+        border-radius: 28px;
+        padding: 12px;
+    }
+
+    .power-btn {
+        width: 92px;
+        height: 92px;
+        border-radius: 50%;
+        background: var(--blue);
+        display: grid;
+        place-items: center;
+        transition: background .2s ease, transform .1s ease;
+    }
+
+    .power-btn:active { transform: scale(.94); }
+    .power-btn.on { background: var(--green); }
+    .power-btn.busy { background: var(--muted); }
+
+    /* Material 3: чип статуса без шеврона, с серым/голубым контейнером. */
+    .status-chip {
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        background: #E1EFFF;
+        color: var(--blue);
+        border-radius: 999px;
+        padding: 9px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        width: 145px;
+        justify-content: center;
+    }
+
+    .status-chip.on { background: #DCF5E6; color: #1E8E3E; }
+    .status-chip.error { background: #FDE0E0; color: #C5221F; }
+    .status-chip.busy { background: #EEF0F4; color: var(--muted); }
+
+    .status-hint {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        text-align: center;
+        max-width: 300px;
+    }
+
+    /* ---------- группы ---------- */
+
+    .section-title {
+        font-size: 13px;
+        color: var(--blue);
+        margin: 22px 32px 8px;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+    }
+
+    .group {
+        background: var(--card);
+        border-radius: 12px;
+        margin: 0 16px 8px;
+        overflow: hidden;
+    }
+
+    .group-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .group-title {
+        flex: 1;
+        min-width: 0;
+        font-size: 19px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .group-title.small { font-size: 19px; }
+    .chevron { color: var(--blue); transition: transform .2s ease; }
+    .group.collapsed .chevron { transform: rotate(-90deg); }
+
+    /*
+     * Плавное сворачивание: анимируем высоту строки grid 1fr → 0fr,
+     * поэтому переход идёт по реальной высоте содержимого, а не по display.
+     */
+    .group-body {
+        display: grid;
+        grid-template-rows: 1fr;
+        transition: grid-template-rows .28s ease;
+    }
+
+    .group-inner {
+        overflow: hidden;
+        min-height: 0;
+    }
+
+    .group.collapsed .group-body { grid-template-rows: 0fr; }
+
+    /* Свёрнутая группа — только заголовок, без разделителя под ним. */
+    .group.collapsed .group-head { border-bottom: none; }
+    .group.collapsed .row:last-child,
+    .group.collapsed .group-inner > *:last-child { border-bottom: none; }
+
+    /* ---------- строка профиля ---------- */
+
+    .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        text-align: left;
+        padding: 12px 16px 12px 14px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .row:last-child { border-bottom: none; }
+    .row:active { background: #EFEFF4; }
+
+    /* Индикатор профиля — кольцо: светло-серое у обычных, синее у выбранного. */
+    .dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 4px solid #D5D5DC;
+        flex: none;
+    }
+
+    .dot.selected,
+    .dot.on {
+        border: 6px solid var(--blue);
+    }
+
+    .row-body { flex: 1; min-width: 0; }
+
+    .row-title {
+        font-size: 17px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .row-sub {
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .info-btn {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        border: 2px solid var(--blue);
+        color: var(--blue);
+        display: grid;
+        place-items: center;
+        flex: none;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    /* «i» всегда синяя: подключение на вид не влияет. */
+    .info-btn.active { color: var(--blue); border-color: var(--blue); background: none; }
+
+    .empty { padding: 18px 16px; color: var(--muted); font-size: 15px; }
+
+    /* ---------- журнал ---------- */
+
+    .log {
+        background: var(--card);
+        border-radius: 12px;
+        margin: 8px 16px 22px;
+        overflow: hidden;
+    }
+
+    .log .group-head { border-bottom: none; }
+    .log .group-title { font-size: 13px; text-transform: uppercase; color: var(--muted); }
+
+    #logBody {
+        padding: 0 16px 12px;
+        font-size: 12px;
+        color: var(--muted);
+        max-height: 140px;
+        overflow-y: auto;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+    }
+
+    /* ---------- настройки ---------- */
+
+    .settings-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        text-align: left;
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 17px;
+    }
+
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row .value { margin-left: auto; color: var(--muted); font-size: 15px; }
+    .settings-row.center { justify-content: center; color: var(--blue); }
+    .settings-row.danger { justify-content: center; color: var(--red); }
+    .settings-row small { display: block; color: var(--muted); font-size: 13px; }
+    .settings-row small { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .settings-row .value { flex: none; margin-left: auto; padding: 4px 0 4px 12px; }
+
+  /* Синие действия в настройках — как «Добавить из буфера». */
+  .settings-row .value.accent {
+    color: var(--blue);
+    width: 82px;
+  }
+
+  /* Спиннер загрузки подписки: кольцо с вращающейся «шапкой». */
+  .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(11, 15, 20, .15);
+      border-top-color: var(--blue);
+      animation: spin .7s linear infinite;
+      vertical-align: -3px;
+  }
+
+  @keyframes spin {
+  to { transform: rotate(360deg); }
+  }
+
+  .settings-row .value:disabled {
+  opacity: .6;
+  pointer-events: none;
+  }
+
+    /* Раскладка страницы задана выше: display у .page переключается через .active. */
+
+    /* ---------- шторка действий ---------- */
+
+    .scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .4);
+        display: none;
+        z-index: 40;
+    }
+
+    .scrim.open { display: block; }
+
+    .sheet {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 12px);
+        background: rgba(250, 250, 250, .96);
+        backdrop-filter: blur(20px);
+        border-radius: 14px;
+        overflow: hidden;
+        z-index: 41;
+        /*
+         * Прячем через visibility/opacity: сдвиг вниз перестал бы прятать шторку,
+         * когда bottom учитывает высоту навигационной панели.
+         */
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(16px);
+        transition: opacity .22s ease, transform .22s ease, visibility .22s;
+    }
+
+    .sheet.open {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    .sheet-item {
+        display: block;
+        width: 100%;
+        text-align: center;
+        font-size: 19px;
+        color: var(--blue);
+        padding: 17px 12px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .sheet-item:last-child { border-bottom: none; color: var(--red); }
+
+    /* ---------- модальное окно профиля ---------- */
+
+    .modal {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%) scale(.9);
+        max-width: 420px;
+        margin: 0 auto;
+        background: rgba(250, 250, 250, .97);
+        backdrop-filter: blur(20px);
+        border-radius: 14px;
+        overflow: hidden;
+        z-index: 41;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .modal.open { opacity: 1; pointer-events: auto; transform: translateY(-50%) scale(1); }
+
+    /* ---------- диалог подтверждения ---------- */
+
+    /*
+     * Свой диалог вместо системного window.confirm: тот выглядит чужеродно
+     * («The page at file:// says») и не поддаётся стилизации.
+     */
+    .modal.alert { text-align: center; }
+
+    .alert-head {
+        padding: 20px 18px 4px;
+        font-size: 17px;
+        font-weight: 600;
+    }
+
+    .alert-text {
+        padding: 0 18px 4px;
+        font-size: 14px;
+        line-height: 1.4;
+        color: var(--muted);
+    }
+
+    .alert-actions { display: flex; border-top: 1px solid var(--line); }
+
+    .alert-btn {
+        flex: 1;
+        padding: 15px 10px;
+        font-size: 17px;
+        color: var(--blue);
+        border-right: 1px solid var(--line);
+    }
+
+    .alert-btn.danger { color: var(--red); font-weight: 600; border-right: none; }
+
+    .modal-head { padding: 18px 16px 10px; text-align: center; font-size: 17px; font-weight: 600; }
+
+    .detail {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 9px 18px;
+        font-size: 14px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .detail .k { color: var(--muted); flex: none; }
+    .detail .v { text-align: right; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<header class="navbar">
+    <button class="nav-link big" id="addBtn" aria-label="Добавить">&#65291;</button>
+    <button class="nav-link" id="settingsBtn" aria-label="Настройки">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M19.14,12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24,0-.43.17-.47.41l-.36,2.54c-.59.24-1.12.57-1.62.94l-2.39-.96c-.22-.08-.47,0-.59.22L2.74,8.87c-.12.21-.08.47.12.61l2.03,1.58c-.05.3-.08.62-.08.94s.02.64.07.94l-2.03,1.58c-.18.14-.23.41-.12.61l1.92,3.32c.12.22.37.29.59.22l2.39-.96c.5.38,1.03.7,1.62.94l.36,2.54c.05.24.24.41.48.41h3.84c.24,0,.44-.17.47-.41l.36-2.54c.59-.24,1.13-.56,1.62-.94l2.39.96c.22.08.47,0,.59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12,15.6a3.6,3.6 0 1,1 0-7.2,3.6,3.6,0 0,1 0,7.2z"></path>
+        </svg>
+    </button>
+</header>
+
+<!-- ================= Главная ================= -->
+<main class="page active" id="pageHome">
+    <section class="power-area">
+        <div class="uptime">
+            <div class="uptime-label">Время подключения</div>
+            <div class="uptime-value" id="uptime">00:00:00</div>
+        </div>
+        <div class="power-box">
+            <button class="power-btn" id="powerBtn" aria-label="Подключение"></button>
+        </div>
+        <div class="status-chip" id="statusChip">
+            <span id="statusText">Отключено</span>
+        </div>
+        <div class="status-hint" id="statusHint">Выберите профиль и нажмите кнопку питания</div>
+    </section>
+
+    <div id="subscriptions"></div>
+
+    <div class="group" id="localGroup"></div>
+
+    <div class="log">
+        <button class="group-head" id="logHead">
+            <span class="group-title">Журнал</span>
+            <span class="chevron" id="logChev"></span>
+        </button>
+        <div id="logBody"></div>
+    </div>
+</main>
+
+<!-- ================= Настройки ================= -->
+<main class="page" id="pageSettings">
+    <div class="settings-bar">
+        <button class="nav-link" id="backBtn">Назад</button>
+    </div>
+
+    <h3 class="section-title">Подписки</h3>
+    <div class="group" id="subAdmin"></div>
+
+    <h3 class="section-title">Импорт</h3>
+    <div class="group">
+        <button class="settings-row center" id="importProfiles">Добавить из буфера</button>
+    </div>
+
+    <h3 class="section-title">О приложении</h3>
+    <div class="group">
+        <div class="settings-row">
+            <span>Ядро</span><span class="value" id="coreVersion">—</span>
+        </div>
+        <div class="settings-row">
+            <span>Версия приложения</span><span class="value" id="appVersion">—</span>
+        </div>
+    </div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="sheet" id="sheet">
+    <button class="sheet-item" data-action="import">Добавить из буфера</button>
+    <button class="sheet-item" data-action="cancel">Отмена</button>
+</div>
+
+<div class="modal" id="modal">
+    <div class="modal-head" id="modalTitle">Профиль</div>
+    <div id="modalBody"></div>
+    <button class="sheet-item" data-action="modal-connect" id="modalConnect">Подключиться</button>
+    <button class="sheet-item danger" data-action="modal-remove" id="modalRemove">Удалить</button>
+    <button class="sheet-item" data-action="modal-close" style="color:var(--muted)">Закрыть</button>
+</div>
+
+<!-- Подтверждение опасных действий: свой диалог вместо системного window.confirm -->
+<div class="modal alert" id="alert" role="alertdialog">
+    <div class="alert-head" id="alertTitle"></div>
+    <div class="alert-text" id="alertText"></div>
+    <div class="alert-actions">
+        <button class="alert-btn" id="alertCancel">Отмена</button>
+        <button class="alert-btn danger" id="alertOk">Удалить</button>
+    </div>
+</div>
+
+<!-- Мок моста для отладки в браузере: работает только при ?demo=1, в приложении безвреден. -->
+<script src="dev-mock.js"></script>
+
+<script>
+(function () {
+    'use strict';
+
+    var bridge = window.NodewayVpn;
+
+    var state = 'disconnected';
+    var model = {
+        profiles: [],
+        subscriptions: [],
+        selectedProfileId: '',
+        activeProfileId: '',
+        connectedAt: 0
+    };
+    var coreVersion = '';
+    var modalProfileId = '';
+    var logCollapsed = false;
+
+    /**
+     * Свёрнутые группы: по id подписки и отдельно для локальных профилей.
+     * Состояние переживает перезапуск приложения — лежит в localStorage,
+     * поэтому перерисовка групп его не сбрасывает.
+     */
+    var COLLAPSED_KEY = 'nodeway.collapsed';
+    var collapsed = loadCollapsed();
+
+    function loadCollapsed() {
+      var fallback = { subscriptions: {}, local: false, log: false };
+      try {
+        var raw = localStorage.getItem(COLLAPSED_KEY);
+        if (!raw) return fallback;
+        var saved = JSON.parse(raw);
+        return {
+          subscriptions: saved && saved.subscriptions ? saved.subscriptions : {},
+          local: !!(saved && saved.local),
+          log: !!(saved && saved.log)
+        };
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function saveCollapsed() {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed));
+      } catch (e) { /* приватный режим — просто не сохраняем */ }
+    }
+
+    var el = {
+        powerBtn: document.getElementById('powerBtn'),
+        uptime: document.getElementById('uptime'),
+        statusText: document.getElementById('statusText'),
+        statusHint: document.getElementById('statusHint'),
+        statusChip: document.getElementById('statusChip'),
+        subscriptions: document.getElementById('subscriptions'),
+        localGroup: document.getElementById('localGroup'),
+        subAdmin: document.getElementById('subAdmin'),
+        logBody: document.getElementById('logBody'),
+        logChev: document.getElementById('logChev'),
+        scrim: document.getElementById('scrim'),
+        sheet: document.getElementById('sheet'),
+        modal: document.getElementById('modal'),
+        modalTitle: document.getElementById('modalTitle'),
+        modalBody: document.getElementById('modalBody'),
+        modalConnect: document.getElementById('modalConnect'),
+        modalRemove: document.getElementById('modalRemove'),
+    coreVersion: document.getElementById('coreVersion'),
+    alert: document.getElementById('alert'),
+    alertTitle: document.getElementById('alertTitle'),
+    alertText: document.getElementById('alertText'),
+    alertOk: document.getElementById('alertOk'),
+    alertCancel: document.getElementById('alertCancel')
+    };
+
+    // Подключено: две одинаковые полоски по центру круга, как в iOS.
+    var ICON_POWER_ON =
+        '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" ' +
+        'stroke-linecap="round"><path d="M9.1 6.9v10.2"/><path d="M14.9 6.9v10.2"/></svg>';
+    var ICON_POWER_OFF =
+        '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" ' +
+        'stroke-linecap="round"><path d="M12 4.5v7.5"/><path d="M7.6 7a6.8 6.8 0 1 0 8.8 0"/></svg>';
+
+    var ICON_CHEV =
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+        'stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg>';
+
+    // ------------------------------------------------------------------ utils
+
+    function clear(node) {
+        while (node.firstChild) node.removeChild(node.firstChild);
+    }
+
+    function svg(markup) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = markup;
+        return wrap.firstChild;
+    }
+
+    /** У SVG свойство className только для чтения, поэтому задаём атрибутом. */
+    function chevron() {
+        var node = svg(ICON_CHEV);
+        node.setAttribute('class', 'chevron');
+        return node;
+    }
+
+    /** Спиннер загрузки: кольцо с вращающейся «шапкой». */
+    function spinner() {
+        var node = document.createElement('span');
+        node.className = 'spinner';
+        return node;
+    }
+
+    function parse(json) {
+        try { return JSON.parse(json); } catch (e) { return null; }
+    }
+
+    function log(message) {
+        if (!message) return;
+        var now = new Date();
+        var time = ('0' + now.getHours()).slice(-2) + ':' +
+            ('0' + now.getMinutes()).slice(-2) + ':' +
+            ('0' + now.getSeconds()).slice(-2);
+        var line = document.createElement('div');
+        line.textContent = time + '  ' + message;
+        el.logBody.appendChild(line);
+        while (el.logBody.childElementCount > 60) el.logBody.removeChild(el.logBody.firstChild);
+        el.logBody.scrollTop = el.logBody.scrollHeight;
+    }
+
+    function profileById(id) {
+        return model.profiles.filter(function (p) { return p.id === id; })[0] || null;
+    }
+
+    /** ЧЧ:ММ:СС с ведущими нулями. */
+    function formatUptime(millis) {
+        var total = Math.max(0, Math.floor(millis / 1000));
+        var hours = Math.floor(total / 3600);
+        var minutes = Math.floor(total % 3600 / 60);
+        var seconds = total % 60;
+        function pad(value) { return ('0' + value).slice(-2); }
+        return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+    }
+
+    function renderUptime() {
+        var running = state === 'connected' && model.connectedAt > 0;
+        el.uptime.textContent = running ? formatUptime(Date.now() - model.connectedAt) : '00:00:00';
+    }
+
+    function selectedProfile() {
+        return profileById(model.selectedProfileId);
+    }
+
+    // ------------------------------------------------------------------ render
+
+    function render() {
+        renderPower();
+        renderUptime();
+        renderSubscriptions();
+        renderLocals();
+        renderSubAdmin();
+    }
+
+    function renderPower() {
+        var on = state === 'connected';
+        var busy = state === 'connecting' || state === 'disconnecting';
+
+        el.powerBtn.className = 'power-btn' + (on ? ' on' : '') + (busy ? ' busy' : '');
+        el.powerBtn.innerHTML = on ? ICON_POWER_ON : ICON_POWER_OFF;
+        el.powerBtn.disabled = busy;
+
+        var active = profileById(model.activeProfileId);
+        el.statusChip.className = 'status-chip' +
+            (on ? ' on' : busy ? ' busy' : state === 'error' ? ' error' : '');
+        el.statusText.textContent = {
+            disconnected: 'Отключено',
+            connecting: 'Подключение',
+            connected: 'Подключено',
+            disconnecting: 'Отключение',
+            error: 'Ошибка'
+        }[state] || 'Отключено';
+
+        var hint;
+        if (state === 'error') {
+            hint = lastMessage || 'Не удалось подключиться';
+        } else if (on && active) {
+            hint = active.name;
+        } else {
+            var selected = selectedProfile();
+            hint = selected ? 'Выбрано: ' + selected.name : 'Выберите профиль и нажмите кнопку питания';
+        }
+        el.statusHint.textContent = hint;
+    }
+
+    function renderSubscriptions() {
+        clear(el.subscriptions);
+        if (!model.subscriptions.length) {
+            var hint = document.createElement('div');
+            hint.className = 'empty';
+            hint.textContent = 'Подписок нет — добавьте ссылку подписки из буфера обмена';
+            el.subscriptions.appendChild(hint);
+            return;
+        }
+
+        model.subscriptions.forEach(function (sub) {
+            var profiles = model.profiles.filter(function (p) {
+                return p.subscriptionId === sub.id;
+            });
+            var group = document.createElement('div');
+            // Состояние свёртки храним отдельно, иначе перерисовка его сбрасывает.
+            group.className = 'group' + (collapsed.subscriptions[sub.id] ? ' collapsed' : '');
+
+            var head = document.createElement('button');
+            head.className = 'group-head';
+
+            var title = document.createElement('span');
+            title.className = 'group-title';
+            var subName = sub.name || 'Подписка';
+            // Название может уже содержать эмодзи облака — не дублируем.
+            title.textContent = subName.indexOf('☁') === -1 ? '☁️ ' + subName : subName;
+            head.appendChild(title);
+
+            head.appendChild(chevron());
+            head.onclick = function () {
+                group.classList.toggle('collapsed');
+                collapsed.subscriptions[sub.id] = group.classList.contains('collapsed');
+                saveCollapsed();
+            };
+
+            var body = document.createElement('div');
+            body.className = 'group-body';
+            var inner = document.createElement('div');
+            inner.className = 'group-inner';
+            body.appendChild(inner);
+            if (!profiles.length) {
+                var empty = document.createElement('div');
+                empty.className = 'empty';
+                empty.textContent = 'Пока нет профилей';
+                inner.appendChild(empty);
+            } else {
+                profiles.forEach(function (profile) { inner.appendChild(profileRow(profile)); });
+            }
+
+            group.appendChild(head);
+            group.appendChild(body);
+            el.subscriptions.appendChild(group);
+        });
+    }
+
+    function renderLocals() {
+        clear(el.localGroup);
+        var locals = model.profiles.filter(function (p) { return !p.fromSubscription; });
+        var group = el.localGroup;
+        group.className = 'group' + (collapsed.local ? ' collapsed' : '');
+
+        var head = document.createElement('button');
+        head.className = 'group-head';
+        var title = document.createElement('span');
+        title.className = 'group-title small';
+        title.textContent = 'Локальные профили';
+        head.appendChild(title);
+        var count = document.createElement('span');
+        count.className = 'row-sub';
+        count.textContent = locals.length ? String(locals.length) : '';
+        head.appendChild(count);
+        head.appendChild(chevron());
+        head.onclick = function () {
+            group.classList.toggle('collapsed');
+            collapsed.local = group.classList.contains('collapsed');
+            saveCollapsed();
+        };
+        group.appendChild(head);
+
+        var body = document.createElement('div');
+        body.className = 'group-body';
+        var inner = document.createElement('div');
+        inner.className = 'group-inner';
+        body.appendChild(inner);
+        if (!locals.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = 'Профилей нет — скопируйте vless-ссылку и импортируйте из буфера';
+            inner.appendChild(empty);
+        } else {
+            locals.forEach(function (profile) { inner.appendChild(profileRow(profile)); });
+        }
+        group.appendChild(body);
+    }
+
+    function renderSubAdmin() {
+        clear(el.subAdmin);
+        if (!model.subscriptions.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = 'Подписок нет';
+            el.subAdmin.appendChild(empty);
+            return;
+        }
+        model.subscriptions.forEach(function (sub) {
+            var row = document.createElement('div');
+            row.className = 'settings-row';
+
+            var body = document.createElement('span');
+            var name = document.createElement('span');
+            name.textContent = sub.name || 'Подписка';
+            var meta = document.createElement('small');
+            meta.textContent = (sub.host || '') + ' \u00B7 ' + sub.count + ' \u00B7 ' + sub.refreshLabel +
+                ' \u00B7 ' + (sub.updatedLabel || 'ещё не обновлялась');
+            body.appendChild(name);
+            body.appendChild(document.createElement('br'));
+            body.appendChild(meta);
+            row.appendChild(body);
+
+            var refresh = document.createElement('button');
+            refresh.className = 'value accent';
+            if (sub.loading) {
+              // Подписка грузится: вместо надписи — спиннер, повторный клик не нужен.
+              refresh.disabled = true;
+              refresh.appendChild(spinner());
+            } else {
+              refresh.textContent = 'Обновить';
+              refresh.onclick = function () {
+                log('обновляем «' + (sub.name || 'подписку') + '»');
+                bridge.refreshSubscription(sub.id);
+              };
+            }
+            row.appendChild(refresh);
+
+            var remove = document.createElement('button');
+            remove.className = 'value';
+            remove.style.color = 'var(--red)';
+            remove.textContent = 'Удалить';
+            remove.onclick = function () {
+                var name = sub.name || 'Подписка';
+                var count = sub.count || 0;
+                confirm('Удалить подписку?', function () {
+                    bridge.removeSubscription(sub.id);
+                    log('подписка удалена');
+                }, 'Подписка «' + name + '» и её профили' +
+                    (count ? ' (' + count + ')' : '') + ' будут удалены без возможности восстановления.');
+            };
+            row.appendChild(remove);
+
+            el.subAdmin.appendChild(row);
+        });
+    }
+
+    function profileRow(profile) {
+        var row = document.createElement('button');
+        row.className = 'row';
+
+        var dot = document.createElement('span');
+        dot.className = 'dot' + (profile.id === model.activeProfileId ? ' on' : '')
+            + (profile.id === model.selectedProfileId && profile.id !== model.activeProfileId
+                ? ' selected' : '');
+        row.appendChild(dot);
+
+        var body = document.createElement('span');
+        body.className = 'row-body';
+
+        var name = document.createElement('span');
+        name.className = 'row-title';
+        name.textContent = profile.name;
+
+        var sub = document.createElement('span');
+        sub.className = 'row-sub';
+        sub.textContent = 'VLESS / ' + (profile.network || 'TCP').toUpperCase() + ' / ' +
+            (profile.security || 'none').toUpperCase();
+
+        body.appendChild(name);
+        body.appendChild(document.createElement('br'));
+        body.appendChild(sub);
+        row.appendChild(body);
+
+        var info = document.createElement('span');
+        info.className = 'info-btn' + (profile.id === model.activeProfileId ? ' active' : '');
+        info.textContent = 'i';
+        info.onclick = function (event) {
+            event.stopPropagation();
+            openModal(profile.id);
+        };
+        row.appendChild(info);
+
+        row.onclick = function () {
+            // Тап по строке только выбирает профиль. Повторный тап по уже выбранному
+            // ничего не делает — VPN включает только кнопка питания.
+            if (profile.id === model.selectedProfileId) return;
+            bridge.selectProfile(profile.id);
+        };
+
+        return row;
+    }
+
+    // ------------------------------------------------------------------ модалка
+
+    function openModal(profileId) {
+        var profile = profileById(profileId);
+        if (!profile) return;
+        modalProfileId = profileId;
+        el.modalTitle.textContent = profile.name;
+        clear(el.modalBody);
+
+        [
+            ['Адрес', profile.address + (profile.port ? ':' + profile.port : '')],
+            ['Сеть', (profile.network || 'tcp').toUpperCase()],
+            ['Защита', (profile.security || 'none').toUpperCase()],
+            ['SNI', profile.sni || '—'],
+            ['Источник', profile.fromSubscription ? (profile.subscriptionName || 'подписка') : 'буфер обмена'],
+            ['Ссылка', profile.link]
+        ].forEach(function (pair) {
+            var row = document.createElement('div');
+            row.className = 'detail';
+            var key = document.createElement('span');
+            key.className = 'k';
+            key.textContent = pair[0];
+            var value = document.createElement('span');
+            value.className = 'v';
+            value.textContent = pair[1] || '—';
+            row.appendChild(key);
+            row.appendChild(value);
+            el.modalBody.appendChild(row);
+        });
+
+        el.modalConnect.textContent = profile.id === model.activeProfileId ? 'Отключиться' : 'Подключиться';
+        el.modal.classList.add('open');
+        el.scrim.classList.add('open');
+    }
+
+    function closeOverlays() {
+        el.sheet.classList.remove('open');
+        el.modal.classList.remove('open');
+        el.alert.classList.remove('open');
+        el.scrim.classList.remove('open');
+    }
+
+    /**
+     * Подтверждение опасного действия своим диалогом, а не системным окном.
+     * `text` — короткий вопрос, `detail` — чем грозит действие.
+     */
+    function confirm(text, onYes, detail) {
+        closeOverlays();
+        el.alertTitle.textContent = text;
+        el.alertText.textContent = detail || '';
+        el.alertText.style.display = detail ? '' : 'none';
+        el.alertOk.textContent = 'Удалить';
+        el.alert.classList.add('open');
+        el.scrim.classList.add('open');
+
+        // Колбэк живёт до нажатия кнопки: диалог живёт дольше текущего клика.
+        el.alertOk.onclick = function () {
+            closeOverlays();
+            onYes();
+        };
+        el.alertCancel.onclick = closeOverlays;
+    }
+
+    // ------------------------------------------------------------------ события
+
+    var lastMessage = '';
+
+    el.powerBtn.onclick = function () {
+        if (state === 'connected') {
+            bridge.requestDisconnect();
+            return;
+        }
+        var profile = selectedProfile() || model.profiles[0];
+        if (!profile) {
+            log('сначала добавьте профиль');
+            showPage('pageSettings');
+            return;
+        }
+        if (profile.id !== model.selectedProfileId) bridge.selectProfile(profile.id);
+        bridge.requestConnect(profile.id);
+    };
+
+    /* Чип статуса информационный: тап по нему ничего не делает. */
+
+    document.getElementById('addBtn').onclick = function () {
+        el.sheet.classList.add('open');
+        el.scrim.classList.add('open');
+    };
+
+    document.getElementById('logHead').onclick = function () {
+        logCollapsed = !logCollapsed;
+        el.logBody.style.display = logCollapsed ? 'none' : 'block';
+        el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
+        collapsed.log = logCollapsed;
+        saveCollapsed();
+    };
+
+    document.getElementById('importProfiles').onclick = function () {
+        var reply = parse(bridge.importFromClipboard());
+        if (reply) log(reply.message);
+    };
+
+    el.scrim.onclick = closeOverlays;
+
+    document.getElementById('settingsBtn').onclick = function () { showPage('pageSettings'); };
+    document.getElementById('backBtn').onclick = function () { showPage('pageHome'); };
+
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(function (page) {
+            page.classList.toggle('active', page.id === id);
+        });
+        // «+» и шестерёнка относятся только к списку профилей.
+        document.querySelector('.navbar').classList.toggle('hidden', id !== 'pageHome');
+        window.scrollTo(0, 0);
+    }
+
+    el.sheet.addEventListener('click', function (event) {
+        var action = event.target.getAttribute('data-action');
+        if (!action) return;
+        closeOverlays();
+        if (action === 'import') {
+            // Подписка или отдельные ссылки — определяется по содержимому буфера.
+            var reply = parse(bridge.importFromClipboard());
+            if (reply) log(reply.message);
+        }
+    });
+
+    el.modal.addEventListener('click', function (event) {
+        var action = event.target.getAttribute('data-action');
+        if (!action) return;
+        if (action === 'modal-close') closeOverlays();
+        if (action === 'modal-connect') {
+            var profile = profileById(modalProfileId);
+            closeOverlays();
+            if (!profile) return;
+            if (profile.id === model.activeProfileId) bridge.requestDisconnect();
+            else {
+                if (profile.id !== model.selectedProfileId) bridge.selectProfile(profile.id);
+                bridge.requestConnect(profile.id);
+            }
+        }
+        if (action === 'modal-remove') {
+            var target = profileById(modalProfileId);
+            if (!target) return;
+            confirm('Удалить профиль?', function () {
+                bridge.removeProfile(target.id);
+                log('профиль «' + target.name + '» удалён');
+            }, 'Профиль «' + target.name + '» будет удалён без возможности восстановления.');
+        }
+    });
+
+    // ------------------------------------------------------------------ мост
+
+    /**
+     * Высота системных панелей в CSS-пикселях — её сообщает приложение.
+     * В WebView `env(safe-area-inset-*)` пустой, поэтому значения приходят из Kotlin.
+     * В браузере остаётся запасной вариант через `env()` в CSS.
+     */
+    window.setInsets = function (top, bottom) {
+        document.documentElement.style.setProperty('--inset-top', (top || 0) + 'px');
+        document.documentElement.style.setProperty('--inset-bottom', (bottom || 0) + 'px');
+    };
+
+    window.onVpnState = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        var changed = data.state !== state;
+        state = data.state;
+        lastMessage = data.message || '';
+        renderPower();
+        // Технические переходы без текста («connecting») в журнал не пишем.
+        if (changed && lastMessage) log(lastMessage);
+        renderUptime();
+    };
+
+    window.onProfilesChanged = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        model = data;
+        render();
+    };
+
+    window.onImportResult = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        log(data.message);
+        render();
+    };
+
+    // ------------------------------------------------------------------ init
+
+    if (bridge) {
+        var initial = parse(bridge.getInitialState());
+        if (initial) {
+            model = initial.state;
+            coreVersion = initial.coreVersion || '';
+            if (initial.appVersion) {
+                document.getElementById('appVersion').textContent = initial.appVersion;
+            }
+        }
+        el.coreVersion.textContent = coreVersion || '—';
+        el.logChev.innerHTML = ICON_CHEV;
+        logCollapsed = collapsed.log;
+        el.logBody.style.display = logCollapsed ? 'none' : 'block';
+        el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
+        log('интерфейс готов');
+    } else {
+        log('Android-мост недоступен');
+    }
+
+    render();
+    setInterval(renderUptime, 1000);
+})();
+</script>
+</body>
+</html>
