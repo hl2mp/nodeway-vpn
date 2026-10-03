@@ -447,6 +447,17 @@
 
     .picker-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
+    /* Пока мост считает список приложений, вместо него показываем заглушку. */
+    .picker-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 32px 16px;
+        color: var(--muted);
+        font-size: 15px;
+    }
+
     .picker-group {
         padding: 14px 16px 6px;
         font-size: 13px;
@@ -750,6 +761,7 @@
                aria-label="Поиск приложения" autocomplete="off">
         <label class="picker-switch"><input type="checkbox" id="pickerSystem"><span>Показывать системные</span></label>
     </div>
+    <div class="picker-loading" id="pickerLoading" hidden><span class="spinner"></span><span>Загрузка приложений…</span></div>
     <div class="picker-list" id="pickerList"></div>
 </div>
 
@@ -1224,6 +1236,7 @@
         pick: document.getElementById('splitPick'),
         picker: document.getElementById('appPicker'),
         list: document.getElementById('pickerList'),
+        loading: document.getElementById('pickerLoading'),
         query: document.getElementById('pickerQuery'),
         system: document.getElementById('pickerSystem'),
         title: document.getElementById('pickerTitle')
@@ -1261,6 +1274,24 @@
         renderSplit();
     }
 
+    /**
+     * ai-generated: индикатор загрузки.
+     *
+     * Показывается с задержкой в 150 мс: список на быстрых устройствах приходит
+     * быстрее, и мигающий спиннер выглядел бы хуже отсутствия спиннера.
+     */
+    var loadingTimer = null;
+
+    function showPickerLoading() {
+        clearTimeout(loadingTimer);
+        loadingTimer = setTimeout(function () { elSplit.loading.hidden = false; }, 150);
+    }
+
+    function hidePickerLoading() {
+        clearTimeout(loadingTimer);
+        elSplit.loading.hidden = true;
+    }
+
     /** ai-generated: открытие листа выбора и первая загрузка списка. */
     function openPicker() {
         elSplit.title.textContent = splitMode === 'allow'
@@ -1276,13 +1307,33 @@
         elSplit.picker.classList.remove('open');
     }
 
-    /** ai-generated: запрос списка приложений с текущим поиском и фильтром. */
+    /**
+     * ai-generated: запрос списка приложений с текущим поиском и фильтром.
+     *
+     * Обращение к мосту синхронное и на сотнях пакетов заметно тормозит,
+     * поэтому работа откладывается на следующий кадр: индикатор успевает появиться.
+     */
+    var pickerRequest = 0;
+
     function requestApps() {
-        var reply = parse(bridge.listInstalledApps(elSplit.system.checked, elSplit.query.value.trim()));
-        renderApps(reply || []);
+        var token = ++pickerRequest;
+        showPickerLoading();
+        clear(elSplit.list);
+        setTimeout(function () {
+            // Быстрые переключения фильтра отменяют предыдущий запрос.
+            if (token !== pickerRequest) return;
+            var reply = parse(bridge.listInstalledApps(elSplit.system.checked, elSplit.query.value.trim()));
+            hidePickerLoading();
+            renderApps(reply || []);
+        }, 0);
     }
 
-    /** ai-generated: список, где отмеченные приложения закреплены сверху. */
+    /**
+     * ai-generated: список, где отмеченные приложения закреплены сверху.
+     *
+     * Иконки не запрашиваются здесь: их отрисовка идёт порциями по мере прокрутки,
+     * иначе сотня синхронных вызовов моста замораживает страницу.
+     */
     function renderApps(apps) {
         clear(elSplit.list);
         var chosen = apps.filter(function (app) { return splitPackages[app.pkg]; });
@@ -1304,6 +1355,7 @@
                 : 'Нет приложений для выбора';
             elSplit.list.appendChild(empty);
         }
+        watchIcons();
     }
 
     function pickerGroup(title) {
@@ -1322,8 +1374,7 @@
         var icon = document.createElement('img');
         icon.className = 'app-icon';
         icon.alt = '';
-        var iconUrl = bridge.getAppIcon(app.pkg);
-        if (iconUrl) icon.src = iconUrl;
+        icon.setAttribute('data-pkg', app.pkg);
         row.appendChild(icon);
 
         var copy = document.createElement('span');
@@ -1362,6 +1413,61 @@
         bridge.setSplitTunnelMode('all');
         renderSplit();
         log('режим сброшен: не выбрано ни одного приложения');
+    }
+
+    /**
+     * ai-generated: ленивая подгрузка иконок.
+     *
+     * Запрашиваются только строки, близкие к экрану, и не больше пачки за кадр:
+     * иначе прокрутка заикает, а перекодирование сотни иконок занимает секунды.
+     */
+    var iconCache = {};
+    var iconQueue = [];
+    var iconBusy = false;
+
+    /** Сколько иконок мост отдаёт за один кадр: не больше, чем нужно экрану. */
+    var ICON_CHUNK = 8;
+
+    var iconObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            iconObserver.unobserve(entry.target);
+            iconQueue.push(entry.target.querySelector('img'));
+        });
+        pumpIcons();
+    }, { root: elSplit.list, rootMargin: '240px 0px' });
+
+    /** ai-generated: ставит наблюдение за иконками новых строк. */
+    function watchIcons() {
+        iconObserver.disconnect();
+        iconQueue = [];
+        var images = elSplit.list.querySelectorAll('img[data-pkg]');
+        Array.prototype.forEach.call(images, function (img) {
+            var pkg = img.getAttribute('data-pkg');
+            if (hasIcon(pkg)) img.src = iconCache[pkg];
+            else iconObserver.observe(img.parentNode);
+        });
+    }
+
+    /** ai-generated: разбирает очередь иконок небольшими порциями. */
+    function pumpIcons() {
+        if (iconBusy || !iconQueue.length) return;
+        iconBusy = true;
+        var chunk = iconQueue.splice(0, ICON_CHUNK);
+        setTimeout(function () {
+            chunk.forEach(function (img) {
+                var pkg = img.getAttribute('data-pkg');
+                if (!hasIcon(pkg)) iconCache[pkg] = bridge.getAppIcon(pkg);
+                if (iconCache[pkg]) img.src = iconCache[pkg];
+            });
+            iconBusy = false;
+            pumpIcons();
+        }, 0);
+    }
+
+    /** ai-generated: был ли пакет запрошен раньше, даже если иконки у него нет. */
+    function hasIcon(pkg) {
+        return Object.prototype.hasOwnProperty.call(iconCache, pkg);
     }
 
     elSplit.all.onclick = function () { setSplitMode('all'); };
