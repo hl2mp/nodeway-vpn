@@ -188,9 +188,7 @@
     },
 
     setSplitTunnelMode: function (mode) {
-      if (mode === 'allow' && state.splitPackages.size === 0) {
-        return JSON.stringify({ ok: false, error: 'Выберите хотя бы одно приложение' });
-      }
+      // Пустой список разрешён: сброс в «Все приложения» делает сама страница.
       state.splitMode = mode;
       return JSON.stringify({ ok: true });
     },
