@@ -313,19 +313,21 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     override fun uiState(): String = store.toUiModel(activeProfileId).toString()
 
     // ai-generated
-    override fun onGetSplitTunnelSettings(): String = JSONObject().apply {
-        put("mode", prefs.tunnelMode)
-        put("packages", JSONArray(prefs.splitPackages.toList()))
-        put("selfPackage", packageName)
-    }.toString()
+    override fun onGetSplitTunnelSettings(): String {
+        // Режим без единого приложения ничего не делает, поэтому приводим к общему.
+        if (TunnelMode.fromCode(prefs.tunnelMode) != TunnelMode.ALL && prefs.splitPackages.isEmpty()) {
+            prefs.tunnelMode = TunnelMode.ALL.code
+        }
+        return JSONObject().apply {
+            put("mode", prefs.tunnelMode)
+            put("packages", JSONArray(prefs.splitPackages.toList()))
+            put("selfPackage", packageName)
+        }.toString()
+    }
 
     // ai-generated
     override fun onSetSplitTunnelModeRequested(mode: String): String {
         val next = TunnelMode.fromCode(mode.trim())
-        // Пустой список в режиме allow отрезал бы трафик вообще, поэтому не пускаем.
-        if (next == TunnelMode.ALLOW && prefs.splitPackages.isEmpty()) {
-            return splitResult(ok = false, error = "Выберите хотя бы одно приложение")
-        }
         prefs.tunnelMode = next.code
         Log.i(TAG, "Split tunneling mode: ${next.code}")
         restartTunnelWithSplitSettings()

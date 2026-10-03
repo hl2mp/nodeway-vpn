@@ -1351,12 +1351,30 @@
         return row;
     }
 
+    /**
+ * ai-generated: режим без единого приложения ничего не делает, поэтому при уходе
+ * с настроек, сворачивании или следующем запуске он сбрасывается в «Все приложения».
+ */
+    function enforceSplitFallback() {
+        if (splitMode === 'all') return;
+        if (Object.keys(splitPackages).length) return;
+        splitMode = 'all';
+        bridge.setSplitTunnelMode('all');
+        renderSplit();
+        log('режим сброшен: не выбрано ни одного приложения');
+    }
+
     elSplit.all.onclick = function () { setSplitMode('all'); };
     elSplit.allow.onclick = function () { setSplitMode('allow'); };
     elSplit.exclude.onclick = function () { setSplitMode('exclude'); };
     elSplit.pick.onclick = openPicker;
     document.getElementById('pickerClose').onclick = closePicker;
     elSplit.system.onchange = requestApps;
+
+    /* Сворачивание приложения тоже считаем уходом: режим без выбора не сохраняем. */
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) enforceSplitFallback();
+    });
 
     /* Поиск ждёт паузу в наборе: запрос на каждый символ лишний. */
     var searchTimer = null;
@@ -1421,6 +1439,8 @@
     document.getElementById('backBtn').onclick = function () { showPage('pageHome'); };
 
     function showPage(id) {
+        // Уход с настроек без отмеченных приложений возвращает режим «Все приложения».
+        if (id !== 'pageSettings') enforceSplitFallback();
         document.querySelectorAll('.page').forEach(function (page) {
             page.classList.toggle('active', page.id === id);
         });
