@@ -50,6 +50,13 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     private val network = Executors.newSingleThreadExecutor()
 
+    /**
+     * Отдельный поток для списка приложений и иконок.
+     *
+     * Он не связан с сетью: тяжёлая отрисовка иконок не должна задерживать загрузку подписки.
+     */
+    private val appsExecutor = Executors.newSingleThreadExecutor()
+
     /** Пользовательские настройки: последняя ссылка и раздельное туннелирование. */
     private lateinit var prefs: Prefs
 
@@ -181,6 +188,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         )
 
         webView.loadUrl("file:///android_asset/index.html")
+        // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
+        warmInstalledAppsCache()
         requestNotificationPermissionIfNeeded()
     }
 
@@ -210,6 +219,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         (webView.parent as? ViewGroup)?.removeView(webView)
         webView.destroy()
         network.shutdownNow()
+        appsExecutor.shutdownNow()
         super.onDestroy()
     }
 
@@ -370,7 +380,16 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     }
 
     // ai-generated
-    override fun onListInstalledAppsRequested(includeSystem: Boolean, query: String): String {
+    override fun onListInstalledAppsRequested(includeSystem: Boolean, query: String): String =
+        installedAppsJson(includeSystem, query)
+
+    /**
+     * Список приложений, отобранный по фильтру и поиску.
+     *
+     * Отдельная функция нужна и синхронному, и асинхронному пути.
+     */
+    // ai-generated
+    private fun installedAppsJson(includeSystem: Boolean, query: String): String {
         val selected = prefs.splitPackages
         val needle = query.trim().lowercase()
         val array = JSONArray()
@@ -406,6 +425,61 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         val dataUrl = runCatching { encodeIcon(pkg) }.getOrDefault("")
         if (dataUrl.isNotEmpty()) iconCache.put(pkg, dataUrl)
         return dataUrl
+    }
+
+    /**
+     * Асинхронные варианты для страницы списка приложений.
+     *
+     * Синхронный мост выполняется на JS-потоке WebView и на слабых устройствах
+     * считает сотни пакетов секунду-две. Всё это время браузер не может
+     * отрисовать индикатор загрузки, поэтому тяжёлое уходит в отдельный поток,
+     * а ответ приходит вызовом из Kotlin.
+     */
+    // ai-generated
+    override fun onListInstalledAppsAsyncRequested(
+        token: String,
+        includeSystem: Boolean,
+        query: String,
+    ) {
+        appsExecutor.execute {
+            val payload = installedAppsJson(includeSystem, query)
+            runOnUiThread { pushSplitApps(token, payload) }
+        }
+    }
+
+    // ai-generated
+    override fun onGetAppIconAsyncRequested(packageName: String) {
+        val pkg = packageName.trim()
+        appsExecutor.execute {
+            val dataUrl = onGetAppIconRequested(pkg)
+            runOnUiThread { pushAppIcon(pkg, dataUrl) }
+        }
+    }
+
+    /** Отдаёт список приложений странице: `window.onSplitApps(token, json)`. */
+    // ai-generated
+    private fun pushSplitApps(token: String, payload: String) {
+        val script = "window.onSplitApps && window.onSplitApps('${escape(token)}', '${escape(payload)}');"
+        runOnUiThread { runCatching { webView.evaluateJavascript(script, null) } }
+    }
+
+    /** Отдаёт иконку странице: `window.onAppIcon(pkg, url)`. */
+    // ai-generated
+    private fun pushAppIcon(packageName: String, dataUrl: String) {
+        val script =
+            "window.onAppIcon && window.onAppIcon('${escape(packageName)}', '${escape(dataUrl)}');"
+        runOnUiThread { runCatching { webView.evaluateJavascript(script, null) } }
+    }
+
+    /**
+     * Прогревает кэш списка приложений заранее.
+     *
+     * Первое обращение к packageManager занимает на медленных устройствах секунды,
+     * а открыть лист выбора можно сразу после запуска приложения.
+     */
+    // ai-generated
+    private fun warmInstalledAppsCache() {
+        appsExecutor.execute { installedApps() }
     }
 
     // endregion

@@ -223,6 +223,15 @@
       { pkg: 'com.android.printspooler', label: 'Печать', system: true, color: '#5E5CE6' }
     ];
 
+  /** SVG-заглушка вместо настоящей иконки: цветной квадрат с первой буквой. */
+  function mockIcon(app) {
+    var mark = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">' +
+      '<rect width="96" height="96" rx="20" fill="' + app.color + '"/>' +
+      '<text x="48" y="65" font-family="sans-serif" font-size="46" fill="#fff" ' +
+      'text-anchor="middle">' + app.label.charAt(0).toUpperCase() + '</text></svg>';
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(mark)));
+  }
+
   var state = {
     model: scenarios.default(),
     vpnState: 'disconnected',
@@ -304,14 +313,26 @@
       return respond(JSON.stringify(apps));
     },
 
+    /** Асинхронный вариант: ответ приходит вызовом window.onSplitApps. */
+    listInstalledAppsAsync: function (token, includeSystem, query) {
+      var payload = this.listInstalledApps(includeSystem, query);
+      Promise.resolve(payload).then(function (json) {
+        window.onSplitApps && window.onSplitApps(token, json);
+      });
+    },
+
     getAppIcon: function (pkg) {
       var app = mockApps.filter(function (item) { return item.pkg === pkg; })[0];
       if (!app) return respond('');
-      var mark = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">' +
-        '<rect width="96" height="96" rx="20" fill="' + app.color + '"/>' +
-        '<text x="48" y="65" font-family="sans-serif" font-size="46" fill="#fff" ' +
-        'text-anchor="middle">' + app.label.charAt(0).toUpperCase() + '</text></svg>';
-      return respond('data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(mark))));
+      return respond(mockIcon(app));
+    },
+
+    /** Асинхронный вариант: ответ приходит вызовом window.onAppIcon. */
+    getAppIconAsync: function (pkg) {
+      var url = this.getAppIcon(pkg);
+      Promise.resolve(url).then(function (data) {
+        window.onAppIcon && window.onAppIcon(pkg, data || '');
+      });
     },
 
     requestConnect: function (profileId) {

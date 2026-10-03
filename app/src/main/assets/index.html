@@ -1357,27 +1357,43 @@
      */
     var pickerRequest = 0;
 
+    /**
+     * ai-generated: запрос списка приложений.
+     *
+     * Основной путь асинхронный: мост считает список в отдельном потоке и
+     * отвечает вызовом [onSplitApps]. Синхронный вызов замораживал страницу на
+     * слабых устройствах, и индикатор загрузки успевал скрыться, не показавшись.
+     * Старый путь остался запасным, если асинхронных методов у моста нет.
+     */
     function requestApps() {
         var token = ++pickerRequest;
         showPickerLoading();
         clear(elSplit.list);
+        var includeSystem = elSplit.system.checked;
+        var query = elSplit.query.value.trim();
+        if (bridge.listInstalledAppsAsync) {
+            bridge.listInstalledAppsAsync(String(token), includeSystem, query);
+            return;
+        }
         setTimeout(function () {
-            // Быстрые переключения фильтра отменяют предыдущий запрос.
             if (token !== pickerRequest) return;
-            var reply = bridge.listInstalledApps(elSplit.system.checked, elSplit.query.value.trim());
-            // Мок с задержкой отдаёт Promise, нативный мост — строку.
+            var reply = bridge.listInstalledApps(includeSystem, query);
             if (reply && typeof reply.then === 'function') {
-                reply.then(function (data) {
-                    if (token !== pickerRequest) return;
-                    hidePickerLoading();
-                    renderApps(parse(data) || []);
-                });
+                reply.then(function (data) { applyApps(token, data); });
                 return;
             }
-            hidePickerLoading();
-            renderApps(parse(reply) || []);
+            applyApps(token, reply);
         }, 0);
     }
+
+    /** Принимает список приложений, отбрасывая устаревшие ответы. */
+    function applyApps(token, payload) {
+        if (Number(token) !== pickerRequest) return;
+        hidePickerLoading();
+        renderApps(parse(payload) || []);
+    }
+
+    window.onSplitApps = applyApps;
 
     /**
      * ai-generated: список, где отмеченные приложения закреплены сверху.
@@ -1474,6 +1490,7 @@
      */
     var iconCache = {};
     var iconQueue = [];
+    var iconWaiting = {};
     var iconBusy = false;
 
     /** Сколько иконок мост отдаёт за один кадр: не больше, чем нужно экрану. */
@@ -1512,22 +1529,46 @@
                     applyIcon(img, iconCache[pkg]);
                     return;
                 }
-                var url = bridge.getAppIcon(pkg);
-                // Мок с задержкой отдаёт Promise, нативный мост — строку сразу.
-                if (url && typeof url.then === 'function') {
-                    url.then(function (data) {
-                        iconCache[pkg] = data;
-                        applyIcon(img, data);
-                    });
-                    return;
-                }
-                iconCache[pkg] = url;
-                applyIcon(img, url);
+                requestIcon(pkg, img);
             });
             iconBusy = false;
             pumpIcons();
         }, 0);
     }
+
+    /**
+     * ai-generated: запрашивает иконку у моста.
+     *
+     * Асинхронный вариант кодирует картинку в отдельном потоке: иначе на
+     * слабом устройстве каждая иконка задерживает отрисовку списка.
+     */
+    function requestIcon(pkg, img) {
+        if (bridge.getAppIconAsync) {
+            iconWaiting[pkg] = iconWaiting[pkg] || [];
+            iconWaiting[pkg].push(img);
+            bridge.getAppIconAsync(pkg);
+            return;
+        }
+        var url = bridge.getAppIcon(pkg);
+        if (url && typeof url.then === 'function') {
+            url.then(function (data) { storeIcon(pkg, data, [img]); });
+            return;
+        }
+        storeIcon(pkg, url, [img]);
+    }
+
+    function storeIcon(pkg, url, images) {
+        iconCache[pkg] = url || '';
+        images.forEach(function (img) { applyIcon(img, url); });
+    }
+
+    /** Принимает иконку от нативного моста. */
+    window.onAppIcon = function (pkg, url) {
+        var images = iconWaiting[pkg];
+        if (!images) return;
+        delete iconWaiting[pkg];
+        storeIcon(pkg, url, images);
+    };
 
     /** ai-generated: был ли пакет запрошен раньше, даже если иконки у него нет. */
     function hasIcon(pkg) {

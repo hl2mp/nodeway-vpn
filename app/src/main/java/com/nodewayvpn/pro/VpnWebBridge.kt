@@ -70,9 +70,27 @@ class VpnWebBridge(private val host: Host) {
         // ai-generated
         fun onListInstalledAppsRequested(includeSystem: Boolean, query: String): String
 
+        /**
+         * Тот же список, но считается в отдельном потоке.
+         *
+         * Синхронный вариант замирал на слабых устройствах: пока считается список,
+         * браузер не может отрисовать индикатор загрузки. Ответ приходит вызовом
+         * `window.onSplitApps(token, json)`.
+         */
+        // ai-generated
+        fun onListInstalledAppsAsyncRequested(
+            token: String,
+            includeSystem: Boolean,
+            query: String,
+        )
+
         /** Иконка приложения в виде data-URL для WebView. */
         // ai-generated
         fun onGetAppIconRequested(packageName: String): String
+
+        /** Иконка считается в отдельном потоке, ответ приходит в `window.onAppIcon`. */
+        // ai-generated
+        fun onGetAppIconAsyncRequested(packageName: String)
     }
 
     @JavascriptInterface
@@ -124,7 +142,16 @@ class VpnWebBridge(private val host: Host) {
 
     // ai-generated
     @JavascriptInterface
+    fun listInstalledAppsAsync(token: String, includeSystem: Boolean, query: String) =
+        host.onListInstalledAppsAsyncRequested(token, includeSystem, query)
+
+    // ai-generated
+    @JavascriptInterface
     fun getAppIcon(packageName: String): String = host.onGetAppIconRequested(packageName)
+
+    // ai-generated
+    @JavascriptInterface
+    fun getAppIconAsync(packageName: String) = host.onGetAppIconAsyncRequested(packageName)
 
     private fun uiState(): String = JSONObject().apply {
         put("state", JSONObject(host.uiState()))
