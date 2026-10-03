@@ -445,6 +445,12 @@
 
     .picker-switch input { width: 18px; height: 18px; accent-color: var(--blue); }
 
+    /* Переключатель системных и кнопка очистки делят одну строку. */
+    .picker-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+    .picker-clear { flex: none; color: var(--blue); font-size: 14px; }
+    .picker-clear:disabled { color: var(--muted); opacity: 0.4; }
+
     .picker-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
     /* Пока мост считает список приложений, вместо него показываем заглушку. */
@@ -759,7 +765,10 @@
     <div class="picker-tools">
         <input class="picker-input" id="pickerQuery" type="text" placeholder="Поиск приложения"
                aria-label="Поиск приложения" autocomplete="off">
-        <label class="picker-switch"><input type="checkbox" id="pickerSystem"><span>Показывать системные</span></label>
+        <div class="picker-row">
+            <label class="picker-switch"><input type="checkbox" id="pickerSystem"><span>Показывать системные</span></label>
+            <button class="picker-clear" id="pickerClear" type="button">Очистить</button>
+        </div>
     </div>
     <div class="picker-loading" id="pickerLoading" hidden><span class="spinner"></span><span>Загрузка приложений…</span></div>
     <div class="picker-list" id="pickerList"></div>
@@ -1239,6 +1248,7 @@
         loading: document.getElementById('pickerLoading'),
         query: document.getElementById('pickerQuery'),
         system: document.getElementById('pickerSystem'),
+        clear: document.getElementById('pickerClear'),
         title: document.getElementById('pickerTitle')
     };
 
@@ -1260,6 +1270,7 @@
         var count = Object.keys(splitPackages).length;
         elSplit.pick.hidden = splitMode === 'all';
         elSplit.pick.textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
+        elSplit.clear.disabled = count === 0;
     }
 
     /** ai-generated: смена режима. При отказе ядра список остаётся прежним. */
@@ -1502,6 +1513,19 @@
     elSplit.pick.onclick = openPicker;
     document.getElementById('pickerClose').onclick = closePicker;
     elSplit.system.onchange = requestApps;
+
+    /**
+     * ai-generated: снять все отметки одним касанием.
+     *
+     * К ядру список уходит только по кнопке «Готово», поэтому очистка обратима:
+     * закрытый лист ничего не меняет.
+     */
+    elSplit.clear.onclick = function () {
+        if (!Object.keys(splitPackages).length) return;
+        splitPackages = {};
+        requestApps();
+        renderSplit();
+    };
 
     /* Сворачивание приложения тоже считаем уходом: режим без выбора не сохраняем. */
     document.addEventListener('visibilitychange', function () {
