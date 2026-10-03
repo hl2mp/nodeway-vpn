@@ -132,18 +132,77 @@
     };
   }
 
-  /** Приложения для листа выбора: подборка для демо, не настоящий список пакетов. */
-  var mockApps = [
-    { pkg: 'com.example.browser', label: 'Браузер', system: false, color: '#007AFF' },
-    { pkg: 'com.example.chat', label: 'Мессенджер', system: false, color: '#34C759' },
-    { pkg: 'com.example.video', label: 'Видео', system: false, color: '#FF3B30' },
-    { pkg: 'com.example.bank', label: 'Банк', system: false, color: '#FF9500' },
-    { pkg: 'com.example.mail', label: 'Почта', system: false, color: '#5856D6' },
-    { pkg: 'com.example.cloud', label: 'Облако', system: false, color: '#8A8A8E' },
-    { pkg: 'com.android.settings', label: 'Настройки', system: true, color: '#636366' },
-    { pkg: 'com.android.chrome', label: 'Chrome', system: true, color: '#0F9D58' },
-    { pkg: 'com.android.vending', label: 'Play Маркет', system: true, color: '#00D0FF' }
-  ];
+  /**
+ * Приложения для листа выбора: подборка для демо, не настоящий список пакетов.
+ *
+ * Их намеренно много: так в браузере видно, что иконки подгружаются порциями
+ * по мере прокрутки, а не все сразу.
+ */
+    var mockApps = [
+      { pkg: 'com.example.browser', label: 'Браузер', system: false, color: '#007AFF' },
+      { pkg: 'com.example.chat', label: 'Мессенджер', system: false, color: '#34C759' },
+      { pkg: 'com.example.video', label: 'Видео', system: false, color: '#FF3B30' },
+      { pkg: 'com.example.bank', label: 'Банк', system: false, color: '#FF9500' },
+      { pkg: 'com.example.mail', label: 'Почта', system: false, color: '#5856D6' },
+      { pkg: 'com.example.cloud', label: 'Облако', system: false, color: '#8A8A8E' },
+      { pkg: 'com.example.music', label: 'Музыка', system: false, color: '#FF2D55' },
+      { pkg: 'com.example.maps', label: 'Карты', system: false, color: '#30B0C7' },
+      { pkg: 'com.example.social', label: 'Соцсеть', system: false, color: '#0A84FF' },
+      { pkg: 'com.example.shop', label: 'Магазин', system: false, color: '#FFCC00' },
+      { pkg: 'com.example.news', label: 'Новости', system: false, color: '#AF52DE' },
+      { pkg: 'com.example.camera', label: 'Камера', system: false, color: '#636366' },
+      { pkg: 'com.example.notes', label: 'Заметки', system: false, color: '#FFD60A' },
+      { pkg: 'com.example.weather', label: 'Погода', system: false, color: '#64D2FF' },
+      { pkg: 'com.example.fitness', label: 'Фитнес', system: false, color: '#FF375F' },
+      { pkg: 'com.example.game', label: 'Игры', system: false, color: '#30D158' },
+      { pkg: 'com.example.bank2', label: 'Другая банковская карта', system: false, color: '#BF5AF2' },
+      { pkg: 'com.example.drive', label: 'Диск', system: false, color: '#5E5CE6' },
+      { pkg: 'com.example.translate', label: 'Переводчик', system: false, color: '#32ADE6' },
+      { pkg: 'com.example.wallet', label: 'Кошелёк', system: false, color: '#32D74B' },
+      { pkg: 'com.example.calendar', label: 'Календарь', system: false, color: '#FF9F0A' },
+      { pkg: 'com.example.dict', label: 'Словарь', system: false, color: '#98989D' },
+      { pkg: 'com.example.travel', label: 'Путешествия', system: false, color: '#66D4CF' },
+      { pkg: 'com.example.reader', label: 'Читалка', system: false, color: '#AC8E68' },
+      { pkg: 'com.example.podcast', label: 'Подкасты', system: false, color: '#D96C75' },
+      { pkg: 'com.example.delivery', label: 'Доставка', system: false, color: '#FF6482' },
+      { pkg: 'com.example.taxi', label: 'Такси', system: false, color: '#0A84FF' },
+      { pkg: 'com.example.work', label: 'Рабочий чат', system: false, color: '#48484A' },
+      { pkg: 'com.example.education', label: 'Обучение', system: false, color: '#009639' },
+      { pkg: 'com.example.tasks', label: 'Задачи', system: false, color: '#FF453A' },
+      { pkg: 'com.example.habits', label: 'Привычки', system: false, color: '#BF5AF2' },
+      { pkg: 'com.example.sleep', label: 'Сон', system: false, color: '#5E5CE6' },
+      { pkg: 'com.example.stocks', label: 'Акции', system: false, color: '#30B0C7' },
+      { pkg: 'com.example.photoeditor', label: 'Фоторедактор', system: false, color: '#FF375F' },
+      { pkg: 'com.example.vpnclient', label: 'Другой VPN', system: false, color: '#8E8E93' },
+      { pkg: 'com.example.launcher', label: 'Лаунчер', system: false, color: '#3A3A3C' },
+      { pkg: 'com.example.keyboard', label: 'Клавиатура', system: false, color: '#636366' },
+      { pkg: 'com.example.files', label: 'Файлы', system: false, color: '#0A84FF' },
+      { pkg: 'com.example.store', label: 'Магазин приложений', system: false, color: '#FF9F0A' },
+      { pkg: 'com.example.podcast2', label: 'Аудиокниги', system: false, color: '#BF5AF2' },
+      { pkg: 'com.example.radio', label: 'Радио', system: false, color: '#FF453A' },
+      { pkg: 'com.example.smart', label: 'Умный дом', system: false, color: '#64D2FF' },
+      { pkg: 'com.example.antivirus', label: 'Антивирус', system: false, color: '#32D74B' },
+      { pkg: 'com.example.backup', label: 'Резервные копии', system: false, color: '#5E5CE6' },
+      { pkg: 'com.example.notes2', label: 'Заметки 2', system: false, color: '#FFD60A' },
+      { pkg: 'com.android.settings', label: 'Настройки', system: true, color: '#636366' },
+      { pkg: 'com.android.chrome', label: 'Chrome', system: true, color: '#0F9D58' },
+      { pkg: 'com.android.vending', label: 'Play Маркет', system: true, color: '#00D0FF' },
+      { pkg: 'com.android.systemui', label: 'Системный интерфейс', system: true, color: '#8A8A8E' },
+      { pkg: 'com.android.shell', label: 'Оболочка', system: true, color: '#48484A' },
+      { pkg: 'com.android.providers.media', label: 'Медиахранилище', system: true, color: '#30B0C7' },
+      { pkg: 'com.android.permissioncontroller', label: 'Контроль разрешений', system: true, color: '#FF9500' },
+      { pkg: 'com.android.packageinstaller', label: 'Установка приложений', system: true, color: '#34C759' },
+      { pkg: 'com.android.providers.settings', label: 'Провайдер настроек', system: true, color: '#AF52DE' },
+      { pkg: 'com.android.keychain', label: 'Хранилище ключей', system: true, color: '#FF2D55' },
+      { pkg: 'com.android.location.fused', label: 'Служба местоположения', system: true, color: '#30D158' },
+      { pkg: 'com.android.external.storage', label: 'Внешнее хранилище', system: true, color: '#FFD60A' },
+      { pkg: 'com.android.frameworks.res', label: 'Ресурсы системы', system: true, color: '#98989D' },
+      { pkg: 'com.android.phone', label: 'Телефон', system: true, color: '#34C759' },
+      { pkg: 'com.android.deskclock', label: 'Часы', system: true, color: '#FF453A' },
+      { pkg: 'com.android.documentsui', label: 'Файлы системы', system: true, color: '#0A84FF' },
+      { pkg: 'com.android.camera2', label: 'Камера системы', system: true, color: '#FF9F0A' },
+      { pkg: 'com.android.printspooler', label: 'Печать', system: true, color: '#5E5CE6' }
+    ];
 
   var state = {
     model: scenarios.default(),
