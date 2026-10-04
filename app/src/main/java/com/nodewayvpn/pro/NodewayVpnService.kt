@@ -109,7 +109,7 @@ class NodewayVpnService : VpnService() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                startForeground(NOTIFICATION_ID, buildNotification(VpnState.CONNECTING))
+                startForeground(NOTIFICATION_ID, buildNotification(VpnState.CONNECTING, link))
                 activeProfileId = intent.getStringExtra(EXTRA_PROFILE_ID).orEmpty()
                 publishState(VpnState.CONNECTING)
                 work?.cancel()
@@ -329,6 +329,10 @@ class NodewayVpnService : VpnService() {
 
                 val result = withTimeoutOrNull(PING_PROFILE_TIMEOUT_MS) {
                     connect(link)
+                    // Подпись должна называть ядро того профиля, который проверяется
+                    // сейчас: publishState уведомление не трогает, иначе оно осталось
+                    // бы от прошлого подключения.
+                    updateNotification(VpnState.PINGING)
                     if (state == VpnState.CONNECTED) TunnelProbe.measure(probeSocksPort) else null
                 }
                 // -1 — «не отвечает», рисуется иначе, чем хороший отклик.
@@ -569,7 +573,24 @@ class NodewayVpnService : VpnService() {
         manager.createNotificationChannel(channel)
     }
 
-    private fun buildNotification(currentState: VpnState): Notification {
+    /**
+     * Подпись уведомления — имя ядра, через которое на самом деле идёт трафик.
+     *
+     * У olcrtc туннель заворачивает отдельный процесс, а Xray только пересылает
+     * его в SOCKS5, поэтому «ядром Xray» там было бы враньём.
+     */
+    private fun notificationSubtitle(link: String): String =
+        if (OlcrtcProfile.isOlcrtcLink(link)) {
+            getString(R.string.notification_subtitle_olcrtc)
+        } else {
+            getString(R.string.notification_subtitle)
+        }
+
+    private fun buildNotification(currentState: VpnState, link: String = activeLink): Notification {
+        // Проверка профилей идёт по своим правилам: туннель в цикле то поднимается,
+        // то гаснет, и уведомление мигало бы «подключено / отключение…» ровно так же,
+        // как это уже запрещено интерфейсу в publishState. Снаружи — один статус.
+        val shown = if (pinging) VpnState.PINGING else currentState
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
@@ -583,7 +604,7 @@ class NodewayVpnService : VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val title = when (currentState) {
+        val title = when (shown) {
             VpnState.CONNECTING -> getString(R.string.notification_connecting)
             VpnState.CONNECTED -> getString(R.string.notification_connected)
             VpnState.DISCONNECTING -> getString(R.string.notification_disconnecting)
@@ -594,7 +615,7 @@ class NodewayVpnService : VpnService() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentTitle(title)
-            .setContentText(getString(R.string.notification_subtitle))
+            .setContentText(notificationSubtitle(link))
             .setContentIntent(contentIntent)
             .setOngoing(true)
             .setSilent(true)
