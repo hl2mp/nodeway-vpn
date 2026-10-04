@@ -1,0 +1,2510 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Nodeway VPN</title>
+<style>
+    :root {
+        /* iOS System Palette (Light Mode HIG) */
+        --ios-bg: #F2F2F7;
+        --ios-grouped-card: #FFFFFF;
+        --ios-secondary-bg: #E5E5EA;
+        --ios-tertiary-bg: #D1D1D6;
+
+        --ios-blue: #007AFF;
+        --ios-blue-tint: #EBF4FF;
+        --ios-green: #34C759;
+        --ios-green-tint: #E8F8EE;
+        --ios-orange: #FF9500;
+        --ios-red: #FF3B30;
+        --ios-red-tint: #FEECEB;
+
+        --ios-label: #000000;
+        --ios-secondary-label: #8E8E93;
+        --ios-tertiary-label: #C7C7CC;
+        --ios-separator: #E5E5EA;
+        --ios-separator-subtle: rgba(60, 60, 67, 0.12);
+
+        /* Radii */
+        --ios-card-radius: 16px;
+        --ios-inner-radius: 10px;
+        --ios-pill: 9999px;
+
+        /* System Insets */
+        --inset-top: 0px;
+        --inset-bottom: 0px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+        margin: 0;
+        background: var(--ios-bg);
+        color: var(--ios-label);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.35;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        display: block;
+        max-width: 600px;
+        margin: 0 auto;
+        min-height: 100vh;
+        padding-bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 32px);
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+    svg { display: block; }
+
+    /* ---------- iOS Navigation Bar ---------- */
+    .m3-top-bar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: rgba(242, 242, 247, 0.88);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 10px);
+        padding-bottom: 12px;
+        padding-left: 20px;
+        padding-right: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 0.5px solid var(--ios-separator-subtle);
+    }
+
+    .m3-top-bar.hidden { display: none; }
+
+    .m3-app-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .m3-logo-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: var(--ios-blue);
+        color: #ffffff;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 2px 6px rgba(0, 122, 255, 0.28);
+    }
+
+    .m3-app-title {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.4px;
+        color: var(--ios-label);
+    }
+
+    .m3-top-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* iOS Circular Bar Button */
+    .m3-icon-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--ios-pill);
+        background: #E5E5EA;
+        color: var(--ios-blue);
+        display: grid;
+        place-items: center;
+        position: relative;
+        transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+    }
+
+    .m3-icon-btn:active {
+        opacity: 0.65;
+        transform: scale(0.95);
+    }
+
+    .m3-icon-btn.tonal {
+        background: var(--ios-blue-tint);
+        color: var(--ios-blue);
+    }
+
+    /* ---------- Settings Top Bar ---------- */
+    .settings-bar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: rgba(242, 242, 247, 0.88);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 10px);
+        padding-bottom: 12px;
+        padding-left: 12px;
+        padding-right: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 0.5px solid var(--ios-separator-subtle);
+    }
+
+    .settings-bar .m3-icon-btn {
+        background: transparent;
+        color: var(--ios-blue);
+    }
+
+    .settings-bar-title {
+        font-size: 19px;
+        font-weight: 600;
+        letter-spacing: -0.3px;
+        color: var(--ios-label);
+    }
+
+    /* ---------- Hero Power / Connection Card ---------- */
+    .hero-power-card {
+        margin: 16px 16px 20px;
+        background: var(--ios-grouped-card);
+        border-radius: var(--ios-card-radius);
+        padding: 28px 20px 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border: 0.5px solid var(--ios-separator-subtle);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .uptime {
+        text-align: center;
+        margin-bottom: 22px;
+    }
+
+    .uptime-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        color: var(--ios-secondary-label);
+        text-transform: uppercase;
+    }
+
+    .uptime-value {
+        margin-top: 4px;
+        font-size: 34px;
+        font-weight: 700;
+        color: var(--ios-label);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.6px;
+        font-feature-settings: "tnum";
+    }
+
+    /* iOS Connection Button */
+    .power-outer-ring {
+        position: relative;
+        padding: 8px;
+        border-radius: var(--ios-pill);
+        background: #F2F2F7;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+        transition: background-color 0.3s ease;
+    }
+
+    .hero-power-card.connected .power-outer-ring {
+        background: rgba(52, 199, 89, 0.14);
+    }
+
+    .power-btn {
+        width: 88px;
+        height: 88px;
+        border-radius: var(--ios-pill);
+        background: var(--ios-blue);
+        color: #ffffff;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 8px 20px rgba(0, 122, 255, 0.3);
+        transition: transform 0.15s cubic-bezier(0.17, 0.67, 0.83, 0.67), background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .power-btn:active {
+        transform: scale(0.94);
+    }
+
+    .power-btn.on {
+        background: var(--ios-green);
+        box-shadow: 0 8px 22px rgba(52, 199, 89, 0.35);
+    }
+
+    .power-btn.busy {
+        background: var(--ios-secondary-label);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        animation: iosPulse 1.6s infinite ease-in-out;
+    }
+
+    @keyframes iosPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.75; transform: scale(0.96); }
+    }
+
+    /* iOS Status Pill */
+    .status-chip {
+        margin-top: 22px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #F2F2F7;
+        color: var(--ios-label);
+        border-radius: var(--ios-pill);
+        padding: 6px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .status-chip .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #8E8E93;
+    }
+
+    .status-chip.on {
+        background: var(--ios-green-tint);
+        color: #248A3D;
+    }
+    .status-chip.on .dot { background: var(--ios-green); }
+
+    .status-chip.busy {
+        background: #FFF5E5;
+        color: #C97200;
+    }
+    .status-chip.busy .dot { background: var(--ios-orange); }
+
+    .status-chip.error {
+        background: var(--ios-red-tint);
+        color: var(--ios-red);
+    }
+    .status-chip.error .dot { background: var(--ios-red); }
+
+    .status-hint {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--ios-secondary-label);
+        text-align: center;
+        max-width: 300px;
+        line-height: 1.35;
+    }
+
+    /* ---------- iOS Grouped Section Headers & Cards ---------- */
+    .section-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ios-secondary-label);
+        margin: 22px 20px 8px 20px;
+        text-transform: uppercase;
+        letter-spacing: -0.05px;
+    }
+
+    /* Inset Grouped Card */
+    .group {
+        background: var(--ios-grouped-card);
+        border-radius: var(--ios-card-radius);
+        margin: 0 16px 14px;
+        overflow: hidden;
+        border: 0.5px solid var(--ios-separator-subtle);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .group-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 13px 16px;
+        text-align: left;
+        background: var(--ios-grouped-card);
+        transition: background-color 0.15s ease;
+        /* Шапка перестала быть <button>: внутрь неё легла кнопка проверки,
+           а вложенные интерактивные элементы невалидны и ломают клик. */
+        cursor: pointer;
+    }
+
+    .group-head:active {
+        background-color: #E5E5EA;
+    }
+
+    .group-head-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        background: var(--ios-blue-tint);
+        color: var(--ios-blue);
+        display: grid;
+        place-items: center;
+        flex: none;
+    }
+
+    .group-title {
+        flex: 1;
+        min-width: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--ios-label);
+        letter-spacing: -0.2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .group-badge {
+        font-size: 13px;
+        font-weight: 500;
+        padding: 2px 9px;
+        border-radius: var(--ios-pill);
+        background: #F2F2F7;
+        color: var(--ios-secondary-label);
+    }
+
+    .chevron {
+        color: var(--ios-tertiary-label);
+        transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .group.collapsed .chevron { transform: rotate(-90deg); }
+
+    .group-body {
+        display: grid;
+        grid-template-rows: 1fr;
+        transition: grid-template-rows 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .group-inner {
+        overflow: hidden;
+        min-height: 0;
+        border-top: 0.5px solid var(--ios-separator);
+    }
+
+    .group.collapsed .group-body { grid-template-rows: 0fr; }
+    .group.collapsed .group-inner { border-top: none; }
+
+    /* ---------- Profile Row (iOS Table Row) ---------- */
+    .row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        text-align: left;
+        padding: 12px 16px;
+        position: relative;
+        background: var(--ios-grouped-card);
+        border-bottom: 0.5px solid var(--ios-separator);
+        transition: background-color 0.15s ease;
+    }
+
+    .row:last-child { border-bottom: none; }
+
+    .row:active {
+        background-color: #F2F2F7;
+    }
+
+    /* iOS Check Radio Marker */
+    .mark {
+        flex: none;
+        position: relative;
+        width: 22px;
+        height: 22px;
+        border: 1.5px solid var(--ios-tertiary-label);
+        border-radius: 50%;
+        background: #ffffff;
+        transition: all 0.2s ease;
+    }
+
+    .mark.on {
+        background: var(--ios-blue);
+        border-color: var(--ios-blue);
+    }
+
+    .mark.on::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 3px;
+        width: 5px;
+        height: 10px;
+        border: solid #ffffff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    .row-body { flex: 1; min-width: 0; }
+
+    .row-title {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--ios-label);
+        letter-spacing: -0.2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .row-sub {
+        margin-top: 1px;
+        font-size: 13px;
+        color: var(--ios-secondary-label);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* iOS info disclosure (i) */
+    .info-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--ios-blue);
+        display: grid;
+        place-items: center;
+        flex: none;
+        transition: opacity 0.15s ease, transform 0.1s ease;
+    }
+
+    .info-btn:active {
+        opacity: 0.5;
+        transform: scale(0.9);
+    }
+
+    .info-btn.active {
+        color: var(--ios-green);
+    }
+
+    /* Кнопка проверки в шапке группы: дискретная, чтобы не спорить с кнопкой питания. */
+    .ping-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        flex: none;
+        padding: 0;
+        border-radius: 50%;
+        background: var(--ios-blue-tint);
+        color: var(--ios-blue);
+        cursor: pointer;
+        transition: opacity 0.15s ease, transform 0.1s ease;
+    }
+
+    .ping-btn:active { transform: scale(0.9); }
+
+    .ping-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+    }
+
+    /* Плашка отклика в строке профиля, рядом с «i». */
+    .ping-badge {
+        display: flex;
+        align-items: center;
+        height: 22px;
+        flex: none;
+        padding: 0 9px;
+        border-radius: var(--ios-pill);
+        background: var(--ios-secondary-bg);
+        color: var(--ios-secondary-label);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    /* Пустая плашка не должна занимать место — она ждёт первого результата. */
+    .ping-badge:empty { display: none; }
+
+    .ping-badge.bad { color: var(--ios-red); }
+
+    .ping-badge.active { color: var(--ios-blue); }
+
+    .empty {
+        padding: 20px 16px;
+        color: var(--ios-secondary-label);
+        font-size: 14px;
+        text-align: center;
+        line-height: 1.4;
+    }
+
+    /* ---------- Event Log (Card & iOS Segmented Control) ---------- */
+    .log {
+        background: var(--ios-grouped-card);
+        border-radius: var(--ios-card-radius);
+        margin: 14px 16px 24px;
+        overflow: hidden;
+        border: 0.5px solid var(--ios-separator-subtle);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .log .group-head-icon {
+        background: #F2F2F7;
+        color: var(--ios-secondary-label);
+    }
+
+    /* iOS Native Segmented Control */
+    .log-filter {
+        display: flex;
+        align-items: center;
+        margin: 4px 14px 12px;
+        padding: 3px;
+        background: rgba(118, 118, 128, 0.12);
+        border-radius: 9px;
+        position: relative;
+    }
+
+    .log-filter button {
+        flex: 1;
+        text-align: center;
+        padding: 6px 10px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ios-label);
+        border-radius: 7px;
+        transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+        border: none;
+    }
+
+    .log-filter button.active {
+        background: #FFFFFF;
+        font-weight: 600;
+        box-shadow: 0 1.5px 3px rgba(0, 0, 0, 0.12), 0 0.5px 1px rgba(0, 0, 0, 0.08);
+    }
+
+    .log-filter .log-hint {
+        font-size: 11px;
+        color: var(--ios-secondary-label);
+        padding-left: 6px;
+        padding-right: 4px;
+        white-space: nowrap;
+    }
+
+    #logBody {
+        padding: 8px 14px 14px;
+        font-size: 12px;
+        color: #3C3C43;
+        max-height: 200px;
+        overflow-y: auto;
+        font-family: "SF Mono", Menlo, Consolas, Monaco, monospace;
+        line-height: 1.5;
+        border-top: 0.5px solid var(--ios-separator);
+        background: #FAF9FE;
+    }
+
+    #logBody .log-line {
+        padding: 2px 0;
+        word-break: break-all;
+    }
+
+    #logBody .log-line.xray { color: #5856D6; }
+    #logBody .log-line.olcrtc { color: #34C759; }
+    #logBody .log-line.warn { color: var(--ios-orange); font-weight: 500; }
+    #logBody .log-line.error { color: var(--ios-red); font-weight: 600; }
+
+    /* ---------- iOS UISwitch Component ---------- */
+    .switch {
+        flex: none;
+        width: 51px;
+        height: 31px;
+        border-radius: var(--ios-pill);
+        background: #E5E5EA;
+        position: relative;
+        transition: background-color 0.25s ease;
+        box-shadow: inset 0 0 1px rgba(0,0,0,0.1);
+    }
+
+    .switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 27px;
+        height: 27px;
+        border-radius: 50%;
+        background: #FFFFFF;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.1);
+        transition: transform 0.25s cubic-bezier(0.2, 0.85, 0.32, 1.2);
+    }
+
+    .switch.on {
+        background: var(--ios-green);
+    }
+
+    .switch.on::after {
+        transform: translateX(20px);
+    }
+
+    /* ---------- Settings Page Elements ---------- */
+    .settings-row {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        text-align: left;
+        padding: 13px 16px;
+        border-bottom: 0.5px solid var(--ios-separator);
+        font-size: 16px;
+        color: var(--ios-label);
+        background: var(--ios-grouped-card);
+        transition: background-color 0.15s;
+    }
+
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row:active { background-color: #F2F2F7; }
+
+    .settings-row.center {
+        justify-content: center;
+        color: var(--ios-blue);
+        font-weight: 500;
+    }
+
+    .settings-row .value {
+        flex: none;
+        margin-left: auto;
+        color: var(--ios-secondary-label);
+        font-size: 15px;
+    }
+
+    .settings-row .value.accent {
+        color: var(--ios-blue);
+        font-weight: 500;
+        background: var(--ios-blue-tint);
+        padding: 4px 12px;
+        border-radius: var(--ios-pill);
+    }
+
+    .settings-row small {
+        display: block;
+        margin-top: 2px;
+        color: var(--ios-secondary-label);
+        font-size: 13px;
+        line-height: 1.35;
+    }
+
+    .settings-row.sub-row {
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .settings-row.sub-row > span {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .mode-row { align-items: flex-start; }
+    .mode-copy { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+    .mode-copy > span { font-weight: 500; }
+
+    #splitPick {
+        margin: 8px 16px 14px;
+        width: calc(100% - 32px);
+        padding: 11px 16px;
+        background: var(--ios-blue-tint);
+        color: var(--ios-blue);
+        border-radius: var(--ios-inner-radius);
+        font-weight: 600;
+        font-size: 15px;
+        text-align: center;
+    }
+    #splitPick:active { opacity: 0.75; }
+
+    /* ---------- iOS App Picker Modal Sheet ---------- */
+    .picker {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: none;
+        flex-direction: column;
+        background: var(--ios-bg);
+    }
+
+    .picker.open { display: flex; }
+
+    .picker-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 12px) 16px 12px;
+        background: var(--ios-bg);
+        border-bottom: 0.5px solid var(--ios-separator-subtle);
+    }
+
+    .picker-title {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--ios-label);
+    }
+
+    .picker-bar .m3-btn {
+        width: auto;
+        color: var(--ios-blue);
+        font-weight: 600;
+        font-size: 16px;
+        padding: 4px 8px;
+    }
+
+    .picker-tools {
+        padding: 10px 16px;
+        background: var(--ios-bg);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .picker-search { position: relative; }
+
+    .picker-input {
+        width: 100%;
+        padding: 9px 36px 9px 34px;
+        border: none;
+        border-radius: 10px;
+        background: rgba(118, 118, 128, 0.12);
+        color: var(--ios-label);
+        font-size: 16px;
+        outline: none;
+    }
+
+    .picker-search::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%238E8E93" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>');
+        background-repeat: no-repeat;
+    }
+
+    .picker-search-clear {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        display: grid;
+        place-items: center;
+        color: var(--ios-secondary-label);
+    }
+
+    .picker-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .picker-switch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--ios-secondary-label);
+    }
+
+    .picker-switch input {
+        accent-color: var(--ios-blue);
+        width: 17px;
+        height: 17px;
+    }
+
+    .picker-clear {
+        color: var(--ios-blue);
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .picker-clear:disabled { color: var(--ios-tertiary-label); }
+
+    .picker-list {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 20px);
+    }
+
+    .picker-group {
+        padding: 12px 18px 6px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: -0.05px;
+        color: var(--ios-secondary-label);
+    }
+
+    .app-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        text-align: left;
+        padding: 10px 16px;
+        background: var(--ios-grouped-card);
+        border-bottom: 0.5px solid var(--ios-separator);
+    }
+
+    .app-icon {
+        flex: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 9px;
+        background: #E5E5EA;
+        object-fit: cover;
+    }
+
+    .app-copy { flex: 1; min-width: 0; }
+    .app-name { display: block; font-size: 16px; font-weight: 500; color: var(--ios-label); }
+    .app-pkg { display: block; font-size: 12px; color: var(--ios-secondary-label); }
+
+    .app-box {
+        flex: none;
+        width: 22px;
+        height: 22px;
+        border: 1.5px solid var(--ios-tertiary-label);
+        border-radius: 50%;
+        position: relative;
+    }
+
+    .app-row.on .app-box {
+        background: var(--ios-blue);
+        border-color: var(--ios-blue);
+    }
+
+    .app-row.on .app-box::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 3px;
+        width: 5px;
+        height: 10px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    /* ---------- iOS Sheets & Modals ---------- */
+    .scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        display: none;
+        z-index: 40;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+    }
+
+    .scrim.open { display: block; }
+
+    /* iOS Action Sheet */
+    .sheet {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 10px);
+        max-width: 480px;
+        margin: 0 auto;
+        overflow: hidden;
+        z-index: 45;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(100%);
+        transition: transform 0.28s cubic-bezier(0.17, 0.89, 0.32, 1.15), opacity 0.2s ease, visibility 0.28s;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .sheet-handle { display: none; }
+
+    .sheet.open {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .sheet-item {
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 14px;
+        padding: 16px 20px;
+        font-size: 18px;
+        font-weight: 500;
+        color: var(--ios-blue);
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .sheet-item:active {
+        background: rgba(230, 230, 235, 0.95);
+    }
+
+    .sheet-item[data-action="cancel"] {
+        font-weight: 600;
+        color: var(--ios-blue);
+    }
+
+    /* iOS Dialog (UIAlertController Style) */
+    .modal {
+        position: fixed;
+        left: 32px;
+        right: 32px;
+        top: 50%;
+        transform: translateY(-50%) scale(1.05);
+        max-width: 320px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 14px;
+        overflow: hidden;
+        z-index: 48;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.17, 0.89, 0.32, 1.1);
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+        text-align: center;
+    }
+
+    .modal.open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(-50%) scale(1);
+    }
+
+    .modal-head {
+        padding: 20px 16px 8px;
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--ios-label);
+        letter-spacing: -0.3px;
+    }
+
+    .modal-body {
+        max-height: 40vh;
+        overflow-y: auto;
+        padding: 0 16px 14px;
+        font-size: 13px;
+    }
+
+    .detail {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 6px 0;
+        border-bottom: 0.5px solid var(--ios-separator);
+        font-size: 13px;
+    }
+
+    .detail .k { color: var(--ios-secondary-label); flex: none; }
+    .detail .v { text-align: right; word-break: break-all; color: var(--ios-label); font-weight: 500; }
+
+    .modal-actions {
+        display: flex;
+        flex-direction: column;
+        border-top: 0.5px solid var(--ios-separator-subtle);
+    }
+
+    .m3-btn {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 16px;
+        font-weight: 400;
+        color: var(--ios-blue);
+        border-bottom: 0.5px solid var(--ios-separator-subtle);
+        background: transparent;
+        transition: background-color 0.15s;
+    }
+
+    .m3-btn:last-child { border-bottom: none; }
+
+    .m3-btn:active {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .m3-btn.filled {
+        font-weight: 600;
+    }
+
+    .m3-btn.text-danger {
+        color: var(--ios-red);
+    }
+
+    /* iOS Alert Dialog */
+    .alert-head {
+        padding: 20px 16px 6px;
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--ios-label);
+    }
+
+    .alert-text {
+        padding: 0 16px 16px;
+        font-size: 13px;
+        line-height: 1.4;
+        color: var(--ios-secondary-label);
+    }
+
+    .alert-actions {
+        display: flex;
+        border-top: 0.5px solid var(--ios-separator-subtle);
+    }
+
+    .alert-btn {
+        flex: 1;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: 400;
+        color: var(--ios-blue);
+        border-right: 0.5px solid var(--ios-separator-subtle);
+    }
+
+    .alert-btn:last-child { border-right: none; }
+    .alert-btn:active { background: rgba(0, 0, 0, 0.05); }
+
+    .alert-btn.danger {
+        color: var(--ios-red);
+        font-weight: 600;
+    }
+
+    /* Spinner */
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid var(--ios-tertiary-label);
+        border-top-color: var(--ios-blue);
+        animation: spin 0.75s linear infinite;
+        vertical-align: -2px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<!-- iOS Top Navigation Bar -->
+<header class="m3-top-bar" id="mainHeader">
+<div class="m3-app-brand">
+<div class="m3-logo-badge">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+</div>
+<span class="m3-app-title">Nodeway</span>
+</div>
+<div class="m3-top-actions">
+<button aria-label="Добавить профиль" class="m3-icon-btn tonal" id="addBtn" title="Добавить">
+<svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-width="2.5" viewbox="0 0 24 24" width="20">
+<line x1="12" x2="12" y1="5" y2="19"></line>
+<line x1="5" x2="19" y1="12" y2="12"></line>
+</svg>
+</button>
+<button aria-label="Настройки" class="m3-icon-btn" id="settingsBtn" title="Настройки">
+<svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24" width="20">
+<circle cx="12" cy="12" r="3"></circle>
+<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+</svg>
+</button>
+</div>
+</header>
+<!-- ================= Главная ================= -->
+<main class="page active" id="pageHome">
+<!-- Hero iOS Inset Card -->
+<section class="hero-power-card" id="heroCard">
+<div class="uptime">
+<div class="uptime-label">Время подключения</div>
+<div class="uptime-value" id="uptime">00:00:00</div>
+</div>
+<div class="power-outer-ring">
+<button aria-label="Подключение" class="power-btn" id="powerBtn">
+<!-- SVG Icon populated via JS -->
+</button>
+</div>
+<div class="status-chip" id="statusChip">
+<span class="dot"></span>
+<span id="statusText">Отключено</span>
+</div>
+<div class="status-hint" id="statusHint">Выберите профиль и нажмите кнопку питания</div>
+</section>
+<!-- Subscriptions dynamic list -->
+<div id="subscriptions"></div>
+<!-- Local profiles container -->
+<div class="group" id="localGroup"></div>
+<!-- iOS Diagnostic / Event Log -->
+<div class="log" id="logCard">
+<button class="group-head" id="logHead">
+<div class="group-head-icon">
+<svg fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="18">
+<polyline points="4 17 10 11 4 5"></polyline>
+<line x1="12" x2="20" y1="19" y2="19"></line>
+</svg>
+</div>
+<span class="group-title">Журнал событий</span>
+<span class="chevron" id="logChev"></span>
+</button>
+<div class="log-filter" id="logFilter">
+<button class="active" data-level="all">Все записи</button>
+<button data-level="problems">Только проблемы</button>
+<span class="log-hint" id="logHint"></span>
+</div>
+<div id="logBody"></div>
+</div>
+</main>
+<!-- ================= Настройки ================= -->
+<main class="page" id="pageSettings">
+<div class="settings-bar">
+<button aria-label="Назад" class="m3-icon-btn" id="backBtn">
+<svg fill="none" height="22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewbox="0 0 24 24" width="22">
+<polyline points="15 18 9 12 15 6"></polyline>
+</svg>
+</button>
+<span class="settings-bar-title">Настройки</span>
+</div>
+<h3 class="section-title">Подписки</h3>
+<div class="group" id="subAdmin"></div>
+<h3 class="section-title">Импорт</h3>
+<div class="group">
+<button class="settings-row center" id="importProfiles">
+<svg fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" style="margin-right:8px" viewbox="0 0 24 24" width="18">
+<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+<rect height="4" rx="1" ry="1" width="8" x="8" y="2"></rect>
+</svg>
+            Добавить из буфера обмена
+        </button>
+</div>
+<h3 class="section-title">Раздельное туннелирование</h3>
+<div class="group">
+<button class="settings-row mode-row" id="splitAll">
+<span class="mode-copy">
+<span>Все приложения</span>
+<small>Весь сетевой трафик проходит через зашифрованный туннель</small>
+</span>
+<span class="mark"></span>
+</button>
+<button class="settings-row mode-row" id="splitAllow">
+<span class="mode-copy">
+<span>Приложения через VPN</span>
+<small>Только выбранные приложения идут через туннель, остальные напрямую</small>
+</span>
+<span class="mark"></span>
+</button>
+<button class="settings-row mode-row" id="splitExclude">
+<span class="mode-copy">
+<span>Приложения в обход VPN</span>
+<small>Выбранные приложения идут напрямую, остальные через туннель</small>
+</span>
+<span class="mark"></span>
+</button>
+<button class="settings-row center" hidden="" id="splitPick">Выбрать приложения</button>
+</div>
+<h3 class="section-title">Диагностика</h3>
+<div class="group">
+<button class="settings-row" id="journalRow">
+<span>Логи ядер<small>Детальный вывод olcrtc и Xray и системные события</small></span>
+<span class="switch" id="journalSwitch"></span>
+</button>
+</div>
+<h3 class="section-title">О приложении</h3>
+<div class="group">
+<div class="settings-row">
+<span>Ядро соединения</span><span class="value" id="coreVersion">—</span>
+</div>
+<div class="settings-row">
+<span>Версия клиента</span><span class="value" id="appVersion">—</span>
+</div>
+</div>
+</main>
+<div class="scrim" id="scrim"></div>
+<!-- iOS Action Sheet -->
+<div class="sheet" id="sheet">
+<div class="sheet-handle"></div>
+<button class="sheet-item" data-action="import">
+<svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24" width="20">
+<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+<rect height="4" rx="1" ry="1" width="8" x="8" y="2"></rect>
+</svg>
+<span>Добавить из буфера обмена</span>
+</button>
+<button class="sheet-item" data-action="cancel">
+<span>Отмена</span>
+</button>
+</div>
+<!-- iOS Dialog -->
+<div class="modal" id="modal">
+<div class="modal-head" id="modalTitle">Информация о профиле</div>
+<div class="modal-body" id="modalBody"></div>
+<div class="modal-actions">
+<button class="m3-btn filled" data-action="modal-connect" id="modalConnect">Подключиться</button>
+<button class="m3-btn text-danger" data-action="modal-remove">Удалить профиль</button>
+<button class="m3-btn" data-action="modal-close">Закрыть</button>
+</div>
+</div>
+<!-- iOS UIAlertController Alert -->
+<div class="modal alert" id="alert" role="alertdialog">
+<div class="alert-head" id="alertTitle"></div>
+<div class="alert-text" id="alertText"></div>
+<div class="alert-actions">
+<button class="alert-btn" id="alertCancel">Отмена</button>
+<button class="alert-btn danger" id="alertOk">Удалить</button>
+</div>
+</div>
+<!-- iOS App Picker Modal -->
+<div class="picker" id="appPicker">
+<div class="picker-bar">
+<button class="m3-btn" id="pickerClose" style="color:var(--ios-blue)">Отменить</button>
+<span class="picker-title" id="pickerTitle">Выбрать приложения</span>
+<button class="m3-btn" id="pickerDone" style="color:var(--ios-blue); font-weight:600">Готово</button>
+</div>
+<div class="picker-tools">
+<div class="picker-search">
+<input aria-label="Поиск приложения" autocomplete="off" class="picker-input" id="pickerQuery" placeholder="Поиск приложений..." type="text"/>
+<button aria-label="Очистить поиск" class="picker-search-clear" hidden="" id="pickerSearchClear" type="button">
+<svg fill="currentColor" height="16" viewbox="0 0 24 24" width="16">
+<path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"></path>
+</svg>
+</button>
+</div>
+<div class="picker-row">
+<label class="picker-switch"><input id="pickerSystem" type="checkbox"/><span>Показывать системные</span></label>
+<button class="picker-clear" id="pickerClear" type="button">Сбросить выбор</button>
+</div>
+</div>
+<div class="picker-loading" hidden="" id="pickerLoading" style="display:flex; justify-content:center; align-items:center; gap:8px; padding:28px; color:var(--ios-secondary-label)"><span class="spinner"></span><span>Загрузка приложений…</span></div>
+<div class="picker-list" id="pickerList"></div>
+</div>
+<script src="dev-mock.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var bridge = window.NodewayVpn;
+
+    var state = 'disconnected';
+    var model = {
+        profiles: [],
+        subscriptions: [],
+        selectedProfileId: '',
+        activeProfileId: '',
+        connectedAt: 0
+    };
+    /**
+     * Прогресс проверки откликов.
+     *
+     * Живёт отдельно от модели: за один прогон приходит десяток событий, и
+     * ради каждого перерисовывать список было бы нельзя — плашки обновляются
+     * точечно, по одной на профиль.
+     */
+    var ping = { running: false, index: 0, total: 0, profileId: '', results: {} };
+    var coreVersion = '';
+    var modalProfileId = '';
+    var logCollapsed = false;
+
+    var journalEntries = [];
+    var logFilter = 'all';
+    var journalEnabled = false;
+    var renderedUpTo = 0;
+    var renderFull = true;
+
+    var COLLAPSED_KEY = 'nodeway.collapsed';
+    var collapsed = loadCollapsed();
+
+    function loadCollapsed() {
+      var fallback = { subscriptions: {}, local: false, log: false };
+      try {
+        var raw = localStorage.getItem(COLLAPSED_KEY);
+        if (!raw) return fallback;
+        var saved = JSON.parse(raw);
+        return {
+          subscriptions: saved && saved.subscriptions ? saved.subscriptions : {},
+          local: !!(saved && saved.local),
+          log: !!(saved && saved.log)
+        };
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function saveCollapsed() {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed));
+      } catch (e) { }
+    }
+
+    var el = {
+        heroCard: document.getElementById('heroCard'),
+        powerBtn: document.getElementById('powerBtn'),
+        uptime: document.getElementById('uptime'),
+        statusText: document.getElementById('statusText'),
+        statusHint: document.getElementById('statusHint'),
+        statusChip: document.getElementById('statusChip'),
+        subscriptions: document.getElementById('subscriptions'),
+        localGroup: document.getElementById('localGroup'),
+        subAdmin: document.getElementById('subAdmin'),
+        logBody: document.getElementById('logBody'),
+        logChev: document.getElementById('logChev'),
+        logCard: document.getElementById('logCard'),
+        logFilter: document.getElementById('logFilter'),
+        logHint: document.getElementById('logHint'),
+        journalRow: document.getElementById('journalRow'),
+        journalSwitch: document.getElementById('journalSwitch'),
+        scrim: document.getElementById('scrim'),
+        sheet: document.getElementById('sheet'),
+        modal: document.getElementById('modal'),
+        modalTitle: document.getElementById('modalTitle'),
+        modalBody: document.getElementById('modalBody'),
+        modalConnect: document.getElementById('modalConnect'),
+        coreVersion: document.getElementById('coreVersion'),
+        alert: document.getElementById('alert'),
+        alertTitle: document.getElementById('alertTitle'),
+        alertText: document.getElementById('alertText'),
+        alertOk: document.getElementById('alertOk'),
+        alertCancel: document.getElementById('alertCancel')
+    };
+
+    var ICON_POWER_ON =
+        '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>';
+    var ICON_POWER_OFF =
+        '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>';
+
+    /** Иконка «проверить профили» для шапки группы. */
+    var ICON_PING =
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round"><path d="M3 12h3l2-6 3 12 2.5-8 1.5 4H21"/></svg>';
+
+    var ICON_CHEV =
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+
+    function clear(node) {
+        while (node.firstChild) node.removeChild(node.firstChild);
+    }
+
+    function svg(markup) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = markup;
+        return wrap.firstChild;
+    }
+
+    function chevron() {
+        var node = svg(ICON_CHEV);
+        node.setAttribute('class', 'chevron');
+        return node;
+    }
+
+    function spinner() {
+        var node = document.createElement('span');
+        node.className = 'spinner';
+        return node;
+    }
+
+    function parse(json) {
+        try { return JSON.parse(json); } catch (e) { return null; }
+    }
+
+    var MAX_LOG_LINES = 200;
+    var MAX_JOURNAL_ENTRIES = 400;
+
+    function pad(value) { return ('0' + value).slice(-2); }
+
+    function clockOf(millis) {
+        var d = new Date(millis);
+        return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+
+    function appendJournal(entries, reset) {
+        if (!journalEnabled) {
+            journalEntries = [];
+            renderFull = true;
+            return;
+        }
+        journalEntries = reset ? (entries || []).slice() : journalEntries.concat(entries || []);
+        if (journalEntries.length > MAX_JOURNAL_ENTRIES) {
+            journalEntries = journalEntries.slice(-MAX_JOURNAL_ENTRIES);
+        }
+        renderJournal();
+    }
+
+    function renderJournal() {
+        var shown = 0;
+        journalEntries.forEach(function (entry) {
+            if (visibleIn(entry)) shown++;
+        });
+        el.logHint.textContent = shown === journalEntries.length
+            ? ''
+            : shown + ' из ' + journalEntries.length;
+
+        if (!journalEnabled || logCollapsed) return;
+
+        if (renderFull || renderedUpTo > journalEntries.length) {
+            el.logBody.textContent = '';
+            renderedUpTo = 0;
+            renderFull = false;
+        }
+
+        for (var i = renderedUpTo; i < journalEntries.length; i++) {
+            if (!visibleIn(journalEntries[i])) continue;
+            el.logBody.appendChild(journalLine(journalEntries[i]));
+        }
+        renderedUpTo = journalEntries.length;
+
+        while (el.logBody.childElementCount > MAX_LOG_LINES) {
+            el.logBody.removeChild(el.logBody.firstChild);
+        }
+        el.logBody.scrollTop = el.logBody.scrollHeight;
+    }
+
+    function journalLine(entry) {
+        var source = entry.s || 'app';
+        var line = document.createElement('div');
+        line.className = 'log-line ' + source + ' ' + (entry.l || 'info');
+        line.textContent = clockOf(entry.t) + '  ' +
+            (source === 'app' ? '' : source + ' · ') + entry.m;
+        return line;
+    }
+
+    function visibleIn(entry) {
+        if (logFilter === 'all') return true;
+        return entry.l === 'warn' || entry.l === 'error';
+    }
+
+    function log(message) {
+        if (!message || !journalEnabled) return;
+        appendJournal([{ t: Date.now(), s: 'app', l: 'info', m: message }], false);
+    }
+
+    function applyJournalEnabled(value) {
+        journalEnabled = !!value;
+        el.journalSwitch.classList.toggle('on', journalEnabled);
+        el.logCard.hidden = !journalEnabled;
+        renderFull = true;
+        journalEntries = [];
+        el.logBody.textContent = '';
+    }
+
+    window.onJournalEnabled = function (value) {
+        applyJournalEnabled(value);
+    };
+
+    window.onJournalReset = function (payload) {
+        renderFull = true;
+        journalEntries = [];
+        appendJournal(parse(payload), true);
+    };
+
+    window.onJournalEntries = function (payload) {
+        appendJournal(parse(payload), false);
+    };
+
+    function profileById(id) {
+        return model.profiles.filter(function (p) { return p.id === id; })[0] || null;
+    }
+
+    function formatUptime(millis) {
+        var total = Math.max(0, Math.floor(millis / 1000));
+        var hours = Math.floor(total / 3600);
+        var minutes = Math.floor(total % 3600 / 60);
+        var seconds = total % 60;
+        return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+    }
+
+    function renderUptime() {
+        // Во время проверки время подключения не показываем: туннель живёт
+        // понемногу на каждом профиле, и счётчик скакал бы в обе стороны.
+        if (ping.running) {
+            el.uptime.textContent = '00:00:00';
+            return;
+        }
+        var running = state === 'connected' && model.connectedAt > 0;
+        el.uptime.textContent = running ? formatUptime(Date.now() - model.connectedAt) : '00:00:00';
+    }
+
+    function selectedProfile() {
+        return profileById(model.selectedProfileId);
+    }
+
+    /**
+     * Подписи данных, из которых собраны списки.
+     *
+     * Пока подпись не менялась, список не пересобираем. Пересборка создаёт строки
+     * заново, а вместе с ними и «галочку» выбранного профиля, у которой своя
+     * анимация появления, — та моргала бы на глазах при каждом событии состояния,
+     * даже когда сами профили не менялись.
+     */
+    var rowsSignature = null;
+    var subsSignature = null;
+
+    /** Приводит прогресс из моста к предсказуемому виду. */
+    function normalizePing(raw) {
+        var results = {};
+        if (raw && raw.results) {
+            Object.keys(raw.results).forEach(function (key) {
+                results[key] = Number(raw.results[key]);
+            });
+        }
+        return {
+            running: !!(raw && raw.running),
+            index: Number((raw && raw.index) || 0),
+            total: Number((raw && raw.total) || 0),
+            profileId: (raw && raw.profileId) || '',
+            results: results
+        };
+    }
+
+    /**
+     * Обновляет плашки без перерисовки списков.
+     *
+     * Списки перерисовывать нельзя: каждое событие проверки сбрасывало бы
+     * прокрутку и состояние развёрнутых групп.
+     */
+    function updatePingBadges() {
+        var rows = document.querySelectorAll('.row[data-profile-id]');
+        for (var i = 0; i < rows.length; i++) {
+            var badge = rows[i].querySelector('.ping-badge');
+            if (!badge) continue;
+            var id = rows[i].getAttribute('data-profile-id');
+            var ms = ping.results[id];
+            var current = ping.running && ping.profileId === id;
+            badge.className = 'ping-badge'
+                + (current ? ' active' : '')
+                + (typeof ms === 'number' && ms < 0 ? ' bad' : '');
+            badge.textContent = current ? '…'
+                : (typeof ms === 'number' ? (ms < 0 ? '—' : ms + ' мс') : '');
+        }
+    }
+
+    /** Гасит кнопки проверки, пока очередь занята. */
+    function updatePingButtons() {
+        var buttons = document.querySelectorAll('.ping-btn');
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].disabled = ping.running;
+            buttons[i].classList.toggle('busy', ping.running);
+        }
+    }
+
+    function startPing(ids) {
+        if (!ids.length || ping.running) return;
+        bridge.pingProfiles(JSON.stringify(ids));
+    }
+
+    function render() {
+        renderPower();
+        renderUptime();
+
+        var rows = JSON.stringify([model.profiles, model.selectedProfileId]);
+        if (rows !== rowsSignature) {
+            rowsSignature = rows;
+            renderSubscriptions();
+            renderLocals();
+        }
+        syncActiveRows();
+
+        // Список подписок в настройках живёт своей жизнью: кнопка «Обновить»
+        // крутит спиннер, обратный отсчёт тикает сам. Пересобирать его имеет
+        // смысл, только когда данные подписок действительно другие.
+        var subs = JSON.stringify(model.subscriptions);
+        if (subs !== subsSignature) {
+            subsSignature = subs;
+            renderSubAdmin();
+        }
+
+        updatePingBadges();
+        updatePingButtons();
+    }
+
+    /**
+     * Подсветка «i» у активного профиля.
+     *
+     * Зависит она только от activeProfileId, поэтому при смене подключения её
+     * достаточно переключить на месте: собирать заново весь список ради одного
+     * класса не нужно.
+     */
+    function syncActiveRows() {
+        var rows = document.querySelectorAll('.row[data-profile-id]');
+        for (var i = 0; i < rows.length; i++) {
+            var info = rows[i].querySelector('.info-btn');
+            if (!info) continue;
+            var active = rows[i].getAttribute('data-profile-id') === model.activeProfileId;
+            info.className = 'info-btn' + (active ? ' active' : '');
+        }
+    }
+
+    function renderPower() {
+        var on = state === 'connected';
+        var busy = state === 'connecting' || state === 'disconnecting';
+        // Во время проверки туннель то поднимается, то гаснет на каждом профиле.
+        // Кнопку питания по указанию не дёргаем: гасим и блокируем, а смысл
+        // показываем в плашке статуса.
+        var checking = ping.running;
+
+        el.powerBtn.className = 'power-btn' + (on ? ' on' : '') + (busy || checking ? ' busy' : '');
+        el.powerBtn.innerHTML = on ? ICON_POWER_ON : ICON_POWER_OFF;
+        el.powerBtn.disabled = busy || checking;
+
+        el.heroCard.classList.toggle('connected', on);
+
+        var active = profileById(model.activeProfileId);
+        el.statusChip.className = 'status-chip' + (checking ? ' busy'
+            : on ? ' on' : busy ? ' busy' : state === 'error' ? ' error' : '');
+        el.statusText.textContent = checking
+            ? 'Проверка: ' + (ping.index + 1) + ' из ' + ping.total
+            : {
+                disconnected: 'Отключено',
+                connecting: 'Подключение...',
+                connected: 'Подключено',
+                disconnecting: 'Отключение...',
+                error: 'Ошибка подключения'
+            }[state] || 'Отключено';
+
+        var hint;
+        if (checking) {
+            var current = profileById(ping.profileId);
+            hint = current ? 'Проверяем: ' + current.name : 'Проверяем профиль…';
+        } else if (state === 'error') {
+            hint = lastMessage || 'Не удалось установить соединение';
+        } else if (on && active) {
+            hint = 'Активный узел: ' + active.name;
+        } else {
+            var selected = selectedProfile();
+            hint = selected ? 'Выбран: ' + selected.name : 'Выберите узел и нажмите кнопку питания';
+        }
+        el.statusHint.textContent = hint;
+    }
+
+    function profileGroup(options, group) {
+        group = group || document.createElement('div');
+        group.className = 'group' + (options.collapsed ? ' collapsed' : '');
+
+        // Шапка — div с ролью кнопки, а не <button>: внутрь легла кнопка проверки,
+        // а вложенные интерактивные элементы невалидны и ломают клик по шапке.
+        var head = document.createElement('div');
+        head.className = 'group-head';
+        head.setAttribute('role', 'button');
+        head.setAttribute('tabindex', '0');
+
+        var iconWrap = document.createElement('div');
+        iconWrap.className = 'group-head-icon';
+        iconWrap.innerHTML = options.isCloud
+            ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'
+            : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>';
+        head.appendChild(iconWrap);
+
+        var title = document.createElement('span');
+        title.className = options.titleClass || 'group-title';
+        title.textContent = options.title;
+        head.appendChild(title);
+
+        // Кнопка проверки стоит сразу за названием группы — туда, куда её и просили.
+        if (options.pingable) {
+            var pingBtn = document.createElement('button');
+            pingBtn.type = 'button';
+            pingBtn.className = 'ping-btn';
+            pingBtn.setAttribute('aria-label', 'Проверить профили группы «' + options.title + '»');
+            pingBtn.innerHTML = ICON_PING;
+            pingBtn.onclick = function (event) {
+                event.stopPropagation();
+                startPing(options.rows.map(function (p) { return p.id; }));
+            };
+            head.appendChild(pingBtn);
+        }
+
+        if (options.count != null) {
+            var badge = document.createElement('span');
+            badge.className = 'group-badge';
+            badge.textContent = options.count ? String(options.count) : '0';
+            head.appendChild(badge);
+        }
+
+        head.appendChild(chevron());
+        head.onclick = function () {
+            group.classList.toggle('collapsed');
+            options.remember(group.classList.contains('collapsed'));
+            saveCollapsed();
+        };
+        head.onkeydown = function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                head.click();
+            }
+        };
+
+        var inner = document.createElement('div');
+        inner.className = 'group-inner';
+        if (options.rows.length) {
+            options.rows.forEach(function (profile) { inner.appendChild(profileRow(profile)); });
+        } else {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = options.emptyText;
+            inner.appendChild(empty);
+        }
+
+        var body = document.createElement('div');
+        body.className = 'group-body';
+        body.appendChild(inner);
+
+        group.appendChild(head);
+        group.appendChild(body);
+        return group;
+    }
+
+    function renderSubscriptions() {
+        clear(el.subscriptions);
+        if (!model.subscriptions.length) {
+            return;
+        }
+
+        model.subscriptions.forEach(function (sub) {
+            var subName = sub.name || 'Подписка';
+            el.subscriptions.appendChild(profileGroup({
+                title: subName,
+                isCloud: true,
+                pingable: true,
+                count: model.profiles.filter(function (p) { return p.subscriptionId === sub.id; }).length,
+                collapsed: collapsed.subscriptions[sub.id],
+                remember: function (value) { collapsed.subscriptions[sub.id] = value; },
+                rows: model.profiles.filter(function (p) { return p.subscriptionId === sub.id; }),
+                emptyText: 'В подписке пока нет профилей'
+            }));
+        });
+    }
+
+    function renderLocals() {
+        clear(el.localGroup);
+        var locals = model.profiles.filter(function (p) { return !p.fromSubscription; });
+        profileGroup({
+            title: 'Локальные профили',
+            titleClass: 'group-title',
+            isCloud: false,
+            pingable: true,
+            count: locals.length,
+            collapsed: collapsed.local,
+            remember: function (value) { collapsed.local = value; },
+            rows: locals,
+            emptyText: 'Профилей нет — скопируйте VLESS / OLCRTC ссылку и добавьте из буфера'
+        }, el.localGroup);
+    }
+
+    function renderSubAdmin() {
+        clear(el.subAdmin);
+        if (!model.subscriptions.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = 'Подписок пока нет';
+            el.subAdmin.appendChild(empty);
+            return;
+        }
+        model.subscriptions.forEach(function (sub) {
+            var row = document.createElement('div');
+            row.className = 'settings-row sub-row';
+
+            var body = document.createElement('span');
+            var name = document.createElement('span');
+            name.style.fontWeight = '600';
+            name.textContent = sub.name || 'Подписка';
+            body.appendChild(name);
+
+            var countLine = document.createElement('small');
+            countLine.textContent = 'Профилей в подписке: ' + (sub.count || 0);
+            body.appendChild(countLine);
+
+            if (sub.refreshMinutes > 0) {
+                var leftLine = document.createElement('small');
+                leftLine.textContent = 'Обновление через: ' + countdownText(sub);
+                leftLine.dataset.refreshMinutes = sub.refreshMinutes;
+                leftLine.dataset.updatedAt = sub.updatedAt || 0;
+                leftLine.dataset.addedAt = sub.addedAt || 0;
+                body.appendChild(leftLine);
+            }
+
+            row.appendChild(body);
+
+            var refresh = document.createElement('button');
+            refresh.className = 'value accent';
+            if (sub.loading) {
+              refresh.disabled = true;
+              refresh.appendChild(spinner());
+            } else {
+              refresh.textContent = 'Обновить';
+              refresh.onclick = function () {
+                log('обновляем «' + (sub.name || 'подписку') + '»');
+                bridge.refreshSubscription(sub.id);
+              };
+            }
+            row.appendChild(refresh);
+
+            var remove = document.createElement('button');
+            remove.className = 'value';
+            remove.style.color = 'var(--ios-red)';
+			remove.style.paddingTop = '4px';
+            remove.textContent = 'Удалить';
+            remove.onclick = function () {
+                var name = sub.name || 'Подписка';
+                var count = sub.count || 0;
+                confirm('Удалить подписку?', function () {
+                    bridge.removeSubscription(sub.id);
+                    log('подписка удалена');
+                }, 'Подписка «' + name + '» и её профили' +
+                    (count ? ' (' + count + ')' : '') + ' будут безвозвратно удалены.');
+            };
+            row.appendChild(remove);
+
+            el.subAdmin.appendChild(row);
+        });
+        syncCountdownTimer();
+    }
+
+    function countdownText(sub) {
+        var minutes = sub.refreshMinutes || 0;
+        if (minutes <= 0) return '';
+        var since = (sub.updatedAt || 0) > 0 ? sub.updatedAt : (sub.addedAt || 0);
+        if (!since) return '—';
+        var left = Math.floor((since + minutes * 60000 - Date.now()) / 1000);
+        if (left <= 0) return 'сейчас';
+        if (left < 60) return left + ' сек';
+        if (left < 3600) return Math.floor(left / 60) + ' мин';
+        return Math.ceil(left / 3600) + ' ч';
+    }
+
+    function countdownNodes() {
+        return el.subAdmin.querySelectorAll('small[data-refresh-minutes]');
+    }
+
+    function syncCountdownTimer() {
+        if (countdownTimer && !countdownNodes().length) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            return;
+        }
+        if (countdownTimer || !countdownNodes().length) return;
+
+        countdownTimer = setInterval(function () {
+            countdownNodes().forEach(function (node) {
+                node.textContent = 'Обновление через: ' + countdownText({
+                    refreshMinutes: +node.dataset.refreshMinutes,
+                    updatedAt: +node.dataset.updatedAt,
+                    addedAt: +node.dataset.addedAt
+                });
+            });
+        }, 1000);
+    }
+
+    var countdownTimer = null;
+
+    function profileRow(profile) {
+        var row = document.createElement('button');
+        row.className = 'row';
+        row.setAttribute('data-profile-id', profile.id);
+
+        var mark = document.createElement('span');
+        mark.className = 'mark' + (profile.id === model.selectedProfileId ? ' on' : '');
+        row.appendChild(mark);
+
+        var body = document.createElement('span');
+        body.className = 'row-body';
+
+        var name = document.createElement('span');
+        name.className = 'row-title';
+        name.textContent = profile.name;
+
+        var sub = document.createElement('span');
+        sub.className = 'row-sub';
+        sub.textContent = profile.type === 'olcrtc'
+            ? 'OLCRTC • ' + (profile.provider || '—').toUpperCase() + ' • '
+                + (profile.transport || '—')
+            : 'VLESS • ' + (profile.network || 'TCP').toUpperCase() + ' • '
+                + (profile.security || 'none').toUpperCase();
+
+        body.appendChild(name);
+        body.appendChild(document.createElement('br'));
+        body.appendChild(sub);
+        row.appendChild(body);
+
+        // Плашка результата стоит рядом с «i». Элемент всегда в DOM и обновляется
+        // точечно, поэтому перерисовывать весь список на каждый ответ не нужно.
+        var badge = document.createElement('span');
+        badge.className = 'ping-badge';
+        row.appendChild(badge);
+
+        var info = document.createElement('span');
+        info.className = 'info-btn' + (profile.id === model.activeProfileId ? ' active' : '');
+        info.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+        info.onclick = function (event) {
+            event.stopPropagation();
+            openModal(profile.id);
+        };
+        row.appendChild(info);
+
+        row.onclick = function () {
+            if (profile.id === model.selectedProfileId) return;
+            bridge.selectProfile(profile.id);
+        };
+
+        return row;
+    }
+
+    function openModal(profileId) {
+        var profile = profileById(profileId);
+        if (!profile) return;
+        modalProfileId = profileId;
+        el.modalTitle.textContent = profile.name;
+        clear(el.modalBody);
+
+        var source = [['Источник', profile.fromSubscription
+            ? (profile.subscriptionName || 'подписка') : 'буфер обмена']];
+
+        var details = profile.type === 'olcrtc' ? [
+            ['Тип протокола', 'OLCRTC'],
+            ['Провайдер', (profile.provider || '—').toUpperCase()],
+            ['Транспорт', profile.transport || '—'],
+            ['Комната', profile.room || '—']
+        ].concat(source) : [
+            ['Адрес сервера', profile.address + (profile.port ? ':' + profile.port : '')],
+            ['Сеть', (profile.network || 'tcp').toUpperCase()],
+            ['Безопасность', (profile.security || 'none').toUpperCase()],
+            ['SNI хост', profile.sni || '—']
+        ].concat(source);
+
+        details.concat([['URI ссылка', profile.link]]).forEach(function (pair) {
+            var row = document.createElement('div');
+            row.className = 'detail';
+            var key = document.createElement('span');
+            key.className = 'k';
+            key.textContent = pair[0];
+            var value = document.createElement('span');
+            value.className = 'v';
+            value.textContent = pair[1] || '—';
+            row.appendChild(key);
+            row.appendChild(value);
+            el.modalBody.appendChild(row);
+        });
+
+        el.modalConnect.textContent = profile.id === model.activeProfileId ? 'Отключить соединение' : 'Подключиться к узлу';
+        el.modal.classList.add('open');
+        el.scrim.classList.add('open');
+    }
+
+    function closeOverlays() {
+        el.sheet.classList.remove('open');
+        el.modal.classList.remove('open');
+        el.alert.classList.remove('open');
+        el.scrim.classList.remove('open');
+    }
+
+    function confirm(text, onYes, detail) {
+        closeOverlays();
+        el.alertTitle.textContent = text;
+        el.alertText.textContent = detail || '';
+        el.alertText.style.display = detail ? '' : 'none';
+        el.alertOk.textContent = 'Удалить';
+        el.alert.classList.add('open');
+        el.scrim.classList.add('open');
+
+        el.alertOk.onclick = function () {
+            closeOverlays();
+            onYes();
+        };
+        el.alertCancel.onclick = closeOverlays;
+    }
+
+    var splitMode = 'all';
+    var splitPackages = {};
+
+    var elSplit = {
+        all: document.getElementById('splitAll'),
+        allow: document.getElementById('splitAllow'),
+        exclude: document.getElementById('splitExclude'),
+        pick: document.getElementById('splitPick'),
+        picker: document.getElementById('appPicker'),
+        list: document.getElementById('pickerList'),
+        loading: document.getElementById('pickerLoading'),
+        query: document.getElementById('pickerQuery'),
+        searchClear: document.getElementById('pickerSearchClear'),
+        system: document.getElementById('pickerSystem'),
+        clear: document.getElementById('pickerClear'),
+        title: document.getElementById('pickerTitle')
+    };
+
+    function loadSplit() {
+        var data = parse(bridge.getSplitTunnelSettings());
+        if (!data) return;
+        splitMode = data.mode || 'all';
+        splitPackages = {};
+        (data.packages || []).forEach(function (pkg) { splitPackages[pkg] = true; });
+        renderSplit();
+    }
+
+    function setModeMark(row, on) {
+        row.querySelector('.mark').classList.toggle('on', on);
+    }
+
+    function renderSplit() {
+        setModeMark(elSplit.all, splitMode === 'all');
+        setModeMark(elSplit.allow, splitMode === 'allow');
+        setModeMark(elSplit.exclude, splitMode === 'exclude');
+        var count = Object.keys(splitPackages).length;
+        elSplit.pick.hidden = splitMode === 'all';
+        elSplit.pick.textContent = count ? 'Выбрать приложения (' + count + ')' : 'Выбрать приложения';
+        elSplit.clear.disabled = count === 0;
+    }
+
+    function setSplitMode(mode) {
+        if (mode === splitMode) return;
+        var reply = parse(bridge.setSplitTunnelMode(mode)) || {};
+        if (reply.ok === false) {
+            log(reply.error || 'не удалось сменить режим');
+            return;
+        }
+        splitMode = mode;
+        renderSplit();
+    }
+
+    var loadingTimer = null;
+
+    function showPickerLoading() {
+        clearTimeout(loadingTimer);
+        loadingTimer = setTimeout(function () { elSplit.loading.hidden = false; }, 150);
+    }
+
+    function hidePickerLoading() {
+        clearTimeout(loadingTimer);
+        elSplit.loading.hidden = true;
+    }
+
+    function openPicker() {
+        elSplit.query.value = '';
+        syncSearchClear();
+        elSplit.system.checked = false;
+        elSplit.picker.classList.add('open');
+        requestApps();
+    }
+
+    function closePicker() {
+        elSplit.picker.classList.remove('open');
+    }
+
+    var pickerRequest = 0;
+
+    function requestApps() {
+        var token = ++pickerRequest;
+        showPickerLoading();
+        clear(elSplit.list);
+        var includeSystem = elSplit.system.checked;
+        var query = elSplit.query.value.trim();
+        if (bridge.listInstalledAppsAsync) {
+            bridge.listInstalledAppsAsync(String(token), includeSystem, query);
+            return;
+        }
+        setTimeout(function () {
+            if (token !== pickerRequest) return;
+            var reply = bridge.listInstalledApps(includeSystem, query);
+            if (reply && typeof reply.then === 'function') {
+                reply.then(function (data) { applyApps(token, data); });
+                return;
+            }
+            applyApps(token, reply);
+        }, 0);
+    }
+
+    function applyApps(token, payload) {
+        if (Number(token) !== pickerRequest) return;
+        hidePickerLoading();
+        renderApps(parse(payload) || []);
+    }
+
+    window.onSplitApps = applyApps;
+
+    function renderApps(apps) {
+        clear(elSplit.list);
+        var chosen = apps.filter(function (app) { return splitPackages[app.pkg]; });
+        var rest = apps.filter(function (app) { return !splitPackages[app.pkg]; });
+
+        if (chosen.length) {
+            elSplit.list.appendChild(pickerGroup('Выбранные (' + chosen.length + ')'));
+            chosen.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
+        }
+        if (rest.length) {
+            if (chosen.length) elSplit.list.appendChild(pickerGroup('Остальные приложения'));
+            rest.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
+        }
+        if (!apps.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = elSplit.query.value.trim()
+                ? 'Ничего не найдено'
+                : 'Нет приложений для выбора';
+            elSplit.list.appendChild(empty);
+        }
+        watchIcons();
+    }
+
+    function pickerGroup(title) {
+        var node = document.createElement('div');
+        node.className = 'picker-group';
+        node.textContent = title;
+        return node;
+    }
+
+    function appRow(app) {
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'app-row' + (splitPackages[app.pkg] ? ' on' : '');
+
+        var icon = document.createElement('img');
+        icon.className = 'app-icon';
+        icon.alt = '';
+        icon.setAttribute('data-pkg', app.pkg);
+        row.appendChild(icon);
+
+        var copy = document.createElement('span');
+        copy.className = 'app-copy';
+        var name = document.createElement('span');
+        name.className = 'app-name';
+        name.textContent = app.label || app.pkg;
+        var pkg = document.createElement('span');
+        pkg.className = 'app-pkg';
+        pkg.textContent = app.pkg;
+        copy.appendChild(name);
+        copy.appendChild(pkg);
+        row.appendChild(copy);
+
+        row.appendChild(document.createElement('span')).className = 'app-box';
+
+        row.onclick = function () {
+            if (splitPackages[app.pkg]) delete splitPackages[app.pkg];
+            else splitPackages[app.pkg] = true;
+            requestApps();
+            renderSplit();
+        };
+
+        return row;
+    }
+
+    function enforceSplitFallback() {
+        if (splitMode === 'all') return;
+        if (Object.keys(splitPackages).length) return;
+        splitMode = 'all';
+        bridge.setSplitTunnelMode('all');
+        renderSplit();
+        log('режим сброшен: не выбрано ни одного приложения');
+    }
+
+    var iconCache = {};
+    var iconQueue = [];
+    var iconWaiting = {};
+    var iconBusy = false;
+    var ICON_CHUNK = 8;
+
+    var iconObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            iconObserver.unobserve(entry.target);
+            iconQueue.push(entry.target.querySelector('img'));
+        });
+        pumpIcons();
+    }, { root: elSplit.list, rootMargin: '240px 0px' });
+
+    function watchIcons() {
+        iconObserver.disconnect();
+        iconQueue = [];
+        var images = elSplit.list.querySelectorAll('img[data-pkg]');
+        Array.prototype.forEach.call(images, function (img) {
+            var pkg = img.getAttribute('data-pkg');
+            if (hasIcon(pkg)) img.src = iconCache[pkg];
+            else iconObserver.observe(img.parentNode);
+        });
+    }
+
+    function pumpIcons() {
+        if (iconBusy || !iconQueue.length) return;
+        iconBusy = true;
+        var chunk = iconQueue.splice(0, ICON_CHUNK);
+        setTimeout(function () {
+            chunk.forEach(function (img) {
+                var pkg = img.getAttribute('data-pkg');
+                if (hasIcon(pkg)) {
+                    applyIcon(img, iconCache[pkg]);
+                    return;
+                }
+                requestIcon(pkg, img);
+            });
+            iconBusy = false;
+            pumpIcons();
+        }, 0);
+    }
+
+    function requestIcon(pkg, img) {
+        if (bridge.getAppIconAsync) {
+            iconWaiting[pkg] = iconWaiting[pkg] || [];
+            iconWaiting[pkg].push(img);
+            bridge.getAppIconAsync(pkg);
+            return;
+        }
+        var url = bridge.getAppIcon(pkg);
+        if (url && typeof url.then === 'function') {
+            url.then(function (data) { storeIcon(pkg, data, [img]); });
+            return;
+        }
+        storeIcon(pkg, url, [img]);
+    }
+
+    function storeIcon(pkg, url, images) {
+        iconCache[pkg] = url || '';
+        images.forEach(function (img) { applyIcon(img, url); });
+    }
+
+    window.onAppIcon = function (pkg, url) {
+        var images = iconWaiting[pkg];
+        if (!images) return;
+        delete iconWaiting[pkg];
+        storeIcon(pkg, url, images);
+    };
+
+    function hasIcon(pkg) {
+        return Object.prototype.hasOwnProperty.call(iconCache, pkg);
+    }
+
+    function applyIcon(img, url) {
+        if (url) img.src = url;
+    }
+
+    elSplit.all.onclick = function () { setSplitMode('all'); };
+    elSplit.allow.onclick = function () { setSplitMode('allow'); };
+    elSplit.exclude.onclick = function () { setSplitMode('exclude'); };
+    elSplit.pick.onclick = openPicker;
+    document.getElementById('pickerClose').onclick = closePicker;
+    elSplit.system.onchange = requestApps;
+
+    elSplit.clear.onclick = function () {
+        if (!Object.keys(splitPackages).length) return;
+        splitPackages = {};
+        requestApps();
+        renderSplit();
+    };
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) enforceSplitFallback();
+    });
+
+    var searchTimer = null;
+    elSplit.query.oninput = function () {
+        clearTimeout(searchTimer);
+        syncSearchClear();
+        searchTimer = setTimeout(requestApps, 250);
+    };
+
+    function syncSearchClear() {
+        elSplit.searchClear.hidden = !elSplit.query.value.length;
+    }
+
+    elSplit.searchClear.onclick = function () {
+        clearTimeout(searchTimer);
+        elSplit.query.value = '';
+        syncSearchClear();
+        requestApps();
+        elSplit.query.focus();
+    };
+
+    document.getElementById('pickerDone').onclick = function () {
+        var packages = Object.keys(splitPackages);
+        var reply = parse(bridge.setSelectedPackages(JSON.stringify(packages))) || {};
+        if (reply.ok === false) {
+            log(reply.error || 'не удалось сохранить список');
+            return;
+        }
+        closePicker();
+        log('в списке приложений: ' + packages.length);
+    };
+
+    var lastMessage = '';
+
+    el.powerBtn.onclick = function () {
+        if (state === 'connected') {
+            bridge.requestDisconnect();
+            return;
+        }
+        var profile = selectedProfile() || model.profiles[0];
+        if (!profile) {
+            log('сначала добавьте профиль');
+            showPage('pageSettings');
+            return;
+        }
+        if (profile.id !== model.selectedProfileId) bridge.selectProfile(profile.id);
+        bridge.requestConnect(profile.id);
+    };
+
+    document.getElementById('addBtn').onclick = function () {
+        el.sheet.classList.add('open');
+        el.scrim.classList.add('open');
+    };
+
+    document.getElementById('logHead').onclick = function () {
+        logCollapsed = !logCollapsed;
+        el.logBody.style.display = logCollapsed ? 'none' : 'block';
+        el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
+        collapsed.log = logCollapsed;
+        saveCollapsed();
+        if (!logCollapsed) {
+            renderFull = true;
+            renderJournal();
+        }
+    };
+
+    el.logFilter.onclick = function (event) {
+        var button = event.target.closest('button');
+        if (!button) return;
+        logFilter = button.dataset.level;
+        el.logFilter.querySelectorAll('button').forEach(function (item) {
+            item.classList.toggle('active', item === button);
+        });
+        renderFull = true;
+        renderJournal();
+    };
+
+    el.journalRow.onclick = function () {
+        var wasEnabled = journalEnabled;
+        var reply = parse(bridge.setJournalEnabled(!journalEnabled));
+        if (!reply) return;
+        applyJournalEnabled(reply.enabled);
+        if (!wasEnabled && state === 'connected') {
+            log('вывод Xray появится со следующего подключения');
+        }
+    };
+
+    document.getElementById('importProfiles').onclick = function () {
+        var reply = parse(bridge.importFromClipboard());
+        if (reply) log(reply.message);
+    };
+
+    el.scrim.onclick = closeOverlays;
+
+    document.getElementById('settingsBtn').onclick = function () { showPage('pageSettings'); };
+    document.getElementById('backBtn').onclick = function () { showPage('pageHome'); };
+
+    function showPage(id) {
+        if (id !== 'pageSettings') enforceSplitFallback();
+        document.querySelectorAll('.page').forEach(function (page) {
+            page.classList.toggle('active', page.id === id);
+        });
+        document.getElementById('mainHeader').classList.toggle('hidden', id !== 'pageHome');
+        window.scrollTo(0, 0);
+    }
+
+    el.sheet.addEventListener('click', function (event) {
+        var action = event.target.closest('[data-action]')?.getAttribute('data-action');
+        if (!action) return;
+        closeOverlays();
+        if (action === 'import') {
+            var reply = parse(bridge.importFromClipboard());
+            if (reply) log(reply.message);
+        }
+    });
+
+    el.modal.addEventListener('click', function (event) {
+        var action = event.target.closest('[data-action]')?.getAttribute('data-action');
+        if (!action) return;
+        if (action === 'modal-close') closeOverlays();
+        if (action === 'modal-connect') {
+            var profile = profileById(modalProfileId);
+            closeOverlays();
+            if (!profile) return;
+            if (profile.id === model.activeProfileId) bridge.requestDisconnect();
+            else {
+                if (profile.id !== model.selectedProfileId) bridge.selectProfile(profile.id);
+                bridge.requestConnect(profile.id);
+            }
+        }
+        if (action === 'modal-remove') {
+            var target = profileById(modalProfileId);
+            if (!target) return;
+            confirm('Удалить профиль?', function () {
+                bridge.removeProfile(target.id);
+                log('профиль «' + target.name + '» удалён');
+            }, 'Профиль «' + target.name + '» будет удалён без возможности восстановления.');
+        }
+    });
+
+    window.setInsets = function (top, bottom) {
+        document.documentElement.style.setProperty('--inset-top', (top || 0) + 'px');
+        document.documentElement.style.setProperty('--inset-bottom', (bottom || 0) + 'px');
+    };
+
+    window.onVpnState = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        state = data.state;
+        lastMessage = data.message || '';
+        if (data.ping) {
+            var next = normalizePing(data.ping);
+            if (next.total > 0) {
+                // Пошёл новый прогон — прежние плашки уходят.
+                ping = next;
+            } else {
+                // Прогона нет: результаты держим на экране, обновляя только шаг.
+                // Иначе они стирались бы в любой посторонний момент — сервис
+                // после проверки гаснет и поднимается с пустой памятью.
+                ping.running = next.running;
+                ping.index = next.index;
+                ping.total = next.total;
+                ping.profileId = next.profileId;
+                Object.keys(next.results).forEach(function (key) {
+                    ping.results[key] = next.results[key];
+                });
+            }
+        }
+        renderPower();
+        renderUptime();
+        updatePingBadges();
+        updatePingButtons();
+    };
+
+    window.onProfilesChanged = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        model = data;
+        render();
+    };
+
+    window.onImportResult = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        log(data.message);
+        render();
+    };
+
+    if (bridge) {
+        var initial = parse(bridge.getInitialState());
+        if (initial) {
+            model = initial.state;
+			state = model.vpnState || 'disconnected';
+            ping = normalizePing(model.ping);
+            coreVersion = initial.coreVersion || '';
+            applyJournalEnabled(!!initial.journalEnabled);
+            if (initial.appVersion) {
+                document.getElementById('appVersion').textContent = initial.appVersion;
+            }
+        }
+        el.coreVersion.textContent = coreVersion || '—';
+        el.logChev.innerHTML = ICON_CHEV;
+        logCollapsed = collapsed.log;
+        el.logBody.style.display = logCollapsed ? 'none' : 'block';
+        el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
+        loadSplit();
+        log('интерфейс готов');
+    } else {
+        log('Android-мост недоступен');
+    }
+
+    render();
+    setInterval(renderUptime, 1000);
+})();
+</script>
+</body></html>
