@@ -333,7 +333,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         )
     }
 
-    
 
     override fun onRefreshSubscriptionRequested(id: String) {
         val source = store.subscription(id) ?: return
@@ -371,7 +370,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     override fun uiState(): String = store.toUiModel(activeProfileId).toString()
 
-    // ai-generated
     override fun onGetSplitTunnelSettings(): String {
         // Режим без единого приложения ничего не делает, поэтому приводим к общему.
         if (TunnelMode.fromCode(prefs.tunnelMode) != TunnelMode.ALL && prefs.splitPackages.isEmpty()) {
@@ -384,7 +382,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }.toString()
     }
 
-    // ai-generated
     override fun onSetSplitTunnelModeRequested(mode: String): String {
         val next = TunnelMode.fromCode(mode.trim())
         prefs.tunnelMode = next.code
@@ -393,7 +390,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         return splitResult(ok = true)
     }
 
-    // ai-generated
     override fun onSetPackageSelectedRequested(packageName: String, selected: Boolean): String {
         val pkg = packageName.trim()
         if (pkg.isEmpty()) return splitResult(ok = false, error = "Пустое имя пакета")
@@ -409,7 +405,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         return splitResult(ok = true)
     }
 
-    // ai-generated
     override fun onSetSelectedPackagesRequested(packagesJson: String): String {
         val array = runCatching { JSONArray(packagesJson) }.getOrNull()
             ?: return splitResult(ok = false, error = "Не удалось разобрать список")
@@ -428,7 +423,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         return splitResult(ok = true)
     }
 
-    // ai-generated
     override fun onListInstalledAppsRequested(includeSystem: Boolean, query: String): String =
         installedAppsJson(includeSystem, query)
 
@@ -437,7 +431,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
      *
      * Отдельная функция нужна и синхронному, и асинхронному пути.
      */
-    // ai-generated
     private fun installedAppsJson(includeSystem: Boolean, query: String): String {
         val selected = prefs.splitPackages
         val needle = query.trim().lowercase()
@@ -466,7 +459,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         return array.toString()
     }
 
-    // ai-generated
     override fun onGetAppIconRequested(packageName: String): String {
         val pkg = packageName.trim()
         if (pkg.isEmpty()) return ""
@@ -484,7 +476,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
      * отрисовать индикатор загрузки, поэтому тяжёлое уходит в отдельный поток,
      * а ответ приходит вызовом из Kotlin.
      */
-    // ai-generated
     override fun onListInstalledAppsAsyncRequested(
         token: String,
         includeSystem: Boolean,
@@ -496,7 +487,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
     }
 
-    // ai-generated
     override fun onGetAppIconAsyncRequested(packageName: String) {
         val pkg = packageName.trim()
         appsExecutor.execute {
@@ -506,14 +496,12 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     }
 
     /** Отдаёт список приложений странице: `window.onSplitApps(token, json)`. */
-    // ai-generated
     private fun pushSplitApps(token: String, payload: String) {
         val script = "window.onSplitApps && window.onSplitApps('${escape(token)}', '${escape(payload)}');"
         runOnUiThread { runCatching { webView.evaluateJavascript(script, null) } }
     }
 
     /** Отдаёт иконку странице: `window.onAppIcon(pkg, url)`. */
-    // ai-generated
     private fun pushAppIcon(packageName: String, dataUrl: String) {
         val script =
             "window.onAppIcon && window.onAppIcon('${escape(packageName)}', '${escape(dataUrl)}');"
@@ -526,7 +514,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
      * Первое обращение к packageManager занимает на медленных устройствах секунды,
      * а открыть лист выбора можно сразу после запуска приложения.
      */
-    // ai-generated
     private fun warmInstalledAppsCache() {
         appsExecutor.execute { installedApps() }
     }
@@ -539,7 +526,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     private data class InstalledApp(val pkg: String, val label: String, val system: Boolean)
 
     /** Установленные приложения. Список кэшируется: он дорогой и меняется редко. */
-    // ai-generated
     private fun installedApps(): List<InstalledApp> {
         installedAppsCache?.let { return it }
         val pm = packageManager
@@ -558,7 +544,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     }
 
     /** Иконка приложения как data-URL: WebView умеет показывать такие картинки напрямую. */
-    // ai-generated
     private fun encodeIcon(packageName: String): String {
         val drawable = packageManager.getApplicationIcon(packageName)
         val width = drawable.intrinsicWidth
@@ -581,7 +566,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     }
 
     /** Пересоздаёт туннель с теми же настройками, если VPN уже поднят. */
-    // ai-generated
     private fun restartTunnelWithSplitSettings() = runOnUiThread {
         if (vpnState != VpnState.CONNECTED.code && vpnState != VpnState.CONNECTING.code) {
             return@runOnUiThread
@@ -592,7 +576,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     }
 
     /** Ответ на изменение настроек раздельного туннелирования. */
-    // ai-generated
     private fun splitResult(ok: Boolean, error: String = ""): String = JSONObject().apply {
         put("ok", ok)
         put("error", error)

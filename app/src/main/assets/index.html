@@ -12,7 +12,6 @@
         --text: #000000;
         --muted: #8A8A8E;
         --blue: #007AFF;
-        --yellow: #FFCC00;
         --green: #34C759;
         --red: #FF3B30;
         /* Отступы под системные панели: приложение передаёт их из Kotlin (setInsets). */
@@ -380,17 +379,38 @@
     }
 
     .settings-row:last-child { border-bottom: none; }
-    .settings-row .value { margin-left: auto; color: var(--muted); font-size: 15px; }
     .settings-row.center { justify-content: center; color: var(--blue); }
-    .settings-row.danger { justify-content: center; color: var(--red); }
-    .settings-row small { display: block; color: var(--muted); font-size: 13px; }
-    .settings-row small { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-    .settings-row .value { flex: none; margin-left: auto; padding: 4px 0 4px 12px; }
+    .settings-row .value {
+        flex: none;
+        margin-left: auto;
+        padding: 4px 0 4px 12px;
+        color: var(--muted);
+        font-size: 15px;
+    }
+    .settings-row small {
+        display: block;
+        flex: 1;
+        min-width: 0;
+        color: var(--muted);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
 
   /* Синие действия в настройках — как «Добавить из буфера». */
   .settings-row .value.accent {
     color: var(--blue);
     width: 82px;
+  }
+
+  /* Плашка подписки: тело занимает три строки, кнопки прижаты к заголовку,
+     иначе align-items: center ставит их между «Профилей» и отсчётом. */
+  .settings-row.sub-row {
+    align-items: flex-start;
+  }
+
+  .settings-row.sub-row > span {
+    flex: 1;
+    min-width: 0;
   }
 
   /* Спиннер загрузки подписки: кольцо с вращающейся «шапкой». */
@@ -966,8 +986,7 @@
         modalTitle: document.getElementById('modalTitle'),
         modalBody: document.getElementById('modalBody'),
         modalConnect: document.getElementById('modalConnect'),
-        modalRemove: document.getElementById('modalRemove'),
-    coreVersion: document.getElementById('coreVersion'),
+        coreVersion: document.getElementById('coreVersion'),
     alert: document.getElementById('alert'),
     alertTitle: document.getElementById('alertTitle'),
     alertText: document.getElementById('alertText'),
@@ -1023,12 +1042,12 @@
     /** Сколько записей держим в памяти страницы. */
     var MAX_JOURNAL_ENTRIES = 400;
 
+    function pad(value) { return ('0' + value).slice(-2); }
+
     /** ЧЧ:ММ:СС с ведущими нулями. */
     function clockOf(millis) {
         var d = new Date(millis);
-        return ('0' + d.getHours()).slice(-2) + ':' +
-            ('0' + d.getMinutes()).slice(-2) + ':' +
-            ('0' + d.getSeconds()).slice(-2);
+        return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
     }
 
     /**
@@ -1148,7 +1167,6 @@
         var hours = Math.floor(total / 3600);
         var minutes = Math.floor(total % 3600 / 60);
         var seconds = total % 60;
-        function pad(value) { return ('0' + value).slice(-2); }
         return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
     }
 
@@ -1202,6 +1220,61 @@
         el.statusHint.textContent = hint;
     }
 
+    /**
+     * Группа профилей со сворачиваемым заголовком.
+     *
+     * Подписки и локальные профили отличаются только заголовком, набором строк
+     * и текстом пустого состояния, поэтому собираются здесь одним кодом.
+     * Группа переиспользует переданный узел, если он уже есть в разметке.
+     */
+    function profileGroup(options, group) {
+        group = group || document.createElement('div');
+        // Состояние свёртки храним отдельно, иначе перерисовка его сбрасывает.
+        group.className = 'group' + (options.collapsed ? ' collapsed' : '');
+
+        var head = document.createElement('button');
+        head.className = 'group-head';
+
+        var title = document.createElement('span');
+        title.className = options.titleClass || 'group-title';
+        title.textContent = options.title;
+        head.appendChild(title);
+
+        // Счётчик есть только у локальных профилей: у подписки его роль играет облако.
+        if (options.count != null) {
+            var badge = document.createElement('span');
+            badge.className = 'row-sub';
+            badge.textContent = options.count ? String(options.count) : '';
+            head.appendChild(badge);
+        }
+
+        head.appendChild(chevron());
+        head.onclick = function () {
+            group.classList.toggle('collapsed');
+            options.remember(group.classList.contains('collapsed'));
+            saveCollapsed();
+        };
+
+        var inner = document.createElement('div');
+        inner.className = 'group-inner';
+        if (options.rows.length) {
+            options.rows.forEach(function (profile) { inner.appendChild(profileRow(profile)); });
+        } else {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = options.emptyText;
+            inner.appendChild(empty);
+        }
+
+        var body = document.createElement('div');
+        body.className = 'group-body';
+        body.appendChild(inner);
+
+        group.appendChild(head);
+        group.appendChild(body);
+        return group;
+    }
+
     function renderSubscriptions() {
         clear(el.subscriptions);
         if (!model.subscriptions.length) {
@@ -1213,88 +1286,31 @@
         }
 
         model.subscriptions.forEach(function (sub) {
-            var profiles = model.profiles.filter(function (p) {
-                return p.subscriptionId === sub.id;
-            });
-            var group = document.createElement('div');
-            // Состояние свёртки храним отдельно, иначе перерисовка его сбрасывает.
-            group.className = 'group' + (collapsed.subscriptions[sub.id] ? ' collapsed' : '');
-
-            var head = document.createElement('button');
-            head.className = 'group-head';
-
-            var title = document.createElement('span');
-            title.className = 'group-title';
             var subName = sub.name || 'Подписка';
             // Название может уже содержать эмодзи облака — не дублируем.
-            title.textContent = subName.indexOf('☁') === -1 ? '☁️ ' + subName : subName;
-            head.appendChild(title);
-
-            head.appendChild(chevron());
-            head.onclick = function () {
-                group.classList.toggle('collapsed');
-                collapsed.subscriptions[sub.id] = group.classList.contains('collapsed');
-                saveCollapsed();
-            };
-
-            var body = document.createElement('div');
-            body.className = 'group-body';
-            var inner = document.createElement('div');
-            inner.className = 'group-inner';
-            body.appendChild(inner);
-            if (!profiles.length) {
-                var empty = document.createElement('div');
-                empty.className = 'empty';
-                empty.textContent = 'Пока нет профилей';
-                inner.appendChild(empty);
-            } else {
-                profiles.forEach(function (profile) { inner.appendChild(profileRow(profile)); });
-            }
-
-            group.appendChild(head);
-            group.appendChild(body);
-            el.subscriptions.appendChild(group);
+            var title = subName.indexOf('☁') === -1 ? '☁️ ' + subName : subName;
+            el.subscriptions.appendChild(profileGroup({
+                title: title,
+                collapsed: collapsed.subscriptions[sub.id],
+                remember: function (value) { collapsed.subscriptions[sub.id] = value; },
+                rows: model.profiles.filter(function (p) { return p.subscriptionId === sub.id; }),
+                emptyText: 'Пока нет профилей'
+            }));
         });
     }
 
     function renderLocals() {
         clear(el.localGroup);
         var locals = model.profiles.filter(function (p) { return !p.fromSubscription; });
-        var group = el.localGroup;
-        group.className = 'group' + (collapsed.local ? ' collapsed' : '');
-
-        var head = document.createElement('button');
-        head.className = 'group-head';
-        var title = document.createElement('span');
-        title.className = 'group-title small';
-        title.textContent = 'Локальные профили';
-        head.appendChild(title);
-        var count = document.createElement('span');
-        count.className = 'row-sub';
-        count.textContent = locals.length ? String(locals.length) : '';
-        head.appendChild(count);
-        head.appendChild(chevron());
-        head.onclick = function () {
-            group.classList.toggle('collapsed');
-            collapsed.local = group.classList.contains('collapsed');
-            saveCollapsed();
-        };
-        group.appendChild(head);
-
-        var body = document.createElement('div');
-        body.className = 'group-body';
-        var inner = document.createElement('div');
-        inner.className = 'group-inner';
-        body.appendChild(inner);
-        if (!locals.length) {
-            var empty = document.createElement('div');
-            empty.className = 'empty';
-            empty.textContent = 'Профилей нет — скопируйте vless- или olcrtc-ссылку и импортируйте из буфера';
-            inner.appendChild(empty);
-        } else {
-            locals.forEach(function (profile) { inner.appendChild(profileRow(profile)); });
-        }
-        group.appendChild(body);
+        profileGroup({
+            title: 'Локальные профили',
+            titleClass: 'group-title small',
+            count: locals.length,
+            collapsed: collapsed.local,
+            remember: function (value) { collapsed.local = value; },
+            rows: locals,
+            emptyText: 'Профилей нет — скопируйте vless- или olcrtc-ссылку и импортируйте из буфера'
+        }, el.localGroup);
     }
 
     function renderSubAdmin() {
@@ -1308,17 +1324,35 @@
         }
         model.subscriptions.forEach(function (sub) {
             var row = document.createElement('div');
-            row.className = 'settings-row';
+            row.className = 'settings-row sub-row';
 
             var body = document.createElement('span');
             var name = document.createElement('span');
             name.textContent = sub.name || 'Подписка';
-            var meta = document.createElement('small');
-            meta.textContent = (sub.host || '') + ' \u00B7 ' + sub.count + ' \u00B7 ' + sub.refreshLabel +
-                ' \u00B7 ' + (sub.updatedLabel || 'ещё не обновлялась');
             body.appendChild(name);
+
+            // Плашка настроек: адрес убран, вместо него то, что важно при работе
+            // с подпиской, — сколько профилей пришло и когда ждать следующего.
             body.appendChild(document.createElement('br'));
-            body.appendChild(meta);
+
+            var countLine = document.createElement('small');
+            countLine.textContent = 'Профилей: ' + (sub.count || 0);
+            body.appendChild(countLine);
+
+            // Без автообновления отсчёта не существует — строку прячем целиком.
+            if (sub.refreshMinutes > 0) {
+                // Перед строкой отсчёта <br> не нужен: <small> и так блочный,
+                // а <br> между двумя блоками даёт пустую строку.
+                var leftLine = document.createElement('small');
+                leftLine.textContent = 'Обновление через: ' + countdownText(sub);
+                // Исходные значения держим в data-*: тик правит только текст и не должен
+                // зависеть от узлов, которые renderSubAdmin при следующем render() заменит.
+                leftLine.dataset.refreshMinutes = sub.refreshMinutes;
+                leftLine.dataset.updatedAt = sub.updatedAt || 0;
+                leftLine.dataset.addedAt = sub.addedAt || 0;
+                body.appendChild(leftLine);
+            }
+
             row.appendChild(body);
 
             var refresh = document.createElement('button');
@@ -1353,7 +1387,61 @@
 
             el.subAdmin.appendChild(row);
         });
+        syncCountdownTimer();
     }
+
+    /**
+     * Сколько осталось до следующего автообновления.
+     *
+     * Опора — последнее обновление, а если его не было ни разу, то момент
+     * добавления подписки: иначе новая подписка показывала бы пустоту вместо
+     * первого интервала.
+     */
+    function countdownText(sub) {
+        var minutes = sub.refreshMinutes || 0;
+        if (minutes <= 0) return '';
+        var since = (sub.updatedAt || 0) > 0 ? sub.updatedAt : (sub.addedAt || 0);
+        if (!since) return '—';
+        var left = Math.floor((since + minutes * 60000 - Date.now()) / 1000);
+        if (left <= 0) return 'сейчас';
+        // Детализация только на последнем шаге: «57 мин 51 сек» и «8 ч 59 мин»
+        // не влезают в колонку рядом с кнопками и рвутся пополам.
+        if (left < 60) return left + ' сек';
+        if (left < 3600) return Math.floor(left / 60) + ' мин';
+        return Math.ceil(left / 3600) + ' ч';
+    }
+
+    function countdownNodes() {
+        return el.subAdmin.querySelectorAll('small[data-refresh-minutes]');
+    }
+
+    /**
+     * Секундный тик отсчёта.
+     *
+     * Живёт только пока в настройках есть хоть одна строка с отсчётом: иначе таймер
+     * крутился бы вхолостую на главном экране. Перерисовывает исключительно текст —
+     * полный render() дёргал бы всё дерево раз в секунду без нужды.
+     */
+    function syncCountdownTimer() {
+        if (countdownTimer && !countdownNodes().length) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            return;
+        }
+        if (countdownTimer || !countdownNodes().length) return;
+
+        countdownTimer = setInterval(function () {
+            countdownNodes().forEach(function (node) {
+                node.textContent = 'Обновление через: ' + countdownText({
+                    refreshMinutes: +node.dataset.refreshMinutes,
+                    updatedAt: +node.dataset.updatedAt,
+                    addedAt: +node.dataset.addedAt
+                });
+            });
+        }, 1000);
+    }
+
+    var countdownTimer = null;
 
     function profileRow(profile) {
         var row = document.createElement('button');
@@ -1496,7 +1584,6 @@
         title: document.getElementById('pickerTitle')
     };
 
-    /** ai-generated: загрузка текущего режима и набора пакетов из настроек. */
     function loadSplit() {
         var data = parse(bridge.getSplitTunnelSettings());
         if (!data) return;
@@ -1506,7 +1593,6 @@
         renderSplit();
     }
 
-    /** ai-generated: отметка выбранного режима и счётчика в кнопке выбора. */
     function renderSplit() {
         elSplit.all.classList.toggle('on', splitMode === 'all');
         elSplit.allow.classList.toggle('on', splitMode === 'allow');
@@ -1517,7 +1603,7 @@
         elSplit.clear.disabled = count === 0;
     }
 
-    /** ai-generated: смена режима. При отказе ядра список остаётся прежним. */
+    /** При отказе ядра режим и список пакетов остаются прежними. */
     function setSplitMode(mode) {
         if (mode === splitMode) return;
         var reply = parse(bridge.setSplitTunnelMode(mode)) || {};
@@ -1530,8 +1616,6 @@
     }
 
     /**
-     * ai-generated: индикатор загрузки.
-     *
      * Показывается с задержкой в 150 мс: список на быстрых устройствах приходит
      * быстрее, и мигающий спиннер выглядел бы хуже отсутствия спиннера.
      */
@@ -1547,7 +1631,6 @@
         elSplit.loading.hidden = true;
     }
 
-    /** ai-generated: открытие листа выбора и первая загрузка списка. */
     function openPicker() {
         elSplit.title.textContent = splitMode === 'allow'
             ? 'Приложения через VPN'
@@ -1563,21 +1646,14 @@
         elSplit.picker.classList.remove('open');
     }
 
-    /**
-     * ai-generated: запрос списка приложений с текущим поиском и фильтром.
-     *
-     * Обращение к мосту синхронное и на сотнях пакетов заметно тормозит,
-     * поэтому работа откладывается на следующий кадр: индикатор успевает появиться.
-     */
     var pickerRequest = 0;
 
     /**
-     * ai-generated: запрос списка приложений.
-     *
      * Основной путь асинхронный: мост считает список в отдельном потоке и
-     * отвечает вызовом [onSplitApps]. Синхронный вызов замораживал страницу на
-     * слабых устройствах, и индикатор загрузки успевал скрыться, не показавшись.
-     * Старый путь остался запасным, если асинхронных методов у моста нет.
+     * отвечает вызовом window.onSplitApps. Синхронный вызов на сотнях пакетов
+     * заметно тормозит и замораживает страницу на слабых устройствах, причём
+     * индикатор загрузки успевает скрыться, не показавшись.
+     * Синхронный путь остался запасным, если асинхронных методов у моста нет.
      */
     function requestApps() {
         var token = ++pickerRequest;
@@ -1610,8 +1686,6 @@
     window.onSplitApps = applyApps;
 
     /**
-     * ai-generated: список, где отмеченные приложения закреплены сверху.
-     *
      * Иконки не запрашиваются здесь: их отрисовка идёт порциями по мере прокрутки,
      * иначе сотня синхронных вызовов моста замораживает страницу.
      */
@@ -1646,7 +1720,6 @@
         return node;
     }
 
-    /** ai-generated: строка приложения с иконкой и галочкой. */
     function appRow(app) {
         var row = document.createElement('button');
         row.type = 'button';
@@ -1684,7 +1757,7 @@
     }
 
     /**
- * ai-generated: режим без единого приложения ничего не делает, поэтому при уходе
+ * Режим без единого приложения ничего не делает, поэтому при уходе
  * с настроек, сворачивании или следующем запуске он сбрасывается в «Все приложения».
  */
     function enforceSplitFallback() {
@@ -1697,8 +1770,6 @@
     }
 
     /**
-     * ai-generated: ленивая подгрузка иконок.
-     *
      * Запрашиваются только строки, близкие к экрану, и не больше пачки за кадр:
      * иначе прокрутка заикает, а перекодирование сотни иконок занимает секунды.
      */
@@ -1719,7 +1790,6 @@
         pumpIcons();
     }, { root: elSplit.list, rootMargin: '240px 0px' });
 
-    /** ai-generated: ставит наблюдение за иконками новых строк. */
     function watchIcons() {
         iconObserver.disconnect();
         iconQueue = [];
@@ -1731,7 +1801,6 @@
         });
     }
 
-    /** ai-generated: разбирает очередь иконок небольшими порциями. */
     function pumpIcons() {
         if (iconBusy || !iconQueue.length) return;
         iconBusy = true;
@@ -1751,8 +1820,6 @@
     }
 
     /**
-     * ai-generated: запрашивает иконку у моста.
-     *
      * Асинхронный вариант кодирует картинку в отдельном потоке: иначе на
      * слабом устройстве каждая иконка задерживает отрисовку списка.
      */
@@ -1784,7 +1851,7 @@
         storeIcon(pkg, url, images);
     };
 
-    /** ai-generated: был ли пакет запрошен раньше, даже если иконки у него нет. */
+    /** Пакет уже запрашивали, даже если иконки у него нет. */
     function hasIcon(pkg) {
         return Object.prototype.hasOwnProperty.call(iconCache, pkg);
     }
@@ -1801,8 +1868,6 @@
     elSplit.system.onchange = requestApps;
 
     /**
-     * ai-generated: снять все отметки одним касанием.
-     *
      * К ядру список уходит только по кнопке «Готово», поэтому очистка обратима:
      * закрытый лист ничего не меняет.
      */
@@ -1827,8 +1892,6 @@
     };
 
     /**
-     * ai-generated: крестик очистки поиска.
-     *
      * Показывает себя только при непустом поле: пустой крестик только мешает.
      * После очистки фокус возвращается в поле, чтобы можно было сразу печатать.
      */

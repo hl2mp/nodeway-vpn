@@ -78,7 +78,7 @@ class XrayLogTailer(private val file: File) {
 
                 Thread.sleep(POLL_INTERVAL_MS)
             }
-        } catch (e: InterruptedException) {
+        } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
         } catch (e: Exception) {
             Log.w(TAG, "xray log tail failed", e)

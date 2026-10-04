@@ -6,44 +6,30 @@ import libXray.LibXray
 import org.json.JSONObject
 
 /**
- * Thin Kotlin facade over the embedded Xray-core (gomobile binding `libXray.LibXray`).
+ * Тонкая обёртка над встроенным Xray-core (gomobile-биндинг `libXray.LibXray`).
  *
- * All calls are blocking and must be performed off the main thread.
+ * Все вызовы блокирующие, их нужно делать вне главного потока.
  */
 object XrayCore {
 
     private const val TAG = "XrayCore"
 
-    /** `LibXrayAPIVersion` in the Go binding. */
+    /** `LibXrayAPIVersion` в Go-биндинге. */
     private const val API_VERSION = 3
 
     private const val METHOD_RUN = "runXray"
     private const val METHOD_STOP = "stopXray"
-    private const val METHOD_TEST = "testXray"
-    private const val METHOD_STATE = "getXrayState"
     private const val METHOD_VERSION = "xrayVersion"
 
     /**
-     * Starts the core with the given configuration.
-     * @return empty string on success, otherwise the error reported by the core.
+     * Запускает ядро с указанной конфигурацией.
+     * @return пустая строка при успехе, иначе текст ошибки от ядра.
      */
     fun start(xrayJson: String): String = invoke(METHOD_RUN, JSONObject().put("xrayJson", xrayJson))
-
-    /** Validates a configuration without starting anything. */
-    fun test(xrayJson: String): String = invoke(METHOD_TEST, JSONObject().put("xrayJson", xrayJson))
 
     fun stop() {
         val error = invoke(METHOD_STOP, JSONObject())
         if (error.isNotEmpty()) Log.w(TAG, "stopXray: $error")
-    }
-
-    fun isRunning(): Boolean = try {
-        val response = rawInvoke(METHOD_STATE, JSONObject())
-        val data = response.optJSONObject("data")
-        data != null && data.optBoolean("running", false)
-    } catch (e: Exception) {
-        Log.w(TAG, "getXrayState failed", e)
-        false
     }
 
     fun version(): String = try {
@@ -56,7 +42,7 @@ object XrayCore {
         ""
     }
 
-    /** Makes the Go DNS resolver bypass the VPN instead of looping into the tunnel. */
+    /** Пускает резолвер Go мимо туннеля, иначе DNS уходит в него же и зацикливается. */
     fun setupDns(server: String, controller: DialerController) {
         runCatching { LibXray.setDNS(controller, server) }
             .onFailure { Log.w(TAG, "setDNS failed", it) }
@@ -72,7 +58,7 @@ object XrayCore {
         LibXray.registerListenerController(controller)
     }
 
-    /** @return error message, empty string when the call succeeded. */
+    /** @return текст ошибки, пустая строка при успешном вызове. */
     private fun invoke(method: String, payload: JSONObject): String {
         val response = rawInvoke(method, payload)
         if (response.optBoolean("success", false)) return ""

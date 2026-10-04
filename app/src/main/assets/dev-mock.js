@@ -72,7 +72,7 @@
         connectedAt: 0,
         selectedProfileId: 'p-2',
         activeProfileId: '',
-        subscriptions: [sub(1, 'Nodeway - VPN', 'https://panel.example.com/sub/token', 60, '2 мин назад')],
+        subscriptions: [sub(1, 'Nodeway - VPN', 'https://panel.example.com/sub/token', 60, 2)],
         profiles: [
           makeProfile('p-1', 'CF Основной (TLS)', 'cf.example.com:443 · TLS/TCP'),
           makeProfile('p-2', 'CF Резервный (Reality)', 'cf2.example.com:443 · REALITY/XHTTP', {
@@ -111,9 +111,11 @@
         selectedProfileId: 'p-1',
         activeProfileId: '',
         subscriptions: [
-          sub(1, 'Nodeway - VPN', 'https://panel.example.com/sub/token', 60, '2 мин назад'),
-          sub(2, 'Быстрый доступ', 'https://fast.example.com/sub/abc', 30, 'только что'),
-          sub(3, 'Рабочий — резерв', 'https://backup.example.org/list', 720, 'ещё не обновлялась')
+          sub(1, 'Nodeway - VPN', 'https://panel.example.com/sub/token', 60, 2),
+          sub(2, 'Быстрый доступ', 'https://fast.example.com/sub/abc', 30, 0),
+          sub(3, 'Рабочий — резерв', 'https://backup.example.org/list', 720, null),
+          // Ноль минут — автообновление выключено: строку с отсчётом прячет.
+          sub(4, 'Ручная подписка', 'https://manual.example.net/sub', 0, 45)
         ],
         profiles: [
           makeProfile('p-1', 'CF Основной (TLS)', 'cf.example.com:443 · TLS/TCP'),
@@ -140,16 +142,22 @@
     }
   };
 
-  /** Подписка в том же виде, что в UI-модели ProfileStore. */
-  function sub(number, name, url, refreshMinutes, updatedLabel) {
+  /**
+   * Подписка в том же виде, что в UI-модели ProfileStore.
+   *
+   * updatedMinutes назад — сколько прошло с последнего обновления; при null
+   * подписка ещё ни разу не обновлялась и отсчёт идёт от addedAt.
+   */
+  function sub(number, name, url, refreshMinutes, updatedMinutes) {
+    var now = Date.now();
     return {
       id: 'sub-' + number,
       name: name,
       url: url,
       host: url.replace(/^https?:\/\//, '').split('/')[0],
-      refreshLabel: 'автообновление раз в ' + (refreshMinutes / 60) + ' ч',
-      updatedLabel: updatedLabel,
-      nextRefreshInMinutes: refreshMinutes,
+      refreshMinutes: refreshMinutes,
+      updatedAt: updatedMinutes === null ? 0 : now - updatedMinutes * 60000,
+      addedAt: now - (3 * 60) * 60000,
       loading: false,
       count: 2
     };
@@ -239,7 +247,6 @@
   var state = {
     model: scenarios.default(),
     vpnState: 'disconnected',
-    connectedAt: 0,
     splitMode: 'all',
     splitPackages: new Set(),
     /*
@@ -279,14 +286,18 @@
     ['olcrtc', 'info', 'sid=9 tunnel to 1.1.1.1:443']
   ];
 
-  function journalNow(source, level, text) {
-    return { t: Date.now(), s: source, l: level, m: text };
+  /**
+   * Запись журнала. `secondsAgo` отнимается от текущего времени — так собирается
+   * готовый хвост, который страница получает задним числом.
+   */
+  function journalNow(source, level, text, secondsAgo) {
+    return { t: Date.now() - (secondsAgo || 0) * 1000, s: source, l: level, m: text };
   }
 
   function emitJournalReset() {
     if (!state.journalEnabled || !window.onJournalReset) return;
     var entries = journalScript.map(function (row) {
-      return { t: Date.now() - row[0] * 1000, s: row[1], l: row[2], m: row[3] };
+      return journalNow(row[1], row[2], row[3], row[0]);
     });
     window.onJournalReset(JSON.stringify(entries));
   }
@@ -315,6 +326,12 @@
     if (window.onVpnState) {
       window.onVpnState(JSON.stringify({ state: next, message: message || '' }));
     }
+  }
+
+  /** Активный профиль и время подключения всегда меняются вместе. */
+  function setConnection(profileId, connectedAt) {
+    state.model.activeProfileId = profileId || '';
+    state.model.connectedAt = connectedAt;
   }
 
   window.NodewayVpn = {
@@ -417,10 +434,8 @@
         journalNow('olcrtc', 'info', 'cnc: dialing udp to room.example.com:3478')
       ]);
       setTimeout(function () {
-        state.model.activeProfileId = profileId;
         state.model.selectedProfileId = profileId;
-        state.connectedAt = Date.now();
-        state.model.connectedAt = state.connectedAt;
+        setConnection(profileId, Date.now());
         emitVpn('connected', 'Подключено');
         emitProfiles();
         emitJournalTail();
@@ -431,9 +446,7 @@
       emitVpn('disconnecting', 'Отключаемся…');
       emitJournal([journalNow('app', 'info', 'Отключаемся')]);
       setTimeout(function () {
-        state.model.activeProfileId = '';
-        state.model.connectedAt = 0;
-        state.connectedAt = 0;
+        setConnection('', 0);
         emitVpn('disconnected', 'Отключено');
         emitProfiles();
         emitJournal([journalNow('app', 'info', 'Отключено')]);
@@ -452,7 +465,6 @@
       emitProfiles();
       setTimeout(function () {
         target.loading = false;
-        target.updatedLabel = 'обновлено только что';
         emitProfiles();
         if (window.onImportResult) {
           window.onImportResult(JSON.stringify({
@@ -483,7 +495,6 @@
       }
       state.model = scenarios.many();
       state.model.subscriptions = state.model.subscriptions.slice(0, 1);
-      state.model.subscriptions[0].updatedLabel = 'обновлено только что';
       emitProfiles();
       return JSON.stringify({
         ok: true, added: 5, total: 5, unsupported: 0,
@@ -577,11 +588,9 @@
 
       if (vpnState === 'connected') {
         var first = state.model.profiles[0];
-        state.model.activeProfileId = first ? first.id : '';
-        state.connectedAt = Date.now();
-        state.model.connectedAt = state.connectedAt;
+        setConnection(first ? first.id : '', Date.now());
       } else {
-        state.connectedAt = 0;
+        setConnection('', 0);
       }
 
       emitProfiles();

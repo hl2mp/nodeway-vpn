@@ -35,7 +35,7 @@ data class ServerProfile(
 
     /** Короткое описание «адрес:порт · защита/сеть» для карточки в UI. */
     fun describe(): String = runCatching {
-        if (OlcrtcProfile.isOlcrtcLink(link)) {
+        if (isOlcrtc) {
             OlcrtcProfile.parse(link).describe()
         } else {
             val parsed = VlessProfile.parse(link)
@@ -49,7 +49,7 @@ data class ServerProfile(
     }
 
     /** Имя сервера из ссылки: MIMO-комментарий для olcrtc, remark для VLESS. */
-    private fun remarkOf(): String = if (OlcrtcProfile.isOlcrtcLink(link)) {
+    private fun remarkOf(): String = if (isOlcrtc) {
         OlcrtcProfile.parse(link).remark
     } else {
         val parsed = VlessProfile.parse(link)
@@ -109,37 +109,6 @@ data class SubscriptionSource(
 ) {
 
     val refreshMillis: Long get() = refreshMinutes * 60_000L
-
-    val refreshLabel: String
-        get() = when {
-            refreshMinutes <= 0 -> "обновление вручную"
-            refreshMinutes < 60 -> "автообновление раз в $refreshMinutes мин"
-            refreshMinutes % (24 * 60) == 0 -> "автообновление раз в ${refreshMinutes / (24 * 60)} д"
-            else -> "автообновление раз в ${refreshMinutes / 60} ч"
-        }
-
-    /** «Обновлено 5 мин назад» — для подписи в списке подписок. */
-    val updatedLabel: String
-        get() = when {
-            updatedAt <= 0L -> "ещё не обновлялась"
-            else -> {
-                val minutes = ((System.currentTimeMillis() - updatedAt) / 60_000L).toInt()
-                when {
-                    minutes < 1 -> "обновлено только что"
-                    minutes < 60 -> "обновлено $minutes мин назад"
-                    else -> "обновлено ${minutes / 60} ч назад"
-                }
-            }
-        }
-
-    /** Через сколько минут положено обновиться в следующий раз. */
-    val nextRefreshInMinutes: Int
-        get() = if (refreshMinutes <= 0 || updatedAt <= 0L) {
-            -1
-        } else {
-            val left = ((updatedAt + refreshMillis - System.currentTimeMillis()) / 60_000L).toInt()
-            left.coerceAtLeast(0)
-        }
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)

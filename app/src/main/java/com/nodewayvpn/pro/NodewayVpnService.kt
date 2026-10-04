@@ -142,7 +142,7 @@ class NodewayVpnService : VpnService() {
         connectVless(link)
     }
 
-    private suspend fun connectVless(link: String) {
+    private fun connectVless(link: String) {
         val profile = try {
             VlessProfile.parse(link)
         } catch (e: IllegalArgumentException) {

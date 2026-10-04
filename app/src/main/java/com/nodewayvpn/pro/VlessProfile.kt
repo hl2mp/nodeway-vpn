@@ -94,8 +94,10 @@ data class VlessProfile(
                 publicKey = params["pbk"].orEmpty(),
                 shortId = params["sid"].orEmpty(),
                 spiderX = params["spx"].orEmpty().ifBlank { "/" },
-                allowInsecure = params["allowInsecure"].toBoolean() ||
-                    params["insecure"].toBoolean(),
+                // Клиенты пишут флаг по-разному: и allowInsecure=1, и insecure=true.
+// Приём на nullable нужен, чтобы params[key] звал эту функцию, а не stdlib:
+// у stdlib toBoolean() ресивер String?, и наш хелпер молча остался бы неиспользуемым.
+                allowInsecure = params["allowInsecure"].toFlag() || params["insecure"].toFlag(),
                 network = network,
                 path = path,
                 hostHeader = hostHeader,
@@ -108,7 +110,7 @@ data class VlessProfile(
 
         private fun splitHostPort(value: String): Pair<String, Int> {
             val unbracketed = value.removePrefix("[").removeSuffix("]")
-            // Host part may be "example.com:443" or a bare IPv6 literal like "::1".
+            // Из ссылки: пример «example.com:443» и голый IPv6-литерал вида «::1».
             val lastColon = unbracketed.lastIndexOf(':')
             val looksLikeIpv6 = unbracketed.count { it == ':' } > 1 && value.startsWith("[")
             require(lastColon > 0 && !looksLikeIpv6) { "Не указан порт сервера" }
@@ -121,7 +123,7 @@ data class VlessProfile(
 
         private fun parseQuery(query: String): Map<String, String> {
             if (query.isBlank()) return emptyMap()
-            // Reuse Uri to get percent-decoded query parameters.
+            // Uri сам разбирает query и раскодирует percent-encoding.
             val uri = Uri.parse("http://localhost/?$query")
             val result = mutableMapOf<String, String>()
             uri.queryParameterNames.forEach { key ->
@@ -130,7 +132,7 @@ data class VlessProfile(
             return result
         }
 
-        private fun String.toBoolean(): Boolean =
-            equals("1", true) || equals("true", ignoreCase = true)
+        private fun String?.toFlag(): Boolean =
+            this != null && (equals("1", ignoreCase = true) || equals("true", ignoreCase = true))
     }
 }

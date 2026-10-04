@@ -7,7 +7,7 @@ import org.json.JSONObject
  * Объект, доступный UI в WebView как `window.NodewayVpn`.
  *
  * Методы вызываются на приватном JS-потоке WebView, поэтому реализация в
- * [MainActivity] перепрыгивает на главный поток и возвращает JSON-строкуми.
+ * [MainActivity] перепрыгивает на главный поток и возвращает JSON-строками.
  *
  * Долгие операции (загрузка подписки) асинхронные: метод возвращает сразу,
  * а результат приходит в `window.onImportResult(json)`.
@@ -28,8 +28,6 @@ class VpnWebBridge(private val host: Host) {
          */
         fun onImportClipboardRequested(): String
 
-        
-
         fun onRefreshSubscriptionRequested(id: String)
 
         fun onRemoveSubscriptionRequested(id: String)
@@ -46,15 +44,12 @@ class VpnWebBridge(private val host: Host) {
         fun uiState(): String
 
         /** Текущий режим и набор пакетов раздельного туннелирования. */
-        // ai-generated
         fun onGetSplitTunnelSettings(): String
 
         /** Сохраняет режим раздельного туннелирования. */
-        // ai-generated
         fun onSetSplitTunnelModeRequested(mode: String): String
 
         /** Добавляет или убирает пакет из набора раздельного туннелирования. */
-        // ai-generated
         fun onSetPackageSelectedRequested(packageName: String, selected: Boolean): String
 
         /**
@@ -63,11 +58,9 @@ class VpnWebBridge(private val host: Host) {
          * Список приходит JSON-массивом. Отмечать по одному нельзя: туннель
          * пересоздаётся на каждое изменение и рвёт активное соединение.
          */
-        // ai-generated
         fun onSetSelectedPackagesRequested(packagesJson: String): String
 
         /** Список установленных приложений для выбора в настройках туннелирования. */
-        // ai-generated
         fun onListInstalledAppsRequested(includeSystem: Boolean, query: String): String
 
         /**
@@ -77,7 +70,6 @@ class VpnWebBridge(private val host: Host) {
          * браузер не может отрисовать индикатор загрузки. Ответ приходит вызовом
          * `window.onSplitApps(token, json)`.
          */
-        // ai-generated
         fun onListInstalledAppsAsyncRequested(
             token: String,
             includeSystem: Boolean,
@@ -85,11 +77,9 @@ class VpnWebBridge(private val host: Host) {
         )
 
         /** Иконка приложения в виде data-URL для WebView. */
-        // ai-generated
         fun onGetAppIconRequested(packageName: String): String
 
         /** Иконка считается в отдельном потоке, ответ приходит в `window.onAppIcon`. */
-        // ai-generated
         fun onGetAppIconAsyncRequested(packageName: String)
 
         /** Ведётся ли журнал: выключатель в настройках. */
@@ -127,39 +117,31 @@ class VpnWebBridge(private val host: Host) {
     @JavascriptInterface
     fun requestDisconnect() = host.onDisconnectRequested()
 
-    // ai-generated
     @JavascriptInterface
     fun getSplitTunnelSettings(): String = host.onGetSplitTunnelSettings()
 
-    // ai-generated
     @JavascriptInterface
     fun setSplitTunnelMode(mode: String): String = host.onSetSplitTunnelModeRequested(mode)
 
-    // ai-generated
     @JavascriptInterface
     fun setPackageSelected(packageName: String, selected: Boolean): String =
         host.onSetPackageSelectedRequested(packageName, selected)
 
-    // ai-generated
     @JavascriptInterface
     fun setSelectedPackages(packagesJson: String): String =
         host.onSetSelectedPackagesRequested(packagesJson)
 
-    // ai-generated
     @JavascriptInterface
     fun listInstalledApps(includeSystem: Boolean, query: String): String =
         host.onListInstalledAppsRequested(includeSystem, query)
 
-    // ai-generated
     @JavascriptInterface
     fun listInstalledAppsAsync(token: String, includeSystem: Boolean, query: String) =
         host.onListInstalledAppsAsyncRequested(token, includeSystem, query)
 
-    // ai-generated
     @JavascriptInterface
     fun getAppIcon(packageName: String): String = host.onGetAppIconRequested(packageName)
 
-    // ai-generated
     @JavascriptInterface
     fun getAppIconAsync(packageName: String) = host.onGetAppIconAsyncRequested(packageName)
 

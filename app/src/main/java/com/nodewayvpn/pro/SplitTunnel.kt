@@ -32,7 +32,6 @@ enum class TunnelMode(val code: String) {
  * попадает в разрешённые, иначе приложение не сможет закрыть туннель и обновить
  * подписку, а в [TunnelMode.EXCLUDE] - всегда исключается из списка.
  */
-// ai-generated
 fun Builder.applySplitTunnel(
     context: Context,
     mode: TunnelMode,
@@ -68,7 +67,6 @@ fun Builder.applySplitTunnel(
  *
  * В режиме [TunnelMode.ALLOW] к списку всегда добавляется пакет самого приложения.
  */
-// ai-generated
 fun splitPackages(context: Context): Set<String> {
     val prefs = Prefs(context)
     val packages = prefs.splitPackages
@@ -78,7 +76,6 @@ fun splitPackages(context: Context): Set<String> {
     }
 }
 
-// ai-generated
 private fun isInstalled(packageManager: PackageManager, pkg: String): Boolean = runCatching {
     packageManager.getPackageInfo(pkg, 0)
 }.isSuccess

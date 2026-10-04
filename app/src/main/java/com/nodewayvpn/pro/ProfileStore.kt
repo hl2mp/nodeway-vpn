@@ -86,11 +86,7 @@ class ProfileStore(context: Context) {
         }
     }
 
-    fun renameProfile(id: String, name: String) {
-        synchronized(lock) {
-            profiles = profiles.map { if (it.id == id) it.copy(name = name) else it }
-        }
-    }
+    
 
     /** Заменяет профили подписки на свежие, сохраняя выбор пользователя. */
     fun replaceSubscriptionProfiles(subscriptionId: String, fresh: List<ServerProfile>) {
@@ -171,9 +167,13 @@ class ProfileStore(context: Context) {
                     put("url", subscription.url)
                     // Полный URL в настройках не показываем — только домен, он помещается в строку.
                     put("host", hostOf(subscription.url))
-                    put("refreshLabel", subscription.refreshLabel)
-                    put("updatedLabel", subscription.updatedLabel)
-                    put("nextRefreshInMinutes", subscription.nextRefreshInMinutes)
+                    // Настройки сами считают обратный отсчёт, поэтому шлём сырые числа.
+                    // Готовые подписи замерзали на момент отправки состояния:
+                    // «обновлено 2 мин назад» не старело, пока страница жива.
+                    put("refreshMinutes", subscription.refreshMinutes)
+                    put("updatedAt", subscription.updatedAt)
+                    // addedAt — опора для отсчёта, пока подписка не обновлялась ни разу.
+                    put("addedAt", subscription.addedAt)
                     // true, пока подписка грузится: кнопка «Обновить» показывает спиннер.
                     put("loading", loadingSubscriptions.contains(subscription.id))
                     put("count", profiles.count { it.subscriptionId == subscription.id })
