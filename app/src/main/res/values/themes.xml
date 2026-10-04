@@ -1,6 +1,12 @@
 <resources>
     <!-- The whole UI is rendered by assets/index.html inside a WebView. -->
-    <style name="Theme.NodewayVPN" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+    <!--
+        Общая часть темы. Само имя Theme.NodewayVPN наследует её без правок,
+        а values-v31 переопределяет только экран загрузки — так общие пункты
+        остаются в одном месте, а не дублируются в двух файлах.
+    -->
+    <style name="Theme.NodewayVPN.Base" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/nodeway_accent</item>
         <item name="colorPrimaryVariant">@color/nodeway_accent_dark</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -9,4 +15,6 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
+
+    <style name="Theme.NodewayVPN" parent="Theme.NodewayVPN.Base" />
 </resources>

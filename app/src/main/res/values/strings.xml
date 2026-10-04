@@ -4,6 +4,7 @@
     <string name="notification_connecting">Подключение…</string>
     <string name="notification_connected">Nodeway VPN подключён</string>
     <string name="notification_disconnecting">Отключение…</string>
+  <string name="notification_ping">Проверка профилей…</string>
     <string name="notification_subtitle">Трафик защищён ядром Xray</string>
 
     <string name="action_disconnect">Отключить</string>

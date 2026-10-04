@@ -1,0 +1,16 @@
+<resources>
+    <!--
+        Android 12 и новее рисуют экран запуска сами. Без этих пунктов система
+        всё равно показала бы иконку, но на теме окна, а не на фирменном синем,
+        и от запуска до первого кадра был бы заметный скачок цвета.
+    -->
+    <style name="Theme.NodewayVPN" parent="Theme.NodewayVPN.Base">
+        <item name="android:windowSplashScreenBackground">@color/nodeway_splash_background</item>
+        <!--
+            Именно слой облака, а не @mipmap/ic_launcher. У адаптивной иконки свой
+            градиентный фон, и на плоском фоне сплеша он читался бы отдельным
+            тёмным кругом. Здесь фон уже задан цветом, лишний слой не нужен.
+        -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

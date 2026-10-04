@@ -11,4 +11,7 @@
     <color name="nodeway_surface">#FF141A22</color>
     <color name="nodeway_accent">#FF3DDC97</color>
     <color name="nodeway_accent_dark">#FF1E9E67</color>
+
+    <!-- Верх фирменного градиента иконки: фон экрана запуска на Android 12+. -->
+    <color name="nodeway_splash_background">#FF185BDE</color>
 </resources>

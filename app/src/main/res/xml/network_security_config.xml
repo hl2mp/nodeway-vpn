@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Замер отклика идёт на generate_204 по http: TLS-рукопожатие там стоило бы
+    дороже самого измерения, а на соединении между замерами его ещё и не было бы
+    — между ними соединение успевает закрыться по таймауту, и каждая цифра
+    впитывала бы рукопожатие вместо отклика.
+
+    Исключение намеренно узкое — ровно один адрес, без поддоменов. Внутри
+    туннеля трафик всё равно шифруется апстримом, а вне его приложение
+    cleartext по-прежнему не разрешает.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">www.google.com</domain>
+    </domain-config>
+</network-security-config>
