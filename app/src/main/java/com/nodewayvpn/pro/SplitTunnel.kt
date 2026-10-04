@@ -23,26 +23,55 @@ enum class TunnelMode(val code: String) {
 }
 
 /**
+ * Пакеты, которые надо передать в [Builder], и ничего больше.
+ *
+ * Вынесено отдельной чистой функцией намеренно: решение о судьбе собственного пакета
+ * приложения — единственное место здесь с нетривиальной логикой, и именно оно ломает
+ * olcrtc при неверном [includeSelf]. Функция ничего не знает про Android, поэтому
+ * её поведение проверяется обычным тестом.
+ *
+ * @param includeSelf входит ли пакет приложения в туннель.
+ *
+ * Обычному транспорту нужно `true`: через VPN приложение обновляет подписки.
+ * olcrtc — отдельный процесс с тем же UID, он не умеет вызывать `protect()`, и его
+ * сокеты попадают в подменённый маршрут. Ему нужен `false`, то есть наш UID вне
+ * туннеля в любом режиме.
+ */
+internal fun tunnelTargets(
+    mode: TunnelMode,
+    packages: Set<String>,
+    selfPackage: String,
+    includeSelf: Boolean,
+): Set<String> = when (mode) {
+    TunnelMode.ALL -> emptySet()
+    // Свой пакет убираем всегда: в разрешённый список он попасть не должен, а в
+    // список исключений — тем более. Для этого случая хватает отсутствия в списке,
+    // поэтому addDisallowedApplication здесь и не вызывается: Android не принимает
+    // разрешённый и запрещённый списки одновременно.
+    TunnelMode.ALLOW -> packages.toMutableSet().apply {
+        if (includeSelf) add(selfPackage) else remove(selfPackage)
+    }
+    TunnelMode.EXCLUDE -> packages - selfPackage
+}
+
+/**
  * Применяет настройки раздельного туннелирования к [Builder] интерфейса VPN.
  *
  * Ошибки наружу не пробрасываются: приложение могли удалить после сохранения списка,
  * и такое не должно ронять подключение.
  *
- * @param selfPackage пакет самого приложения: в режиме [TunnelMode.ALLOW] он всегда
- * попадает в разрешённые, иначе приложение не сможет закрыть туннель и обновить
- * подписку, а в [TunnelMode.EXCLUDE] - всегда исключается из списка.
+ * @param selfPackage пакет самого приложения.
+ * @param includeSelf см. [tunnelTargets].
  */
 fun Builder.applySplitTunnel(
     context: Context,
     mode: TunnelMode,
     packages: Set<String>,
     selfPackage: String,
+    includeSelf: Boolean = true,
 ) {
-    val targets = when (mode) {
-        TunnelMode.ALLOW -> packages + selfPackage
-        TunnelMode.EXCLUDE -> packages.filter { it != selfPackage }
-        TunnelMode.ALL -> return
-    }
+    val targets = tunnelTargets(mode, packages, selfPackage, includeSelf)
+    if (targets.isEmpty()) return
 
     var applied = 0
     targets.forEach { pkg ->

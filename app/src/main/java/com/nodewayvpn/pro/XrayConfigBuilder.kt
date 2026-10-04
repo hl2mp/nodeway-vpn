@@ -148,10 +148,11 @@ object XrayConfigBuilder {
     private fun streamSettings(profile: VlessProfile): JSONObject = JSONObject().apply {
         put("network", profile.network)
         put("security", profile.security)
-        if (profile.fingerprint.isNotBlank() && !profile.isReality) {
-            put("fingerprint", profile.fingerprint)
-        }
 
+        // `raw` — новое имя того же TCP-транспорта (начиная с Xray 24.9.30), старые
+        // клиенты присылают `tcp`. Обе строки обязаны вести в одно место: без `raw`
+        // блок транспорта просто не попал бы в конфиг, и обфускация headerType
+        // потерялась бы молча.
         when (profile.network) {
             "ws" -> put("wsSettings", wsLikeSettings(profile))
             "httpupgrade" -> put("httpupgradeSettings", wsLikeSettings(profile))
@@ -165,7 +166,7 @@ object XrayConfigBuilder {
                 put("path", profile.path)
                 hostHeader(profile)?.let { put("host", JSONArray().put(it)) }
             })
-            "tcp" -> put("tcpSettings", JSONObject().apply {
+            "tcp", "raw" -> put("tcpSettings", JSONObject().apply {
                 put("header", JSONObject().put("type", profile.headerType))
             })
         }
@@ -183,6 +184,12 @@ object XrayConfigBuilder {
                 put("serverName", profile.sni)
                 put("allowInsecure", profile.allowInsecure)
                 if (profile.alpn.isNotEmpty()) put("alpn", JSONArray(profile.alpn))
+                // uTLS-отпечаток живёт именно здесь, внутри tlsSettings. На верхнем
+                // уровне streamSettings такого поля нет, и Go молча выбрасывает
+                // неизвестный ключ: ядро уходит в TLS без маскировки, и Cloudflare
+                // режет рукопожатие — хотя тот же профиль на REALITY работает,
+                // потому что там отпечаток клался в правильный блок.
+                if (profile.fingerprint.isNotBlank()) put("fingerprint", profile.fingerprint)
             })
         }
     }

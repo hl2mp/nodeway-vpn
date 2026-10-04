@@ -73,7 +73,12 @@ data class VlessProfile(
             val params = parseQuery(query)
 
             val network = params["type"]?.lowercase(Locale.ROOT)?.takeIf { it.isNotBlank() } ?: "tcp"
-            val security = params["security"]?.lowercase(Locale.ROOT)?.takeIf { it.isNotBlank() } ?: "none"
+            // `xtls` — старое имя шифрования, ядро его больше не принимает, а ссылки с
+            // ним ещё встречаются. Без нормализации в конфиг ушёл бы `security: "xtls"`
+            // вовсе без блока настроек: ни TLS, ни REALITY, и профиль не поднялся бы.
+            val security = params["security"]?.lowercase(Locale.ROOT)
+                ?.let { if (it == "xtls") "tls" else it }
+                ?.takeIf { it.isNotBlank() } ?: "none"
             val hostHeader = params["host"].orEmpty()
             val path = params["path"].orEmpty().ifBlank { "/" }
             val serviceName = params["serviceName"].orEmpty()

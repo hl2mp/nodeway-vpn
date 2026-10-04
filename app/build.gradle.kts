@@ -115,6 +115,15 @@ dependencies {
     implementation(files("libs/libXray.aar"))
 
     testImplementation(libs.junit)
+
+    /*
+     * Настоящий org.json вместо заглушки из android.jar: в обычных JVM-тестах
+     * JSONObject.put возвращает null, и любой код, строящий конфиг, падает.
+     * С этой зависимостью XrayConfigBuilder удаётся покрыть тестами — а он уже
+     * выпустил баг, который молча ломал профили с TLS.
+     */
+    testImplementation(libs.json)
+
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }
