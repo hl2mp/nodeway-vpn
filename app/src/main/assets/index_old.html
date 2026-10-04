@@ -108,6 +108,18 @@
         letter-spacing: .5px;
     }
 
+    /* Отклик через туннель. Не «пинг»: в цифру входит и путь до адреса замера. */
+    .latency {
+        margin-top: 6px;
+        min-height: 18px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 1px;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
     .power-box {
         background: #E4E4EA;
         border-radius: 28px;
@@ -795,6 +807,7 @@
         <div class="uptime">
             <div class="uptime-label">Время подключения</div>
             <div class="uptime-value" id="uptime">00:00:00</div>
+            <div class="latency" id="latency"></div>
         </div>
         <div class="power-box">
             <button class="power-btn" id="powerBtn" aria-label="Подключение"></button>
@@ -1012,6 +1025,7 @@
     var el = {
         powerBtn: document.getElementById('powerBtn'),
         uptime: document.getElementById('uptime'),
+        latency: document.getElementById('latency'),
         statusText: document.getElementById('statusText'),
         statusHint: document.getElementById('statusHint'),
         statusChip: document.getElementById('statusChip'),
@@ -1231,6 +1245,21 @@
         el.uptime.textContent = running ? formatUptime(Date.now() - model.connectedAt) : '00:00:00';
     }
 
+    /**
+     * Отклик, измеренный через туннель. Показываем именно формулировкой про
+     * туннель, а не «пинг»: в цифру входит ещё и путь до адреса, который опрашиваем.
+     * 0 означает «замера не было» — туннель может быть жив, но первый замер
+     * ещё не успел вернуться, и пустая строка тут честнее нуля.
+     */
+    function renderLatency() {
+      var ms = Number(model.latency) || 0;
+      if (state !== 'connected' || ms <= 0) {
+        el.latency.textContent = '';
+        return;
+      }
+      el.latency.textContent = 'Отклик через туннель: ' + ms + ' мс';
+    }
+
     /** Приводит прогресс из моста к предсказуемому виду. */
     function normalizePing(raw) {
         var results = {};
@@ -1304,6 +1333,7 @@
     function render() {
         renderPower();
         renderUptime();
+        renderLatency();
 
         var rows = JSON.stringify([model.profiles, model.selectedProfileId]);
         if (rows !== rowsSignature) {
@@ -2259,6 +2289,7 @@
         if (!data) return;
         state = data.state;
         lastMessage = data.message || '';
+        model.latency = Number(data.latency) || 0;
         if (data.ping) {
             var next = normalizePing(data.ping);
             if (next.total > 0) {
@@ -2280,6 +2311,7 @@
         renderPower();
         // В журнал пишет нативная часть — оттуда он переживает перезагрузку страницы.
         renderUptime();
+        renderLatency();
         updatePingBadges();
         updatePingButtons();
     };

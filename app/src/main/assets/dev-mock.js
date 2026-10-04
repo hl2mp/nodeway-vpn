@@ -22,6 +22,9 @@
  * каким было до проверки. События повторяют сервис, а не украшают его, —
  * иначе в браузере не повторились бы его собственные огрехи.
  *
+ * Отклик под таймером тоже оживает: замер появляется вместе с подключением,
+ * слегка дрейфует от значения, выведенного из профиля, и пропадает на гашении.
+ *
  * В приложении файл безвреден — там условие demo не выполняется,
  * нативный мост остаётся главным.
  */
@@ -332,11 +335,12 @@
   function emitVpn(next, message) {
     state.vpnState = next;
     if (window.onVpnState) {
-      // Настоящий мост кладёт в событие ещё и прогресс проверки: без него
-      // плашки откликов в браузере не появлялись бы вовсе.
+      // Настоящий мост кладёт в событие ещё прогресс проверки и отклик: без них
+      // плашки и строка под таймером в браузере не появлялись бы вовсе.
       window.onVpnState(JSON.stringify({
         state: next,
         message: message || '',
+        latency: currentLatency(),
         ping: state.ping
       }));
     }
@@ -346,6 +350,12 @@
   function setConnection(profileId, connectedAt) {
     state.model.activeProfileId = profileId || '';
     state.model.connectedAt = connectedAt;
+    // Отклик живёт столько же, сколько туннель: сервис начинает мерить с его
+    // подъёма и обнуляет замер на гашении. Подписка на замеры живёт здесь же —
+    // setConnection проходит через любое подключение и отключение, включая
+    // возврат после проверки профилей.
+    if (state.model.activeProfileId) startLatencyTick();
+    else stopLatencyTick();
   }
 
   /**
@@ -357,6 +367,59 @@
    */
   function clearActive() {
     state.model.activeProfileId = '';
+    stopLatencyTick();
+  }
+
+  // ------------------------------------------------------------ отклик
+
+  /*
+   * Отклик под таймером подключения.
+   *
+   * Сервис меряет сразу при подъёме туннеля и потом раз в минуту, а на гашении
+   * обнуляет замер. Мок повторяет и то, и другое: без этого строка под таймером
+   * в демо не появлялась бы вовсе и её вёрстку было бы нечем посмотреть.
+   */
+
+  /** Пауза между замерами — столько же, сколько PROBE_INTERVAL_MS в сервисе. */
+  var LATENCY_STEP_MS = 60 * 1000;
+
+  /** Сколько замеров прошло с начала подключения: от него зависит дрейф. */
+  var latencyTick = 0;
+  var latencyTimer = null;
+
+  /**
+   * Замер для строки под таймером.
+   *
+   * Отталкивается от id профиля, как и mockLatency в проверке, поэтому одна
+   * и та же подписка всегда выглядит одинаково. Дальше — небольшой дрейф
+   * вокруг этого значения: столько же величина живёт в приложении, а число,
+   * раз за разом одинаковое, выдаёт себя заглушкой.
+   */
+  function currentLatency() {
+    if (state.vpnState !== 'connected' || !state.model.activeProfileId) return 0;
+    var base = mockLatency(state.model.activeProfileId);
+    // -1 в проверке значит «не отвечает», но у живого туннеля такого заглушка
+    // не возвращает: подставляем правдоподобное значение.
+    if (base <= 0) base = 180;
+    var drift = ((latencyTick * 37) % 41) - 20;
+    return Math.max(20, base + drift);
+  }
+
+  function stopLatencyTick() {
+    if (latencyTimer) clearInterval(latencyTimer);
+    latencyTimer = null;
+    latencyTick = 0;
+  }
+
+  function startLatencyTick() {
+    stopLatencyTick();
+    latencyTimer = setInterval(function () {
+      // Проверка профилей крутит туннель сама: её состояния идут своими
+      // событиями, и подмешивать в них наш замер нельзя.
+      if (state.vpnState !== 'connected') return;
+      latencyTick += 1;
+      emitVpn('connected', '');
+    }, LATENCY_STEP_MS);
   }
 
   // ------------------------------------------------------- проверка профилей
