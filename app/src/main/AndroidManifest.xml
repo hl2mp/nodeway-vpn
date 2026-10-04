@@ -33,6 +33,20 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+                Ссылка импорта: nodeway://import#<адрес подписки или base64url>.
+                Всё после первого '#' — фрагмент, поэтому «?» и «#» внутри самой
+                ссылки остаются целыми. autoVerify тут не нужен: схема своя,
+                проверять нечего, а хост выбран так, чтобы под новые действия
+                не пришлось переписывать этот фильтр.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="nodeway" android:host="import" />
+            </intent-filter>
         </activity>
 
         <service

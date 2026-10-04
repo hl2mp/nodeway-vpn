@@ -292,10 +292,27 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         // из недавних, а событий больше не присылает.
         restoreVpnStateFromService()
 
+        // Deeplink разбираем до загрузки страницы: при первом открытии она читает
+        // снимок состояния, и подписка попадёт в него уже добавленной.
+        // Саму ссылку стираем: иначе следующий запуск процеса добавил бы её снова.
+        handleImportLink(intent)
+        intent.data = null
+
         webView.loadUrl("file:///android_asset/index.html")
         // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
         warmInstalledAppsCache()
         requestNotificationPermissionIfNeeded()
+    }
+
+    /**
+     * Ссылка приходит в уже открытое приложение: Activity в singleTop, а без
+     * этого переопределения вторая ссылка просто потерялась бы.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleImportLink(intent)
+        intent.data = null
     }
 
     override fun onStart() {
@@ -697,6 +714,61 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     // endregion
 
+    // region deeplink
+
+    /**
+     * Ссылка импорта `nodeway://import#<адрес подписки>`: base64url или как есть.
+     *
+     * Ссылка приходит извне — из страницы, QR-кода или мессенджера, — поэтому
+     * добавление здесь молчаливое и максимально скупое: подписка не подключается,
+     * не трогает маршрут и видна в списке своим адресом. Одиночные ссылки из веба
+     * не берём: такая строка выглядит в списке неотличимо от настоящей.
+     *
+     * Вызывается и из [onCreate] (до загрузки страницы, чтобы подписка попала в
+     * снимок состояния), и из [onNewIntent], когда приложение уже открыто.
+     */
+    private fun handleImportLink(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (!data.scheme.equals(DEEPLINK_SCHEME, ignoreCase = true)) return
+        if (!data.host.equals(DEEPLINK_HOST, ignoreCase = true)) return
+
+        // Всё после первого '#' — это фрагмент, поэтому «?» и «#» внутри самой
+        // ссылки остаются целыми: подписочный URL с токеном в query переживает
+        // ссылку без единого percent-энкодинга.
+        val payload = data.fragment?.trim().orEmpty()
+        if (payload.isEmpty()) {
+            Journal.append("app", "deeplink: ссылка без адреса подписки", level = "warn")
+            return
+        }
+        if (payload.length > MAX_DEEPLINK_PAYLOAD) {
+            // Intent ходит через Binder: слишком длинный фрагмент уронил бы не нас,
+            // а того, кто ссылку открыл. Обрезаем молча, журналом.
+            Journal.append("app", "deeplink: адрес длиннее $MAX_DEEPLINK_PAYLOAD символов", level = "warn")
+            return
+        }
+
+        val url = LinkListParser.unwrapBase64(payload)
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            // Одиночные ссылки из веба не берём. Подписка тоже добавляет строку в
+            // список, но её URL виден и удаляется одним тапом, а профиль из чужой
+            // страницы выглядит так же, как настоящий, пока не проверишь отклик.
+            Journal.append("app", "deeplink: это не адрес подписки — «${url.take(60)}»", level = "warn")
+            return
+        }
+
+        if (store.subscriptions.any { it.url == url }) {
+            Journal.append("app", "deeplink: подписка уже в списке — $url")
+            return
+        }
+
+        val source = store.addSubscription(SubscriptionSource.create(url))
+        Journal.append("app", "deeplink: подписка добавлена — $url")
+        pushProfiles()
+        loadSubscription(source, isNew = true)
+    }
+
+    // endregion
+
     // region import
 
     private fun readClipboard(): String? {
@@ -1006,5 +1078,12 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
         /** Ниже этого интервала не обновляем, даже если сервер просит `#refresh: 1m`. */
         const val MIN_REFRESH_INTERVAL_MS = 15 * 60_000L
+
+        /** Ссылка импорта: `nodeway://import#<адрес подписки>`. */
+        const val DEEPLINK_SCHEME = "nodeway"
+        const val DEEPLINK_HOST = "import"
+
+        /** Предел полезной нагрузки deeplink в символах, с запасом на URL. */
+        const val MAX_DEEPLINK_PAYLOAD = 4096
     }
 }

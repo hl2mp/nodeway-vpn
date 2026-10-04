@@ -181,8 +181,14 @@ object LinkListParser {
         return merged
     }
 
-    /** Подписки часто приходят в base64; пробуем декодировать, если ссылок в тексте нет. */
-    private fun unwrapBase64(input: String): String {
+    /**
+     * Подписки часто приходят в base64; пробуем декодировать, если ссылок в тексте нет.
+     *
+     * Общая с deeplink: ссылка импорта `nodeway://import#…` приходит в том же виде
+     * и разворачивается тем же правилом — в base64url нет ни «:», ни «/», а в ссылке
+     * всегда есть `://`, поэтому флаг в формате не нужен.
+     */
+    internal fun unwrapBase64(input: String): String {
         val candidate = input.trim()
         if (candidate.contains("://")) return candidate
 
