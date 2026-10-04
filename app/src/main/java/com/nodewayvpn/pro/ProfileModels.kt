@@ -1,12 +1,13 @@
 package com.nodewayvpn.pro
 
 import org.json.JSONObject
+import java.util.Locale
 import java.util.UUID
 
 /**
  * Конфигурация сервера, импортированная из буфера обмена или из подписки.
  *
- * Сама ссылка хранится как есть — разбором занимается [VlessProfile].
+ * Сама ссылка хранится как есть — разбором занимаются [VlessProfile] и [OlcrtcProfile].
  */
 data class ServerProfile(
     val id: String,
@@ -16,6 +17,11 @@ data class ServerProfile(
     val subscriptionId: String? = null,
     val addedAt: Long = System.currentTimeMillis(),
 ) {
+
+    /** Схема ссылки: `vless` или `olcrtc`. По ней выбирается ядро. */
+    val scheme: String get() = link.trim().substringBefore("://", "").lowercase(Locale.ROOT)
+
+    val isOlcrtc: Boolean get() = OlcrtcProfile.isOlcrtcLink(link)
 
     enum class Source(val code: String) {
         CLIPBOARD("clipboard"),
@@ -29,14 +35,25 @@ data class ServerProfile(
 
     /** Короткое описание «адрес:порт · защита/сеть» для карточки в UI. */
     fun describe(): String = runCatching {
-        val parsed = VlessProfile.parse(link)
-        "${parsed.address}:${parsed.port} · ${parsed.security.uppercase()}/${parsed.network}"
+        if (OlcrtcProfile.isOlcrtcLink(link)) {
+            OlcrtcProfile.parse(link).describe()
+        } else {
+            val parsed = VlessProfile.parse(link)
+            "${parsed.address}:${parsed.port} · ${parsed.security.uppercase(Locale.ROOT)}/${parsed.network}"
+        }
     }.getOrDefault("Ссылка не распознана")
 
-    /** Название из фрагмента ссылки, иначе — адрес. */
+    /** Название из фрагмента ссылки, иначе — обобщённое имя. */
     fun resolveName(): String = name.ifBlank {
-        runCatching { VlessProfile.parse(link).remark }.getOrNull()?.takeIf { it.isNotBlank() }
-            ?: runCatching { VlessProfile.parse(link).address }.getOrDefault("Сервер")
+        runCatching { remarkOf() }.getOrNull()?.takeIf { it.isNotBlank() } ?: "Сервер"
+    }
+
+    /** Имя сервера из ссылки: MIMO-комментарий для olcrtc, remark для VLESS. */
+    private fun remarkOf(): String = if (OlcrtcProfile.isOlcrtcLink(link)) {
+        OlcrtcProfile.parse(link).remark
+    } else {
+        val parsed = VlessProfile.parse(link)
+        parsed.remark.ifBlank { parsed.address }
     }
 
     fun toJson(): JSONObject = JSONObject().apply {

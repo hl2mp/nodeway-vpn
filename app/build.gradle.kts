@@ -44,6 +44,12 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        // LinkListParser трогает android.util.Base64 при base64-подписках;
+        // для текстовых тестов это не нужно.
+        unitTests.isReturnDefaultValues = true
+    }
+
     lint {
         abortOnError = false
     }

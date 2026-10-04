@@ -299,10 +299,72 @@
         padding: 0 16px 12px;
         font-size: 12px;
         color: var(--muted);
-        max-height: 140px;
+        max-height: 220px;
         overflow-y: auto;
         font-family: ui-monospace, Menlo, Consolas, monospace;
     }
+
+    /* Вывод ядер — тусклее сообщений приложения, иначе журнал нечитаем. */
+    #logBody .log-line.xray { color: #7f8fa6; }
+    #logBody .log-line.olcrtc { color: #6f9c86; }
+
+    /* Предупреждения и ошибки выделяются: их и ищут в первую очередь. */
+    #logBody .log-line.warn { color: #c9a227; }
+    #logBody .log-line.error { color: #e0625f; }
+
+    /* Переключатель уровня журнала. */
+    .log-filter {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 16px 10px;
+    }
+
+    .log-filter button {
+        border: none;
+        background: none;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+    }
+
+    .log-filter button.active { background: rgba(255, 255, 255, 0.08); color: var(--fg); }
+
+    .log-filter .log-hint {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--muted);
+        opacity: 0.7;
+    }
+
+    /* Переключатель в настройках: выключатель, а не выбор из списка. */
+    .switch {
+        flex: none;
+        width: 51px;
+        height: 31px;
+        border-radius: 16px;
+        background: var(--line);
+        position: relative;
+        transition: background .18s ease;
+    }
+
+    .switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 27px;
+        height: 27px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+        transition: transform .18s ease;
+    }
+
+    .switch.on { background: var(--blue); }
+    .switch.on::after { transform: translateX(20px); }
 
     /* ---------- настройки ---------- */
 
@@ -690,11 +752,16 @@
 
     <div class="group" id="localGroup"></div>
 
-    <div class="log">
+    <div class="log" id="logCard">
         <button class="group-head" id="logHead">
             <span class="group-title">Журнал</span>
             <span class="chevron" id="logChev"></span>
         </button>
+        <div class="log-filter" id="logFilter">
+            <button data-level="all" class="active">всё</button>
+            <button data-level="problems">проблемы</button>
+            <span class="log-hint" id="logHint"></span>
+        </div>
         <div id="logBody"></div>
     </div>
 </main>
@@ -737,6 +804,14 @@
             <span class="mark" id="markExclude"></span>
         </button>
         <button class="settings-row center" id="splitPick" hidden>Выбрать приложения</button>
+    </div>
+
+    <h3 class="section-title">Диагностика</h3>
+    <div class="group">
+      <button class="settings-row" id="journalRow">
+        <span>Логи<small>Вывод ядер olcrtc и Xray и события подключения</small></span>
+        <span class="switch" id="journalSwitch"></span>
+      </button>
     </div>
 
     <h3 class="section-title">О приложении</h3>
@@ -824,6 +899,21 @@
     var modalProfileId = '';
     var logCollapsed = false;
 
+    /** Записи журнала целиком: перерисовка под фильтр идёт из этого массива. */
+    var journalEntries = [];
+
+    /** 'all' или 'problems'. */
+    var logFilter = 'all';
+
+    /** Ведётся ли журнал — выключатель из настроек. */
+    var journalEnabled = false;
+
+    /** Сколько записей из буфера уже выведено в #logBody. */
+    var renderedUpTo = 0;
+
+    /** Когда список в DOM надо перерисовать целиком, а не дополнить. */
+    var renderFull = true;
+
     /**
      * Свёрнутые группы: по id подписки и отдельно для локальных профилей.
      * Состояние переживает перезапуск приложения — лежит в localStorage,
@@ -865,6 +955,11 @@
         subAdmin: document.getElementById('subAdmin'),
         logBody: document.getElementById('logBody'),
         logChev: document.getElementById('logChev'),
+        logCard: document.getElementById('logCard'),
+        logFilter: document.getElementById('logFilter'),
+        logHint: document.getElementById('logHint'),
+        journalRow: document.getElementById('journalRow'),
+        journalSwitch: document.getElementById('journalSwitch'),
         scrim: document.getElementById('scrim'),
         sheet: document.getElementById('sheet'),
         modal: document.getElementById('modal'),
@@ -922,18 +1017,126 @@
         try { return JSON.parse(json); } catch (e) { return null; }
     }
 
-    function log(message) {
-        if (!message) return;
-        var now = new Date();
-        var time = ('0' + now.getHours()).slice(-2) + ':' +
-            ('0' + now.getMinutes()).slice(-2) + ':' +
-            ('0' + now.getSeconds()).slice(-2);
-        var line = document.createElement('div');
-        line.textContent = time + '  ' + message;
-        el.logBody.appendChild(line);
-        while (el.logBody.childElementCount > 60) el.logBody.removeChild(el.logBody.firstChild);
+    /** Сколько строк держим в журнале. */
+    var MAX_LOG_LINES = 200;
+
+    /** Сколько записей держим в памяти страницы. */
+    var MAX_JOURNAL_ENTRIES = 400;
+
+    /** ЧЧ:ММ:СС с ведущими нулями. */
+    function clockOf(millis) {
+        var d = new Date(millis);
+        return ('0' + d.getHours()).slice(-2) + ':' +
+            ('0' + d.getMinutes()).slice(-2) + ':' +
+            ('0' + d.getSeconds()).slice(-2);
+    }
+
+    /**
+ * Рисует порцию записей журнала.
+ *
+ * Записи приходят из нативной части: там подписка на источник и чтение логов ядер.
+ * Собственные сообщения страницы идут через log() в тот же список.
+ */
+    function appendJournal(entries, reset) {
+        if (!journalEnabled) {
+            journalEntries = [];
+            renderFull = true;
+            return;
+        }
+        journalEntries = reset ? (entries || []).slice() : journalEntries.concat(entries || []);
+        if (journalEntries.length > MAX_JOURNAL_ENTRIES) {
+            journalEntries = journalEntries.slice(-MAX_JOURNAL_ENTRIES);
+        }
+        renderJournal();
+    }
+
+    /**
+     * Обновляет список журнала.
+     *
+     * Новые строки дописываются в конец, а не пересоздаётся весь список: ядра
+     * пишут по несколько строк в секунду, и полная перерисовка на каждой пачке
+     * съедала бы CPU впустую.
+     *
+     * Свёрнутый журнал не трогаем вообще — строить невидимые узлы незачем.
+     */
+    function renderJournal() {
+        var shown = 0;
+        journalEntries.forEach(function (entry) {
+            if (visibleIn(entry)) shown++;
+        });
+        el.logHint.textContent = shown === journalEntries.length
+            ? ''
+            : shown + ' из ' + journalEntries.length;
+
+        if (!journalEnabled || logCollapsed) return;
+
+        if (renderFull || renderedUpTo > journalEntries.length) {
+            el.logBody.textContent = '';
+            renderedUpTo = 0;
+            renderFull = false;
+        }
+
+        for (var i = renderedUpTo; i < journalEntries.length; i++) {
+            if (!visibleIn(journalEntries[i])) continue;
+            el.logBody.appendChild(journalLine(journalEntries[i]));
+        }
+        renderedUpTo = journalEntries.length;
+
+        while (el.logBody.childElementCount > MAX_LOG_LINES) {
+            el.logBody.removeChild(el.logBody.firstChild);
+        }
         el.logBody.scrollTop = el.logBody.scrollHeight;
     }
+
+    function journalLine(entry) {
+        var source = entry.s || 'app';
+        var line = document.createElement('div');
+        line.className = 'log-line ' + source + ' ' + (entry.l || 'info');
+        line.textContent = clockOf(entry.t) + '  ' +
+            (source === 'app' ? '' : source + ' · ') + entry.m;
+        return line;
+    }
+
+    /** В режиме «проблемы» показываем только предупреждения и ошибки. */
+    function visibleIn(entry) {
+        if (logFilter === 'all') return true;
+        return entry.l === 'warn' || entry.l === 'error';
+    }
+
+    /** Собственное сообщение страницы: попадает в журнал без источника. */
+    function log(message) {
+        if (!message || !journalEnabled) return;
+        appendJournal([{ t: Date.now(), s: 'app', l: 'info', m: message }], false);
+    }
+
+    /**
+     * Применяет состояние выключателя журнала.
+     *
+     * Выключенный журнал — это не пустой список, а отсутствие карточки:
+     * иначе на главном экране остаётся рамка с пустотой.
+     */
+    function applyJournalEnabled(value) {
+        journalEnabled = !!value;
+        el.journalSwitch.classList.toggle('on', journalEnabled);
+        el.logCard.hidden = !journalEnabled;
+        renderFull = true;
+        journalEntries = [];
+        el.logBody.textContent = '';
+    }
+
+    window.onJournalEnabled = function (value) {
+        applyJournalEnabled(value);
+    };
+
+    window.onJournalReset = function (payload) {
+        renderFull = true;
+        journalEntries = [];
+        appendJournal(parse(payload), true);
+    };
+
+    window.onJournalEntries = function (payload) {
+        appendJournal(parse(payload), false);
+    };
 
     function profileById(id) {
         return model.profiles.filter(function (p) { return p.id === id; })[0] || null;
@@ -1086,7 +1289,7 @@
         if (!locals.length) {
             var empty = document.createElement('div');
             empty.className = 'empty';
-            empty.textContent = 'Профилей нет — скопируйте vless-ссылку и импортируйте из буфера';
+            empty.textContent = 'Профилей нет — скопируйте vless- или olcrtc-ссылку и импортируйте из буфера';
             inner.appendChild(empty);
         } else {
             locals.forEach(function (profile) { inner.appendChild(profileRow(profile)); });
@@ -1171,8 +1374,11 @@
 
         var sub = document.createElement('span');
         sub.className = 'row-sub';
-        sub.textContent = 'VLESS / ' + (profile.network || 'TCP').toUpperCase() + ' / ' +
-            (profile.security || 'none').toUpperCase();
+        sub.textContent = profile.type === 'olcrtc'
+            ? 'OLCRTC / ' + (profile.provider || '—').toUpperCase() + ' / '
+                + (profile.transport || '—')
+            : 'VLESS / ' + (profile.network || 'TCP').toUpperCase() + ' / '
+                + (profile.security || 'none').toUpperCase();
 
         body.appendChild(name);
         body.appendChild(document.createElement('br'));
@@ -1207,14 +1413,22 @@
         el.modalTitle.textContent = profile.name;
         clear(el.modalBody);
 
-        [
+        var source = ['Источник', profile.fromSubscription
+            ? (profile.subscriptionName || 'подписка') : 'буфер обмена'];
+
+        var details = profile.type === 'olcrtc' ? [
+            ['Тип', 'OLCRTC'],
+            ['Провайдер', (profile.provider || '—').toUpperCase()],
+            ['Транспорт', profile.transport || '—'],
+            ['Комната', profile.room || '—']
+        ].concat(source) : [
             ['Адрес', profile.address + (profile.port ? ':' + profile.port : '')],
             ['Сеть', (profile.network || 'tcp').toUpperCase()],
             ['Защита', (profile.security || 'none').toUpperCase()],
-            ['SNI', profile.sni || '—'],
-            ['Источник', profile.fromSubscription ? (profile.subscriptionName || 'подписка') : 'буфер обмена'],
-            ['Ссылка', profile.link]
-        ].forEach(function (pair) {
+            ['SNI', profile.sni || '—']
+        ].concat(source);
+
+        details.concat([['Ссылка', profile.link]]).forEach(function (pair) {
             var row = document.createElement('div');
             row.className = 'detail';
             var key = document.createElement('span');
@@ -1673,6 +1887,34 @@
         el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
         collapsed.log = logCollapsed;
         saveCollapsed();
+        // При разворачивании список в DOM ещё пуст — рисуем с нуля.
+        if (!logCollapsed) {
+            renderFull = true;
+            renderJournal();
+        }
+    };
+
+    el.logFilter.onclick = function (event) {
+        var button = event.target.closest('button');
+        if (!button) return;
+        logFilter = button.dataset.level;
+        el.logFilter.querySelectorAll('button').forEach(function (item) {
+            item.classList.toggle('active', item === button);
+        });
+        renderFull = true;
+        renderJournal();
+    };
+
+    el.journalRow.onclick = function () {
+        var wasEnabled = journalEnabled;
+        var reply = parse(bridge.setJournalEnabled(!journalEnabled));
+        if (!reply) return;
+        applyJournalEnabled(reply.enabled);
+        // Файл логов ядро открывает только на старте, поэтому включённый на ходу
+        // журнал наберёт полноту после следующего подключения — говорим об этом.
+        if (!wasEnabled && state === 'connected') {
+            log('вывод Xray появится со следующего подключения');
+        }
     };
 
     document.getElementById('importProfiles').onclick = function () {
@@ -1746,12 +1988,10 @@
     window.onVpnState = function (payload) {
         var data = parse(payload);
         if (!data) return;
-        var changed = data.state !== state;
         state = data.state;
         lastMessage = data.message || '';
         renderPower();
-        // Технические переходы без текста («connecting») в журнал не пишем.
-        if (changed && lastMessage) log(lastMessage);
+        // В журнал пишет нативная часть — оттуда он переживает перезагрузку страницы.
         renderUptime();
     };
 
@@ -1776,6 +2016,7 @@
         if (initial) {
             model = initial.state;
             coreVersion = initial.coreVersion || '';
+            applyJournalEnabled(!!initial.journalEnabled);
             if (initial.appVersion) {
                 document.getElementById('appVersion').textContent = initial.appVersion;
             }

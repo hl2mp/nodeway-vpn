@@ -136,7 +136,8 @@ class ProfileStore(context: Context) {
 
         put("profiles", JSONArray().apply {
             profiles.forEach { profile ->
-                val parsed = runCatching { VlessProfile.parse(profile.link) }.getOrNull()
+                val vless = runCatching { VlessProfile.parse(profile.link) }.getOrNull()
+                val olcrtc = runCatching { OlcrtcProfile.parse(profile.link) }.getOrNull()
                 put(JSONObject().apply {
                     put("id", profile.id)
                     put("name", profile.resolveName())
@@ -147,12 +148,17 @@ class ProfileStore(context: Context) {
                     put("subscriptionName", profile.subscriptionId
                         ?.let { subscriptionNames[it].orEmpty() }
                         .orEmpty())
+                    // Тип ядра: UI по нему рисует подпись и поля карточки.
+                    put("type", profile.scheme)
                     // Детали для карточки «i» в профиле.
-                    put("address", parsed?.address.orEmpty())
-                    put("port", parsed?.port ?: 0)
-                    put("network", parsed?.network.orEmpty())
-                    put("security", parsed?.security.orEmpty())
-                    put("sni", parsed?.sni.orEmpty())
+                    put("address", vless?.address ?: olcrtc?.roomLabel.orEmpty())
+                    put("port", vless?.port ?: 0)
+                    put("network", vless?.network.orEmpty())
+                    put("security", vless?.security.orEmpty())
+                    put("sni", vless?.sni.orEmpty())
+                    put("provider", olcrtc?.provider.orEmpty())
+                    put("transport", olcrtc?.transport.orEmpty())
+                    put("room", olcrtc?.room.orEmpty())
                     put("link", profile.link)
                 })
             }

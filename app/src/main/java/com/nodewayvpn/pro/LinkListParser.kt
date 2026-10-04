@@ -21,37 +21,79 @@ object LinkListParser {
         val title: String = "",
         val refreshMinutes: Int = 0,
         val supportUrl: String = "",
+        /** Локальные поля `##key: value` — по сырой ссылке, которой они относятся. */
+        val serverFields: Map<String, Map<String, String>> = emptyMap(),
     ) {
-        val vlessLinks: List<Link> get() = links.filter { it.scheme == "vless" }
+        /** Ссылки, которые приложение умеет импортировать. */
+        val supported: List<Link>
+            get() = links.filter { it.scheme == SCHEME_VLESS || (it.scheme == SCHEME_OLCRTC) }
 
-        /** Схемы, которые приложение пока не поддерживает (olcrtc://, vmess:// …). */
-        val unsupported: List<Link> get() = links.filter { it.scheme != "vless" }
+        /** Схемы, которые приложение пока не поддерживает (vmess:// …). */
+        val unsupported: List<Link> get() = links - supported.toSet()
+
+        /** Имя из локального поля `##name:` для указанной ссылки. */
+        fun serverField(link: String, key: String): String =
+            serverFields[link]?.get(key)?.trim().orEmpty()
     }
 
     private val SCHEME = "([a-zA-Z][a-zA-Z0-9+.\\-]*)://"
 
-    /** Ссылка начинается в начале строки или после пробела. */
-    private val LINK_REGEX = Regex("(?:^|\\s+)$SCHEME[^\\s]+")
+    /**
+     * Ссылка в начале токена.
+     *
+     * Саму ссылку берём целиком, а не до первого пробела: после `splitTokens` токен
+     * уже заканчивается ровно там, где начинается следующая схема, а хвост с пробелами
+     * («#CF Основной (TLS)», «$UK Обход списков (WB)») относится к этой ссылке.
+     */
+    private val SCHEME_AT_START_REGEX = Regex("^$SCHEME")
 
-    /** Директива `#key: value` в строке-заголовке. */
-    private val DIRECTIVE_REGEX = Regex("#([a-zA-Z][a-zA-Z0-9_\\-]*)\\s*:\\s*([^#]*)")
+    /**
+     * Директива `#key: value` в строке-заголовке.
+     *
+     * Взгляд назад отсекает `##name:` — это локальное поле конкретного сервера,
+     * а не директива подписки, иначе оно перезаписало бы заголовок.
+     */
+    private val DIRECTIVE_REGEX = Regex("(?<!#)#([a-zA-Z][a-zA-Z0-9_\\-]*)\\s*:\\s*([^#]*)")
+
+    /** Локальное поле конкретного сервера: `##name: RU-1`. */
+    private val SERVER_FIELD_REGEX = Regex("##([a-zA-Z][a-zA-Z0-9_\\-]*)\\s*:\\s*(.*)")
+
+    private const val SCHEME_VLESS = "vless"
+    private const val SCHEME_OLCRTC = "olcrtc"
 
     fun parse(rawInput: String): Result {
         val text = unwrapBase64(rawInput).trim()
         if (text.isEmpty()) return Result(emptyList())
 
-        val tokens = splitTokens(text)
+        val tokens = mergeRemarks(splitTokens(text))
         val links = mutableListOf<Link>()
         val directives = mutableListOf<String>()
+        val serverFields = mutableMapOf<String, MutableMap<String, String>>()
+        var lastLink: Link? = null
 
         tokens.forEach { token ->
             // Токен, начинающийся с «#», — это заголовок с директивами
             // («#support-url: … #name: … #refresh: 1h»), а не конфигурация.
-            val match = if (token.startsWith("#")) null else LINK_REGEX.find(token)
-            if (match != null) {
-                // find, а не matchEntire: подпись ссылки может содержать пробелы
-                // («…#CF Основной (TLS)»), поэтому берём только саму ссылку.
-                links += Link(raw = match.value.trim(), scheme = match.groupValues[1].lowercase(Locale.ROOT))
+            // «##» — локальное поле, привязанное к предыдущей ссылке.
+            if (token.startsWith("##")) {
+                val owner = lastLink ?: return@forEach
+                serverFields.getOrPut(owner.raw) { mutableMapOf() }.apply {
+                    SERVER_FIELD_REGEX.findAll(token).forEach { hit ->
+                        put(hit.groupValues[1].lowercase(Locale.ROOT), hit.groupValues[2].trim())
+                    }
+                }
+                return@forEach
+            }
+
+            val scheme = if (token.startsWith("#")) {
+                null
+            } else {
+                SCHEME_AT_START_REGEX.find(token)?.groupValues?.get(1)?.lowercase(Locale.ROOT)
+            }
+            if (scheme != null) {
+                val link = Link(raw = token, scheme = scheme)
+                links += link
+                lastLink = link
             } else {
                 directives += token
             }
@@ -75,6 +117,7 @@ object LinkListParser {
             title = title,
             refreshMinutes = refresh,
             supportUrl = support,
+            serverFields = serverFields,
         )
     }
 
@@ -102,6 +145,40 @@ object LinkListParser {
             .flatMap { line -> if ('\n' in line || '\r' in line) line.lines() else listOf(line) }
             .map { it.trim() }
             .filter { it.isNotEmpty() }
+    }
+
+    /**
+     * Склеивает обратно MIMO-комментарий olcrtc-ссылки.
+     *
+     * В отличие от VLESS, где `#фрагмент` percent-encoded, у olcrtc хвост после `$`
+     * — свободный текст с пробелами («$UK Обход списков (WB)»). Токенизация режет его
+     * на слова, поэтому все куски до следующей схемы возвращаются в ссылку.
+     */
+    private fun mergeRemarks(tokens: List<String>): List<String> {
+        val merged = mutableListOf<String>()
+        var index = 0
+        while (index < tokens.size) {
+            val token = tokens[index]
+            merged += token
+
+            val hasRemark = token.startsWith("olcrtc://", ignoreCase = true) &&
+                token.substringAfter('#', "").contains('$')
+            if (!hasRemark) {
+                index++
+                continue
+            }
+
+            var next = index + 1
+            while (next < tokens.size &&
+                !tokens[next].contains("://") &&
+                !tokens[next].startsWith("#")
+            ) {
+                merged[merged.lastIndex] += " " + tokens[next]
+                next++
+            }
+            index = next
+        }
+        return merged
     }
 
     /** Подписки часто приходят в base64; пробуем декодировать, если ссылок в тексте нет. */

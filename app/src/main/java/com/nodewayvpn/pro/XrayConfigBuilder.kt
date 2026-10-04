@@ -15,7 +15,10 @@ object XrayConfigBuilder {
     private const val TUN_NAME = "nodeway0"
 
     /** Подробные логи нужны для диагностики соединения с сервером. */
-    private val DEFAULT_LOG_LEVEL = if (BuildConfig.DEBUG) "info" else "warning"
+    val DEFAULT_LOG_LEVEL = if (BuildConfig.DEBUG) "info" else "warning"
+
+    /** Полное молчание: ядро не пишет ни в файл, ни в logcat. */
+    const val LOG_LEVEL_NONE = "none"
 
     /** DNS servers advertised to the TUN interface; shared with [NodewayVpnService]. */
     val DNS_SERVERS = listOf("1.1.1.1", "8.8.8.8")
@@ -33,21 +36,78 @@ object XrayConfigBuilder {
         "fe80::/10",
     )
 
-    fun build(profile: VlessProfile, tunFd: Int, logLevel: String = DEFAULT_LOG_LEVEL): String {
+    fun build(
+        profile: VlessProfile,
+        tunFd: Int,
+        logLevel: String = DEFAULT_LOG_LEVEL,
+        logFile: String? = null,
+    ): String = assemble(tunFd, logLevel, logFile, vlessOutbound(profile), routing(), dns())
+
+    /**
+     * Конфиг для olcrtc: Xray не знает протокол, поэтому роль апстрима играет
+     * локальный SOCKS5 от отдельного процесса olcrtc.
+     */
+    fun buildForOlcrtc(
+        socksPort: Int,
+        tunFd: Int,
+        logLevel: String = DEFAULT_LOG_LEVEL,
+        logFile: String? = null,
+    ): String =
+        assemble(tunFd, logLevel, logFile, socksOutbound(socksPort), olcrtcRouting(), olcrtcDns())
+
+    private fun assemble(
+        tunFd: Int,
+        logLevel: String,
+        logFile: String?,
+        outbound: JSONObject,
+        routing: JSONObject,
+        dns: JSONObject,
+    ): String {
         val config = JSONObject()
 
         // Xray-core applies root level "env" entries with os.Setenv() before building
         // the config; proxy/tun/tun_android.go reads the descriptor from "xray.tun.fd".
         config.put("env", JSONObject().put("xray.tun.fd", tunFd.toString()))
 
-        config.put("log", JSONObject().put("loglevel", logLevel))
+        config.put("log", logConfig(logLevel, logFile))
 
         config.put("inbounds", JSONArray().put(tunInbound()))
-        config.put("outbounds", JSONArray().put(vlessOutbound(profile)).put(freedomOutbound()))
-        config.put("routing", routing())
-        config.put("dns", dns())
+        config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()))
+        config.put("routing", routing)
+        config.put("dns", dns)
 
         return config.toString()
+    }
+
+    /**
+     * Секция `log`.
+     *
+     * Поле `error` отдаёт ядру файл, который приложение читает и показывает в журнале.
+     * Приёмника логов в AAR нет: gomobile сам пишет вывод Go только в logcat,
+     * откуда его достать штатно нельзя — чтение logcat требует привилегий системы.
+     *
+     * Уровень `none` вместе с пустым путём — это выключенный журнал из настроек:
+     * ядро молчит, файл не создаётся, читать нечего.
+     */
+    private fun logConfig(logLevel: String, logFile: String?): JSONObject =
+        JSONObject().put("loglevel", logLevel).apply {
+            if (!logFile.isNullOrBlank()) put("error", logFile)
+        }
+
+    /**
+     * SOCKS5-апстрим на loopback. Настройки стрима нет — SOCKS уже терминирует
+     * TCP, а UDP через него не ходит в принципе.
+     */
+    private fun socksOutbound(port: Int): JSONObject = JSONObject().apply {
+        put("tag", "proxy")
+        put("protocol", "socks")
+        put("settings", JSONObject().apply {
+            put("servers", JSONArray().put(JSONObject().apply {
+                put("address", "127.0.0.1")
+                put("port", port)
+            }))
+        })
+        put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
     }
 
     private fun tunInbound(): JSONObject = JSONObject().apply {
@@ -178,6 +238,42 @@ object XrayConfigBuilder {
 
     private fun dns(): JSONObject = JSONObject().apply {
         put("servers", JSONArray(DNS_SERVERS))
+        put("queryStrategy", "UseIP")
+    }
+
+    /**
+     * Роутинг для olcrtc.
+     *
+     * Отличие от VLESS — прямой DNS не годится: сеть, где работает WebRTC-туннель,
+     * обычно блокирует и его тоже. Поэтому DNS уходит в туннель (см. [olcrtcDns]),
+     * приватные сети идут напрямую, остальное — в туннель.
+     *
+     * UDP при этом остаётся прямым. SOCKS5 UDP не перевозит, и если завернуть его
+     * в туннель, резолвер начнёт сыпать ошибками, а QUIC-запросы — падать без
+     * шанса на TCP-фолбэк. Для обхода блокировок достаточно TCP.
+     */
+    private fun olcrtcRouting(): JSONObject = JSONObject().apply {
+        put("domainStrategy", "IPIfNonMatch")
+        put("rules", JSONArray().apply {
+            put(JSONObject().apply {
+                put("type", "field")
+                put("outboundTag", "direct")
+                put("ip", JSONArray(PRIVATE_CIDRS))
+            })
+            put(JSONObject().apply {
+                put("type", "field")
+                put("outboundTag", "direct")
+                put("network", "udp")
+            })
+        })
+    }
+
+    /**
+     * DNS для olcrtc идёт через туннель, поэтому только TCP: UDP-резолвер
+     * через SOCKS работать не будет.
+     */
+    private fun olcrtcDns(): JSONObject = JSONObject().apply {
+        put("servers", JSONArray(DNS_SERVERS.map { "tcp+$it" }))
         put("queryStrategy", "UseIP")
     }
 }

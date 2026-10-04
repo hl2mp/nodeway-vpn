@@ -89,6 +89,29 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
     }
 
+    /** Источник журнала: строки от обоих ядер и от сервиса. */
+    private val journalListener = Journal.Listener { entries -> pushJournal(entries) }
+
+    /**
+     * Записи журнала, ждущие отправки в страницу.
+     *
+     * Ядра пишут построчно, а каждый вызов `evaluateJavascript` — это переход в JS,
+     * поэтому записи копятся и уходят пачкой.
+     */
+    private val journalQueue = ArrayDeque<Journal.Entry>()
+
+    private var journalFlushScheduled = false
+
+    private val journalFlush = Runnable {
+        journalFlushScheduled = false
+        val batch = synchronized(journalQueue) {
+            val out = journalQueue.toList()
+            journalQueue.clear()
+            out
+        }
+        if (batch.isNotEmpty()) pushJournalEntries("onJournalEntries", batch)
+    }
+
     /** Состояние туннеля — нужно для горячей смены профиля. */
     private var vpnState: String = VpnState.DISCONNECTED.code
 
@@ -125,6 +148,15 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             store.connectedAt = intent.getLongExtra(NodewayVpnService.EXTRA_CONNECTED_AT, 0L)
             pushProfiles()
             pushState(state, message)
+            // Состояние пишем в журнал здесь, а не в странице: записи переживают
+            // перезагрузку WebView и попадают в общий буфер с логами ядер.
+            if (message != null) {
+                Journal.append(
+                    Journal.SOURCE_APP,
+                    message,
+                    if (state == VpnState.ERROR.code) Journal.LEVEL_ERROR else null,
+                )
+            }
         }
     }
 
@@ -134,6 +166,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
         store = ProfileStore(this)
         prefs = Prefs(this)
+        // Настройка журнала применяется раньше любой записи в него.
+        Journal.enabled = prefs.journalEnabled
         webView = WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -158,6 +192,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
                     super.onPageFinished(view, url)
                     // Первая отрисовка может обогнать применение инсетов.
                     pushInsets()
+                    // Страница перерисована — отдаём ей журнал целиком, без дублей.
+                    startJournal()
                 }
             }
             webChromeClient = object : WebChromeClient() {
@@ -215,6 +251,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     override fun onDestroy() {
         runCatching { unregisterReceiver(stateReceiver) }
+        Journal.unsubscribe(journalListener)
+        refreshHandler.removeCallbacks(journalFlush)
         webView.removeJavascriptInterface(BRIDGE_NAME)
         (webView.parent as? ViewGroup)?.removeView(webView)
         webView.destroy()
@@ -262,20 +300,20 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
 
         val parsed = LinkListParser.parse(text)
-        val vless = parsed.vlessLinks
-        if (vless.isEmpty()) {
+        val supported = parsed.supported
+        if (supported.isEmpty()) {
             val hint = if (parsed.unsupported.isNotEmpty()) {
                 "В буфере только неподдерживаемые ссылки: " +
                     parsed.unsupported.map { it.scheme }.distinct().joinToString()
             } else {
-                "В буфере не найдено ни одной vless:// ссылки"
+                "В буфере не найдено ни одной vless:// или olcrtc:// ссылки"
             }
             return result(ok = false, message = hint)
         }
 
         val added = store.addProfiles(
-            links = vless.map { it.raw },
-            names = vless.associate { it.raw to remarkOf(it.raw) },
+            links = supported.map { it.raw },
+            names = supported.associate { it.raw to remarkOf(it.raw, parsed) },
             source = ServerProfile.Source.CLIPBOARD,
             subscriptionId = null,
         )
@@ -283,13 +321,13 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
         val message = when {
             added == 0 -> "Такие ссылки уже были добавлены"
-            added < vless.size -> "Добавлено $added из ${vless.size} (остальные уже есть)"
+            added < supported.size -> "Добавлено $added из ${supported.size} (остальные уже есть)"
             else -> "Добавлено профилей: $added"
         }
         return result(
             ok = true,
             added = added,
-            total = vless.size,
+            total = supported.size,
             unsupported = parsed.unsupported.size,
             message = message,
         )
@@ -317,6 +355,17 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     }
 
     override fun coreVersion(): String = runCatching { XrayCore.version() }.getOrDefault("")
+
+    override fun journalEnabled(): Boolean = Journal.enabled
+
+    override fun onSetJournalEnabledRequested(enabled: Boolean): String {
+        // Настройка нужна сервису при запуске ядра, а он может быть уже запущен:
+        // переключатель применяется к новым подключениям, текущий журнал — сразу.
+        prefs.journalEnabled = enabled
+        Journal.applyEnabled(enabled)
+        pushJournalEnabled()
+        return JSONObject().apply { put("enabled", Journal.enabled) }.toString()
+    }
 
     override fun appVersion(): String = BuildConfig.VERSION_NAME
 
@@ -592,19 +641,19 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         isNew: Boolean,
     ): String {
         val parsed = loaded.parsed
-        val vless = parsed.vlessLinks
-        if (vless.isEmpty()) {
+        val supported = parsed.supported
+        if (supported.isEmpty()) {
             return result(
                 ok = false,
-                message = "В подписке нет vless:// ссылок",
+                message = "В подписке нет vless:// или olcrtc:// ссылок",
                 title = parsed.title,
             )
         }
 
-        val profiles = vless.map { link ->
+        val profiles = supported.map { link ->
             ServerProfile.create(
                 link = link.raw,
-                name = remarkOf(link.raw),
+                name = remarkOf(link.raw, parsed),
                 source = ServerProfile.Source.SUBSCRIPTION,
                 subscriptionId = source.id,
             )
@@ -645,11 +694,25 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         )
     }
 
-    /** Имя из фрагмента `#…` ссылки, иначе — адрес сервера. */
-    private fun remarkOf(link: String): String = runCatching {
-        val parsed = VlessProfile.parse(link)
-        parsed.remark.ifBlank { parsed.address }
-    }.getOrDefault("")
+    /**
+     * Имя сервера для карточки.
+     *
+     * Для olcrtc это MIMO-комментарий из ссылки, но если его нет, берётся
+     * локальное поле `##name:` из подписки. Для VLESS — remark или адрес.
+     */
+    private fun remarkOf(link: String, parsed: LinkListParser.Result? = null): String {
+        if (OlcrtcProfile.isOlcrtcLink(link)) {
+            val fromLink = runCatching { OlcrtcProfile.parse(link).remark }.getOrDefault("")
+            if (fromLink.isNotBlank()) return fromLink
+            val fromSubscription = parsed?.serverField(link, "name").orEmpty()
+            if (fromSubscription.isNotBlank()) return fromSubscription
+            return runCatching { OlcrtcProfile.parse(link).roomLabel }.getOrDefault("olcrtc")
+        }
+        return runCatching {
+            val parsedLink = VlessProfile.parse(link)
+            parsedLink.remark.ifBlank { parsedLink.address }
+        }.getOrDefault("")
+    }
 
     // region автообновление подписок
 
@@ -697,8 +760,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             pushState(VpnState.ERROR.code, "Профиль не найден")
             return
         }
-        if (!VlessProfile.isVlessLink(profile.link)) {
-            pushState(VpnState.ERROR.code, "Ссылка должна начинаться с vless://")
+        if (!VlessProfile.isVlessLink(profile.link) && !OlcrtcProfile.isOlcrtcLink(profile.link)) {
+            pushState(VpnState.ERROR.code, "Ссылка должна начинаться с vless:// или olcrtc://")
             return
         }
 
@@ -745,11 +808,68 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
     }
 
+    /** Сообщает странице, видна ли карточка журнала. */
+    private fun pushJournalEnabled() {
+        val enabled = if (Journal.enabled) "true" else "false"
+        runOnUiThread {
+            runCatching {
+                webView.evaluateJavascript("window.onJournalEnabled && window.onJournalEnabled($enabled);", null)
+            }
+        }
+    }
+
     /** Результат импорта или загрузки подписки. */
     private fun pushImportResult(payload: String) {
         val escaped = escape(payload)
         runOnUiThread {
             webView.evaluateJavascript("window.onImportResult && window.onImportResult('$escaped');", null)
+        }
+    }
+
+    /**
+     * Подписывает страницу на журнал и отдаёт накопленное.
+     *
+     * Вызывается на каждой загрузке страницы: [Journal.subscribe] отдаёт копию
+     * буфера, а страница рисует его с нуля, поэтому перезагрузка не даёт дублей.
+     */
+    private fun startJournal() {
+        Journal.unsubscribe(journalListener)
+        // Всё накопленное уходит снимком — очередь до этого сбросится вместе со страницей.
+        synchronized(journalQueue) { journalQueue.clear() }
+        pushJournalEntries("onJournalReset", Journal.subscribe(journalListener))
+    }
+
+    /** Копит записи и просит отправить их пачкой. */
+    private fun pushJournal(entries: List<Journal.Entry>) {
+        synchronized(journalQueue) {
+            journalQueue.addAll(entries)
+            // Под виной пакетов буфер всё равно конечен: отдаём свежее.
+            while (journalQueue.size > MAX_PENDING_JOURNAL) journalQueue.removeFirst()
+        }
+        if (journalFlushScheduled) return
+        journalFlushScheduled = true
+        refreshHandler.postDelayed(journalFlush, JOURNAL_FLUSH_MS)
+    }
+
+    /** Отправляет записи в страницу одним вызовом. */
+    private fun pushJournalEntries(handler: String, entries: List<Journal.Entry>) {
+        if (entries.isEmpty()) return
+        val payload = escape(
+            JSONArray().apply {
+                entries.forEach { entry ->
+                    put(JSONObject().apply {
+                        put("t", entry.at)
+                        put("s", entry.source)
+                        put("l", entry.level)
+                        put("m", entry.text)
+                    })
+                }
+            }.toString(),
+        )
+        runOnUiThread {
+            runCatching {
+                webView.evaluateJavascript("window.$handler && window.$handler('$payload');", null)
+            }
         }
     }
 
@@ -778,6 +898,12 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
         /** Как часто проверяем, не пора ли обновить подписку. */
         const val REFRESH_CHECK_INTERVAL_MS = 60_000L
+
+        /** Пауза перед отправкой накопленных записей журнала в страницу. */
+        const val JOURNAL_FLUSH_MS = 150L
+
+        /** Сколько записей ждут отправки, прежде чем самые старые будут отброшены. */
+        const val MAX_PENDING_JOURNAL = 200
 
         /** Ниже этого интервала не обновляем, даже если сервер просит `#refresh: 1m`. */
         const val MIN_REFRESH_INTERVAL_MS = 15 * 60_000L

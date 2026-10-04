@@ -12,6 +12,10 @@
  * Дополнительно: index.html?demo=1&delay=800 добавляет задержку ответа,
  * чтобы увидеть индикатор загрузки в списке приложений.
  *
+ * Мок умеет и журнал: на старте отдаёт готовый хвост с обоих ядер, дописывает
+ * строки при подключении, а кнопка «логи» в панели переключает выключатель из
+ * настроек вместе с карточкой журнала.
+ *
  * В приложении файл безвреден — там условие demo не выполняется,
  * нативный мост остаётся главным.
  */
@@ -237,8 +241,68 @@
     vpnState: 'disconnected',
     connectedAt: 0,
     splitMode: 'all',
-    splitPackages: new Set()
+    splitPackages: new Set(),
+    /*
+     * В приложении журнал по умолчанию выключен, но для демо его лучше показать
+     * сразу: иначе карточка скрыта и половину вёрстки не видно.
+     * Переключается кнопкой «логи» в панели внизу.
+     */
+    journalEnabled: true
   };
+
+  // ------------------------------------------------------------------ журнал
+
+  /**
+   * Строки журнала в виде [с секунд назад, источник, уровень, текст].
+   *
+   * Источники и уровни повторяют настоящие: `app` без префикса источника,
+   * ядра со своим, уровень в начале строки.
+   */
+  var journalScript = [
+    [12, 'app', 'info', 'Подключаемся'],
+    [12, 'olcrtc', 'info', 'cnc: dialing udp to room.example.com:3478'],
+    [11, 'olcrtc', 'info', 'vp8channel: open track=TR_demo1 rtp=120 frames=0'],
+    [10, 'xray', 'info', '[Info] [1700000001] app/dns: DNS: created UDP client for tcp+1.1.1.1:53'],
+    [10, 'xray', 'warn', '[Warning] core: Xray 26.9.30 started'],
+    [9, 'xray', 'info', '[Info] [1700000001] proxy/tun: nodeway0 created'],
+    [8, 'xray', 'info', '[Info] [1700000002] transport/internet/tcp: dialing TCP to tcp:127.0.0.1:10808'],
+    // Ошибка нужна, чтобы фильтр «проблемы» было что показать.
+    [6, 'olcrtc', 'error', 'ERROR: vp8channel: read failed, reconnecting'],
+    [5, 'xray', 'info', '[Info] [1700000003] proxy/tun: processing from tcp:10.23.0.2:45710 to tcp:1.1.1.1:443'],
+    [4, 'app', 'info', 'Подключено']
+  ];
+
+  /** Живой хвост журнала: строки приходят по одной, как от настоящего ядра. */
+  var journalTail = [
+    ['olcrtc', 'info', 'vp8channel: open track=TR_demo7 rtp=96 frames=0'],
+    ['xray', 'info', '[Info] [1700000010] proxy/tun: processing from tcp:10.23.0.2:45711 to tcp:1.1.1.1:443'],
+    ['olcrtc', 'info', 'sid=9 tunnel to 1.1.1.1:443']
+  ];
+
+  function journalNow(source, level, text) {
+    return { t: Date.now(), s: source, l: level, m: text };
+  }
+
+  function emitJournalReset() {
+    if (!state.journalEnabled || !window.onJournalReset) return;
+    var entries = journalScript.map(function (row) {
+      return { t: Date.now() - row[0] * 1000, s: row[1], l: row[2], m: row[3] };
+    });
+    window.onJournalReset(JSON.stringify(entries));
+  }
+
+  function emitJournal(entries) {
+    if (!state.journalEnabled || !window.onJournalEntries) return;
+    window.onJournalEntries(JSON.stringify(entries));
+  }
+
+  function emitJournalTail() {
+    journalTail.forEach(function (row, index) {
+      setTimeout(function () {
+        emitJournal([journalNow(row[0], row[1], row[2])]);
+      }, index * 500);
+    });
+  }
 
   // ------------------------------------------------------------------ мост
 
@@ -258,11 +322,21 @@
       return JSON.stringify({
         state: state.model,
         coreVersion: '26.9.30 (mock)',
-        appVersion: '1.0'
+        appVersion: '1.0',
+        journalEnabled: state.journalEnabled
       });
     },
 
     uiState: function () { return this.getInitialState(); },
+
+    /* ---------- журнал ---------- */
+
+    setJournalEnabled: function (enabled) {
+      state.journalEnabled = !!enabled;
+      if (state.journalEnabled) emitJournalReset();
+      if (window.onJournalEnabled) window.onJournalEnabled(state.journalEnabled);
+      return JSON.stringify({ enabled: state.journalEnabled });
+    },
 
     /* ---------- раздельное туннелирование ---------- */
 
@@ -338,6 +412,10 @@
     requestConnect: function (profileId) {
       if (!profileId) return;
       emitVpn('connecting', 'Подключаемся…');
+      emitJournal([
+        journalNow('app', 'info', 'Подключаемся'),
+        journalNow('olcrtc', 'info', 'cnc: dialing udp to room.example.com:3478')
+      ]);
       setTimeout(function () {
         state.model.activeProfileId = profileId;
         state.model.selectedProfileId = profileId;
@@ -345,17 +423,20 @@
         state.model.connectedAt = state.connectedAt;
         emitVpn('connected', 'Подключено');
         emitProfiles();
+        emitJournalTail();
       }, 900);
     },
 
     requestDisconnect: function () {
       emitVpn('disconnecting', 'Отключаемся…');
+      emitJournal([journalNow('app', 'info', 'Отключаемся')]);
       setTimeout(function () {
         state.model.activeProfileId = '';
         state.model.connectedAt = 0;
         state.connectedAt = 0;
         emitVpn('disconnected', 'Отключено');
         emitProfiles();
+        emitJournal([journalNow('app', 'info', 'Отключено')]);
       }, 700);
     },
 
@@ -512,6 +593,31 @@
   addButton('отключить', function () { window.NodewayVpn.requestDisconnect(); });
   addButton('ошибка', function () {
     emitVpn('error', 'Не удалось подключиться: сервер не отвечает');
+    emitJournal([journalNow('app', 'error', 'Не удалось подключиться: сервер не отвечает')]);
+  });
+
+  // Журнал виден на главном экране, поэтому переключатель вынесен в панель:
+  // иначе пришлось бы идти в настройки, чтобы увидеть обе стороны переключения.
+  var journalButton = addButton('логи: вкл', function () {
+    window.NodewayVpn.setJournalEnabled(!state.journalEnabled);
+  });
+
+  function applyJournalButton() {
+    journalButton.textContent = state.journalEnabled ? 'логи: вкл' : 'логи: выкл';
+  }
+
+  /*
+   * Стартовые строки отдаём по событию load, а не по setTimeout.
+   *
+   * Мок подключается отдельным <script> перед разметкой страницы и выполняется
+   * раньше её собственного скрипта: таймер с нулевой задержкой успевает
+   * сработать в промежутке между ними, когда window.onJournalReset ещё нет.
+   * Событие load приходит после выполнения всех скриптов — это единственная
+   * точка, где обработчики журнала гарантированно уже на месте.
+   */
+  window.addEventListener('load', function () {
+    emitJournalReset();
+    applyJournalButton();
   });
 
   applyPanelState();

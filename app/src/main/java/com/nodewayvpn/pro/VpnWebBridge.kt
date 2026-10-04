@@ -91,6 +91,16 @@ class VpnWebBridge(private val host: Host) {
         /** Иконка считается в отдельном потоке, ответ приходит в `window.onAppIcon`. */
         // ai-generated
         fun onGetAppIconAsyncRequested(packageName: String)
+
+        /** Ведётся ли журнал: выключатель в настройках. */
+        fun journalEnabled(): Boolean
+
+        /**
+         * Включает или выключает журнал.
+         *
+         * @return JSON с новым состоянием.
+         */
+        fun onSetJournalEnabledRequested(enabled: Boolean): String
     }
 
     @JavascriptInterface
@@ -153,9 +163,13 @@ class VpnWebBridge(private val host: Host) {
     @JavascriptInterface
     fun getAppIconAsync(packageName: String) = host.onGetAppIconAsyncRequested(packageName)
 
+    @JavascriptInterface
+    fun setJournalEnabled(enabled: Boolean): String = host.onSetJournalEnabledRequested(enabled)
+
     private fun uiState(): String = JSONObject().apply {
         put("state", JSONObject(host.uiState()))
         put("coreVersion", host.coreVersion())
         put("appVersion", host.appVersion())
+        put("journalEnabled", host.journalEnabled())
     }.toString()
 }

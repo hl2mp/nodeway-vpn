@@ -29,11 +29,23 @@ class Prefs(context: Context) {
         get() = LinkedHashSet(sp.getStringSet(KEY_SPLIT_PACKAGES, emptySet()).orEmpty())
         set(value) = sp.edit().putStringSet(KEY_SPLIT_PACKAGES, LinkedHashSet(value)).apply()
 
+    /**
+     * Вести ли журнал: вывод ядер и события подключения.
+     *
+     * По умолчанию выключено — журнал нужен при разборе проблем, а не постоянно.
+     * Выключается и карточка журнала, и запись в logcat приложения не меняется:
+     * logcat кольцевой и бесплатный, в отличие от файла, который ядро пишет само.
+     */
+    var journalEnabled: Boolean
+        get() = sp.getBoolean(KEY_JOURNAL, false)
+        set(value) = sp.edit().putBoolean(KEY_JOURNAL, value).apply()
+
     private companion object {
         const val NAME = "nodeway_vpn"
         const val KEY_LINK = "last_link"
         const val KEY_TUNNEL_MODE = "tunnel_mode"
         const val KEY_SPLIT_PACKAGES = "split_packages"
+        const val KEY_JOURNAL = "journal_enabled"
         const val TUNNEL_MODE_ALL = "all"
     }
 }
