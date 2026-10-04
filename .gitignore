@@ -18,3 +18,7 @@ local.properties
 # Собирается tools/build-olcrtc.ps1 из исходников, которые лежат рядом.
 /olcrtc/
 /app/src/main/jniLibs
+
+# Ключ подписи и пароли от него в историю не должны.
+/keystore/
+/keystore.properties

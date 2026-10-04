@@ -1,8 +1,28 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
 }
+
+/*
+ * Подпись release.
+ *
+ * Файл keystore.properties и сам ключ в git не попадают: пароль от подписи не
+ * должен уезжать в историю. Порядок такой: файл → переменная окружения → ничего.
+ * Без ключа release собирается неподписанным, а не падает: иначе на CI, где
+ * секретов нет, нельзя было бы собрать APK вообще.
+ */
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+/** Значение из файла, иначе из переменной окружения, иначе null. */
+fun signingValue(key: String, env: String): String? =
+    keystoreProperties.getProperty(key)?.takeIf { it.isNotBlank() } ?: System.getenv(env)
+
+val releaseStoreFile = signingValue("storeFile", "NODEWAY_STORE_FILE")
 
 android {
     namespace = "com.nodewayvpn.pro"
@@ -20,9 +40,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = signingValue("storePassword", "NODEWAY_STORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "NODEWAY_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "NODEWAY_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // null, когда ключа нет: APK выходит неподписанным, сборка не падает.
+            signingConfig = signingConfigs.findByName("release")
+
             optimization {
+                // R8 выключен намеренно: ядро ходит в Go через JNI и рефлексию,
+                // а про правила сохранения здесь ничего не документировано.
                 enable = false
             }
         }
