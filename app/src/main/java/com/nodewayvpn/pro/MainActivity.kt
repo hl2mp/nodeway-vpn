@@ -115,6 +115,9 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     /** Состояние туннеля — нужно для горячей смены профиля. */
     private var vpnState: String = VpnState.DISCONNECTED.code
 
+    /** Ход проверки профилей: очередь, текущий и уже полученные отклики. */
+    private var pingProgress: PingProgress = PingProgress()
+
     /** Профиль, к которому относится текущее подключение. */
     private var activeProfileId: String = ""
     private var pendingProfileId: String = ""
@@ -141,24 +144,86 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         override fun onReceive(context: Context?, intent: Intent?) {
             val state = intent?.getStringExtra(NodewayVpnService.EXTRA_STATE) ?: return
             val message = intent.getStringExtra(NodewayVpnService.EXTRA_MESSAGE)
-            val profileId = intent.getStringExtra(NodewayVpnService.EXTRA_PROFILE_ID).orEmpty()
-            // Активный профиль приходит из сервиса: при перезапуске он иначе терялся.
-            activeProfileId = profileId
-            vpnState = state
-            store.connectedAt = intent.getLongExtra(NodewayVpnService.EXTRA_CONNECTED_AT, 0L)
-            pushProfiles()
-            pushState(state, message)
-            // Состояние пишем в журнал здесь, а не в странице: записи переживают
-            // перезагрузку WebView и попадают в общий буфер с логами ядер.
-            if (message != null) {
-                Journal.append(
-                    Journal.SOURCE_APP,
-                    message,
-                    if (state == VpnState.ERROR.code) Journal.LEVEL_ERROR else null,
-                )
-            }
+            applyVpnState(
+                state = state,
+                message = message,
+                profileId = intent.getStringExtra(NodewayVpnService.EXTRA_PROFILE_ID).orEmpty(),
+                connectedAt = intent.getLongExtra(NodewayVpnService.EXTRA_CONNECTED_AT, 0L),
+                latencyMs = intent.getIntExtra(NodewayVpnService.EXTRA_LATENCY_MS, 0),
+                ping = pingFrom(intent),
+            )
         }
     }
+
+    /**
+     * Применяет состояние туннеля ко всем полям и отдаёт его странице и журналу.
+     *
+     * Путь общий для события от сервиса и для снимка при пересоздании Activity,
+     * иначе после смахивания из недавних восстановилось бы не всё.
+     */
+    private fun applyVpnState(
+        state: String,
+        message: String?,
+        profileId: String,
+        connectedAt: Long,
+        latencyMs: Int = 0,
+        ping: PingProgress = PingProgress(),
+    ) {
+        // Активный профиль приходит из сервиса: при перезапуске он иначе терялся.
+        activeProfileId = profileId
+        vpnState = state
+        store.connectedAt = connectedAt
+        pingProgress = ping
+        // Во время проверки профилей список не перерисовываем. Событие приходит
+        // дважды на профиль, и каждая перерисовка создаёт строки заново вместе с
+        // «галочкой» выбранного — тот мигал бы на глазах. Данные профилей при
+        // проверке не меняются, меняются только плашки, а они обновляются точечно.
+        if (state != VpnState.PINGING.code) {
+            pushProfiles()
+        }
+        pushState(state, message, latencyMs)
+        // Состояние пишем в журнал здесь, а не в странице: записи переживают
+        // перезагрузку WebView и попадают в общий буфер с логами ядер.
+        if (message != null) {
+            Journal.append(
+                Journal.SOURCE_APP,
+                message,
+                if (state == VpnState.ERROR.code) Journal.LEVEL_ERROR else null,
+            )
+        }
+    }
+
+    /**
+     * Забирает состояние у сервиса, если он пережил эту Activity.
+     *
+     * Смахивание из недавних убивает Activity, но не процесс с foreground-сервисом,
+     * так что туннель продолжает работать и молчит — без этого вызова новая
+     * Activity до первого события показывала бы «Отключено».
+     */
+    private fun restoreVpnStateFromService() {
+        val snapshot = NodewayVpnService.snapshot
+        // Сервис не поднимался: менять нечего, иначе затёрли бы время подключения.
+        if (snapshot.state == VpnState.DISCONNECTED && store.connectedAt <= 0L) return
+        applyVpnState(
+            state = snapshot.state.code,
+            // Сообщение не восстанавливаем: оно уже было записано в журнал.
+            message = null,
+            profileId = snapshot.profileId,
+            connectedAt = snapshot.connectedAt,
+            latencyMs = snapshot.latencyMs,
+            ping = PingProgress(snapshot.pingIndex, snapshot.pingTotal, snapshot.pingProfileId, snapshot.pingResults),
+        )
+    }
+
+    /** Разбирает прогресс проверки из широковещания сервиса. */
+    private fun pingFrom(intent: Intent) = PingProgress(
+        index = intent.getIntExtra(NodewayVpnService.EXTRA_PING_INDEX, 0),
+        total = intent.getIntExtra(NodewayVpnService.EXTRA_PING_TOTAL, 0),
+        profileId = intent.getStringExtra(NodewayVpnService.EXTRA_PING_PROFILE_ID).orEmpty(),
+        results = @Suppress("UNCHECKED_CAST")
+        (intent.getSerializableExtra(NodewayVpnService.EXTRA_PING_RESULTS) as? HashMap<String, Int>)
+            ?.toMap() ?: emptyMap(),
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -223,6 +288,10 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
 
+        // Сверяемся с сервисом до загрузки страницы: он переживает смахивание
+        // из недавних, а событий больше не присылает.
+        restoreVpnStateFromService()
+
         webView.loadUrl("file:///android_asset/index.html")
         // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
         warmInstalledAppsCache()
@@ -231,6 +300,9 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     override fun onStart() {
         super.onStart()
+        // Страница к этому моменту могла ещё не загрузиться, но на повторном
+        // показе состояние сверяется снова — на случай смены между onStart и onResume.
+        restoreVpnStateFromService()
         refreshHandler.postDelayed(refreshTick, REFRESH_CHECK_INTERVAL_MS)
     }
 
@@ -272,6 +344,32 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             NodewayVpnService.stop(this)
             pushState(VpnState.DISCONNECTING.code, null)
         }
+    }
+
+    override fun onPingRequested(profileIds: List<String>) {
+        runOnUiThread { handlePingRequest(profileIds) }
+    }
+
+    /**
+     * Стартует проверку перечисленных профилей.
+     *
+     * Ссылки и id собираются здесь, в Activity: страница о них ничего не знает,
+     * а сервис получает готовые параллельные списки. Состояние туннеля на момент
+     * нажатия запоминает уже сам сервис и возвращает как было.
+     */
+    private fun handlePingRequest(profileIds: List<String>) {
+        if (vpnState == VpnState.PINGING.code) return
+        val pairs = profileIds.mapNotNull { id -> store.profile(id)?.let { id to it.link } }
+        if (pairs.isEmpty()) {
+            pushState(VpnState.ERROR.code, "Некого проверять")
+            return
+        }
+        Log.i(TAG, "Ping requested for ${pairs.size} profiles")
+        NodewayVpnService.startPing(
+            this,
+            ids = pairs.map { it.first }.toTypedArray(),
+            links = pairs.map { it.second }.toTypedArray(),
+        )
     }
 
     override fun onSelectProfileRequested(id: String) {
@@ -368,7 +466,23 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     override fun appVersion(): String = BuildConfig.VERSION_NAME
 
-    override fun uiState(): String = store.toUiModel(activeProfileId).toString()
+    override fun uiState(): String = store.toUiModel(activeProfileId)
+        // Состояние туннеля обязано быть в стартовом снимке: события от сервиса
+        // приходят только при сменах, а страница переживает перезапуск WebView.
+        // Отклик берём из того же снимка — замер может прийти уже после загрузки.
+        .put("vpnState", vpnState)
+        .put("latency", NodewayVpnService.snapshot.latencyMs)
+        .put("ping", pingProgress.toJson())
+        .toString()
+
+    /** Готовит прогресс проверки для страницы. */
+    private fun PingProgress.toJson(): JSONObject = JSONObject().apply {
+        put("running", running)
+        put("index", index)
+        put("total", total)
+        put("profileId", profileId)
+        put("results", JSONObject(results as Map<*, *>))
+    }
 
     override fun onGetSplitTunnelSettings(): String {
         // Режим без единого приложения ничего не делает, поэтому приводим к общему.
@@ -772,10 +886,12 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     }
 
     /** Serialises a state update into a single JS call. */
-    private fun pushState(state: String, message: String?) {
+    private fun pushState(state: String, message: String?, latencyMs: Int = 0) {
         val payload = JSONObject().apply {
             put("state", state)
             put("message", message ?: "")
+            put("latency", latencyMs)
+            put("ping", pingProgress.toJson())
         }.toString().replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ")
 
         runOnUiThread {

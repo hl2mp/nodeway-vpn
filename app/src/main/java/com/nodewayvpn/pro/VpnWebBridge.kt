@@ -1,6 +1,8 @@
 package com.nodewayvpn.pro
 
 import android.webkit.JavascriptInterface
+import android.util.Log
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -18,6 +20,14 @@ class VpnWebBridge(private val host: Host) {
         fun onConnectRequested(profileId: String)
 
         fun onDisconnectRequested()
+
+    /**
+     * Запуск поочерёдной проверки переданных профилей.
+     *
+     * На вход — список id: Activity сама достаёт из хранилища ссылки и
+     * передаёт сервису готовые пары, а страница ничего о ссылках не знает.
+     */
+    fun onPingRequested(profileIds: List<String>)
 
         /**
          * Синхронно: читает буфер обмена и импортирует его содержимое.
@@ -116,6 +126,23 @@ class VpnWebBridge(private val host: Host) {
 
     @JavascriptInterface
     fun requestDisconnect() = host.onDisconnectRequested()
+
+    /**
+     * Проверка списка профилей: [jsonIds] — массив id вида `["a","b"]`.
+     *
+     * Синхронно не читаем ничего тяжёлого: разбор и запуск уходят в Activity.
+     */
+    @JavascriptInterface
+    fun pingProfiles(jsonIds: String) {
+        val ids = try {
+            val array = JSONArray(jsonIds)
+            List(array.length()) { index -> array.optString(index) }.filter { it.isNotBlank() }
+        } catch (e: Exception) {
+            Log.w("NodewayBridge", "pingProfiles got a malformed id list", e)
+            emptyList()
+        }
+        if (ids.isNotEmpty()) host.onPingRequested(ids)
+    }
 
     @JavascriptInterface
     fun getSplitTunnelSettings(): String = host.onGetSplitTunnelSettings()

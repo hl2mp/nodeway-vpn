@@ -17,7 +17,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import libXray.DialerController
 import java.io.File
 
@@ -46,6 +49,30 @@ class NodewayVpnService : VpnService() {
 
     /** Момент поднятия туннеля (мс) — по нему UI считает время подключения. */
     private var connectedAt: Long = 0L
+
+    /** Отклик через туннель в мс; 0 — замера ещё не было. */
+    private var latencyMs: Int = 0
+
+    /** Порт локального SOCKS5 от olcrtc: замер для него идёт через прокси. */
+    private var probeSocksPort: Int? = null
+
+    /** Цикл замеров отклика, крутится только при живом туннеле. */
+    private var probeJob: Job? = null
+
+    /** Ссылка активного профиля — по ней состояние возвращается после проверки. */
+    private var activeLink: String = ""
+
+    /** Идёт проверка профилей: пока это так, UI не показывает состояние туннеля. */
+    @Volatile
+    private var pinging: Boolean = false
+
+    /** Прогресс проверки: номер текущего профиля (с нуля) и всего в очереди. */
+    private var pingIndex: Int = 0
+    private var pingTotal: Int = 0
+    private var pingProfileId: String = ""
+
+    /** Результаты проверки в памяти процесса; на диск не пишутся. */
+    private var pingResults: MutableMap<String, Int> = mutableMapOf()
 
     /** Настройки раздельного туннелирования читаются на каждый establish. */
     private val prefs by lazy { Prefs(this) }
@@ -109,6 +136,19 @@ class NodewayVpnService : VpnService() {
                 }
             }
 
+            ACTION_PING -> {
+                val links = intent.getStringArrayExtra(EXTRA_PING_LINKS)?.toList().orEmpty()
+                val ids = intent.getStringArrayExtra(EXTRA_PING_IDS)?.toList().orEmpty()
+                if (links.isEmpty() || links.size != ids.size) {
+                    Log.w(TAG, "Ping requested with empty or mismatched profile lists")
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+                startForeground(NOTIFICATION_ID, buildNotification(VpnState.PINGING))
+                work?.cancel()
+                work = serviceScope.launch { runPing(links, ids) }
+            }
+
             else -> {
                 Log.w(TAG, "Unknown action: ${intent?.action}")
                 stopSelf()
@@ -125,6 +165,13 @@ class NodewayVpnService : VpnService() {
 
     override fun onDestroy() {
         serviceScope.cancel()
+        stopProbe()
+        // Проверка, пережившая сервис, оставила бы UI в вечном «проверяем»:
+        // цикла уже нет, а в снимке осталось PINGING.
+        if (pinging) {
+            pinging = false
+            snapshot = VpnSnapshot.DISCONNECTED
+        }
         runCatching { XrayCore.stop() }
         xrayLog.stop()
         olcrtc.stop()
@@ -135,6 +182,8 @@ class NodewayVpnService : VpnService() {
     }
 
     private suspend fun connect(link: String) {
+        // Запоминаем всегда: после проверки профилей вернём то, на чём стояли.
+        activeLink = link
         if (OlcrtcProfile.isOlcrtcLink(link)) {
             connectOlcrtc(link)
             return
@@ -143,6 +192,8 @@ class NodewayVpnService : VpnService() {
     }
 
     private fun connectVless(link: String) {
+        // Наш пакет в туннеле при любом режиме, замер пойдёт прямо в TUN.
+        probeSocksPort = null
         val profile = try {
             VlessProfile.parse(link)
         } catch (e: IllegalArgumentException) {
@@ -203,6 +254,107 @@ class NodewayVpnService : VpnService() {
         connectedAt = System.currentTimeMillis()
         updateNotification(state)
         publishState(state, description)
+        // Во время проверки профилей свой замер не нужен: он всё равно делается
+        // один раз на профиль, а фоновый цикл только жёг бы трафик впустую и
+        // мешал визуально — у него свой таймер, а тут и так всё подряд.
+        if (!pinging) startProbe()
+    }
+
+    /**
+     * Цикл замеров отклика через живой туннель.
+     *
+     * Первый замер идёт сразу после подключения, дальше раз в минуту: чаще
+     * незачем, а запросы через туннель всё-таки видны оператору.
+     *
+     * Результат нигде не хранится — только в [VpnSnapshot], который и так живёт
+     * в памяти процесса. В журнал и Prefs он не пишется намеренно: хронология
+     * «когда подключались и с каким откликом» на устройстве ни к чему.
+     */
+    private fun startProbe() {
+        probeJob?.cancel()
+        latencyMs = 0
+        val socksPort = probeSocksPort
+        probeJob = serviceScope.launch {
+            while (isActive) {
+                latencyMs = TunnelProbe.measure(socksPort) ?: 0
+                publishState(state)
+                delay(PROBE_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun stopProbe() {
+        probeJob?.cancel()
+        probeJob = null
+        latencyMs = 0
+    }
+
+    /**
+     * Поочерёдная проверка профилей: на каждом туннель поднимается по-настоящему,
+     * с настоящим ядром и настоящим выходом, поэтому проверяется не только
+     * достижимость адреса, но и живость профиля — UUID, SNI, поднятие ядра.
+     * Одиночный TCP-connect этого не умеет.
+     *
+     * Строго последовательно: так за один раз стучится ровно в один адрес, и на
+     * узком канале результат не искажается собственными очередями.
+     *
+     * Состояние ВПН возвращается ровно к тому, чем было до старта: если были
+     * подключены — встаём обратно на тот же профиль, если нет — остаёмся
+     * отключёнными.
+     */
+    private suspend fun runPing(links: List<String>, ids: List<String>) {
+        val wasConnected = state == VpnState.CONNECTED || state == VpnState.CONNECTING
+        val restoreLink = activeLink
+        val restoreId = activeProfileId
+
+        pinging = true
+        pingResults = mutableMapOf()
+        pingIndex = 0
+        pingTotal = links.size
+        pingProfileId = ""
+
+        // Гасим то, что уже поднято, до первой итерации. Иначе попытка создать
+        // новый TUN поверх старого провалится, и первый профиль в списке
+        // стабильно отмечался бы отказом — притом только при запуске проверки
+        // с включённым ВПН. Сервис при этом остаётся жив: pinging уже выставлен.
+        if (state != VpnState.DISCONNECTED) {
+            shutdown()
+        }
+
+        try {
+            links.forEachIndexed { index, link ->
+                pingIndex = index
+                pingProfileId = ids[index]
+                publishState(VpnState.PINGING)
+
+                val result = withTimeoutOrNull(PING_PROFILE_TIMEOUT_MS) {
+                    connect(link)
+                    if (state == VpnState.CONNECTED) TunnelProbe.measure(probeSocksPort) else null
+                }
+                // -1 — «не отвечает», рисуется иначе, чем хороший отклик.
+                pingResults[ids[index]] = result ?: -1
+                publishState(VpnState.PINGING)
+
+                shutdown()
+            }
+        } finally {
+            pinging = false
+            pingIndex = 0
+            pingTotal = 0
+            pingProfileId = ""
+            if (wasConnected && restoreLink.isNotBlank()) {
+                activeProfileId = restoreId
+                activeLink = restoreLink
+                startForeground(NOTIFICATION_ID, buildNotification(VpnState.CONNECTING))
+                connect(restoreLink)
+            } else {
+                shutdown()
+                // shutdown() не публикует ничего, если туннель уже погашен, а
+                // последним ушло «Проверка: 5 из 5». Без этого явного события
+                // интерфейс остался бы с надписью «Проверка» навсегда.
+                publishState(VpnState.DISCONNECTED)
+            }
+        }
     }
 
     /**
@@ -248,6 +400,8 @@ class NodewayVpnService : VpnService() {
             return
         }
         Log.i(TAG, "olcrtc ready on 127.0.0.1:$socksPort")
+        // Замер отклика для olcrtc пойдёт через этот SOCKS: наш пакет вне туннеля.
+        probeSocksPort = socksPort
 
         val descriptor = try {
             establishTun(excludeSelf = true)
@@ -276,7 +430,8 @@ class NodewayVpnService : VpnService() {
         )
     }
 
-    private suspend fun shutdown() {
+    private fun shutdown() {
+        stopProbe()
         if (state != VpnState.DISCONNECTED) {
             state = VpnState.DISCONNECTING
             updateNotification(state)
@@ -293,6 +448,8 @@ class NodewayVpnService : VpnService() {
             state = VpnState.DISCONNECTED
             publishState(state)
         }
+        // Между профилями в очереди сервис не гасим — это часть проверки.
+        if (pinging) return
         stopForegroundCompat()
         stopSelf()
     }
@@ -300,6 +457,10 @@ class NodewayVpnService : VpnService() {
     private fun fail(message: String) {
         state = VpnState.ERROR
         publishState(state, message)
+        // Во время проверки профилей сервис остаётся жив: неудачный профиль не
+        // должен уносить с собой всю очередь, иначе один битый сервер остановит
+        // проверку всех остальных.
+        if (pinging) return
         stopForegroundCompat()
         stopSelf()
     }
@@ -307,7 +468,9 @@ class NodewayVpnService : VpnService() {
     /**
      * @param excludeSelf исключает пакет приложения из туннеля. Нужен для olcrtc:
      * его процесс не может вызвать `protect()`, поэтому весь наш UID выводится из
-     * туннеля целиком — иначе WebRTC-сокеты уходят в подменённый маршрут.
+     * туннеля целиком — иначе WebRTC-сокеты уходят в подменённый маршрут. Работает
+     * во всех режимах, включая ALLOW: там исключение достигается отсутствием пакета
+     * в разрешённом списке, потому что Android не принимает оба списка сразу.
      */
     private fun establishTun(excludeSelf: Boolean = false): ParcelFileDescriptor? {
         val builder = Builder()
@@ -320,8 +483,18 @@ class NodewayVpnService : VpnService() {
 
         // Раздельное туннелирование: список приложений применяется к Builder до establish.
         val tunnelMode = TunnelMode.fromCode(prefs.tunnelMode)
-        builder.applySplitTunnel(this, tunnelMode, splitPackages(this), packageName)
+        builder.applySplitTunnel(
+            this,
+            tunnelMode,
+            splitPackages(this),
+            packageName,
+            // olcrtc не умеет protect(), поэтому его собственный UID обязан остаться
+            // вне туннеля — иначе его сокеты уйдут в подменённый маршрут, и трафик
+            // встанет целиком, хотя подключение формально прошло.
+            includeSelf = !excludeSelf,
+        )
 
+        // В ALLOW наш пакет и так вне туннеля — там список запрещённых не собирается.
         if (excludeSelf && (tunnelMode != TunnelMode.ALLOW)) {
             runCatching { builder.addDisallowedApplication(packageName) }
                 .onFailure { Log.w(TAG, "System rejected self exclusion", it) }
@@ -346,15 +519,35 @@ class NodewayVpnService : VpnService() {
     }
 
     private fun publishState(newState: VpnState, message: String? = null) {
+        // Во время проверки профилей состояние туннеля наружу не отдаётся: внутри
+        // цикла оно мельтешит «подключено/отключено» на каждом шаге, и пользователь
+        // видел бы мельтешение вместо прогресса. Снаружи одно состояние.
+        val shown = if (pinging) VpnState.PINGING else newState
+        // Без туннеля профиль не значим — и в снимке, и в широковещании одинаково.
+        val profileId =
+            if (shown == VpnState.DISCONNECTED || shown == VpnState.ERROR) "" else activeProfileId
+        snapshot = VpnSnapshot(
+            state = shown,
+            profileId = profileId,
+            connectedAt = connectedAt,
+            latencyMs = latencyMs,
+            pingIndex = pingIndex,
+            pingTotal = pingTotal,
+            pingProfileId = pingProfileId,
+            pingResults = HashMap(pingResults),
+        )
+
         val intent = Intent(ACTION_STATE)
             .setPackage(packageName)
-            .putExtra(EXTRA_STATE, newState.code)
+            .putExtra(EXTRA_STATE, shown.code)
             .putExtra(EXTRA_MESSAGE, message)
-            .putExtra(
-                EXTRA_PROFILE_ID,
-                if (newState == VpnState.DISCONNECTED || newState == VpnState.ERROR) "" else activeProfileId,
-            )
+            .putExtra(EXTRA_PROFILE_ID, profileId)
             .putExtra(EXTRA_CONNECTED_AT, connectedAt)
+            .putExtra(EXTRA_LATENCY_MS, latencyMs)
+            .putExtra(EXTRA_PING_INDEX, pingIndex)
+            .putExtra(EXTRA_PING_TOTAL, pingTotal)
+            .putExtra(EXTRA_PING_PROFILE_ID, pingProfileId)
+            .putExtra(EXTRA_PING_RESULTS, HashMap(pingResults))
         sendBroadcast(intent)
     }
 
@@ -394,6 +587,7 @@ class NodewayVpnService : VpnService() {
             VpnState.CONNECTING -> getString(R.string.notification_connecting)
             VpnState.CONNECTED -> getString(R.string.notification_connected)
             VpnState.DISCONNECTING -> getString(R.string.notification_disconnecting)
+            VpnState.PINGING -> getString(R.string.notification_ping)
             else -> getString(R.string.app_name)
         }
 
@@ -432,12 +626,26 @@ class NodewayVpnService : VpnService() {
         const val ACTION_SWITCH = "com.nodewayvpn.pro.action.SWITCH"
         const val ACTION_DISCONNECT = "com.nodewayvpn.pro.action.DISCONNECT"
         const val ACTION_STATE = "com.nodewayvpn.pro.action.STATE"
+        const val ACTION_PING = "com.nodewayvpn.pro.action.PING"
 
         const val EXTRA_LINK = "extra_link"
         const val EXTRA_STATE = "extra_state"
         const val EXTRA_MESSAGE = "extra_message"
         const val EXTRA_PROFILE_ID = "extra_profile_id"
         const val EXTRA_CONNECTED_AT = "extra_connected_at"
+
+    /** Отклик через туннель в мс; 0 — замера не было или туннель не ответил. */
+    const val EXTRA_LATENCY_MS = "extra_latency_ms"
+
+    /** Поочерёдная проверка профилей: ссылки и их id в том же порядке. */
+    const val EXTRA_PING_LINKS = "extra_ping_links"
+    const val EXTRA_PING_IDS = "extra_ping_ids"
+
+    /** Прогресс проверки и её результаты, чтобы Activity не отставала. */
+    const val EXTRA_PING_INDEX = "extra_ping_index"
+    const val EXTRA_PING_TOTAL = "extra_ping_total"
+    const val EXTRA_PING_PROFILE_ID = "extra_ping_profile_id"
+    const val EXTRA_PING_RESULTS = "extra_ping_results"
 
         private const val CHANNEL_ID = "nodeway_vpn_service"
         private const val NOTIFICATION_ID = 0x4E57
@@ -446,6 +654,30 @@ class NodewayVpnService : VpnService() {
         private const val TUN_MTU = 1500
         private const val TUN_ADDRESS = "10.23.0.2"
         private const val TUN_PREFIX_LENGTH = 32
+
+        /** Пауза между замерами отклика; минуты хватает с большим запасом. */
+        private const val PROBE_INTERVAL_MS = 60_000L
+
+        /**
+         * Предел на один профиль при проверке.
+         *
+         * С запасом на DNS, TLS-рукопожатие и старт ядра, но всё же ограничение:
+         * мёртвый сервер обязан отпустить очередь, иначе прогон двадцати профилей
+         * растянется на четверть часа.
+         */
+        private const val PING_PROFILE_TIMEOUT_MS = 15_000L
+
+        /**
+         * Последнее опубликованное состояние туннеля.
+         *
+         * Нужно Activity, созданной заново после смахивания приложения из недавних:
+         * сервис в этом процессе жив и событий больше не шлёт, поэтому без снимка
+         * интерфейс показывал бы «Отключено» при работающем туннеле. Значение
+         * обновляется в [publishState] вместе с широковещанием, поэтому совпадает
+         * с тем, что получила бы Activity по событию.
+         */
+        @Volatile
+        var snapshot: VpnSnapshot = VpnSnapshot.DISCONNECTED
 
         fun start(context: Context, link: String, profileId: String) {
             val intent = Intent(context, NodewayVpnService::class.java)
@@ -465,6 +697,24 @@ class NodewayVpnService : VpnService() {
                 .setAction(ACTION_SWITCH)
                 .putExtra(EXTRA_LINK, link)
                 .putExtra(EXTRA_PROFILE_ID, profileId)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        /**
+         * Поочерёдная проверка профилей.
+         *
+         * [ids] и [links] идут строго параллельными списками: индекс в одном
+         * соответствует индексу в другом, иначе плашки разъедутся с профилями.
+         */
+        fun startPing(context: Context, ids: Array<String>, links: Array<String>) {
+            val intent = Intent(context, NodewayVpnService::class.java)
+                .setAction(ACTION_PING)
+                .putExtra(EXTRA_PING_IDS, ids)
+                .putExtra(EXTRA_PING_LINKS, links)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {

@@ -16,6 +16,12 @@
  * строки при подключении, а кнопка «логи» в панели переключает выключатель из
  * настроек вместе с карточкой журнала.
  *
+ * Проверка откликов тоже разыгрывается целиком: кнопки в плашках групп и
+ * кнопка «проверка» в панели пускают очередь по всем профилям, плашки
+ * наполняются по мере замеров, а по завершении состояние возвращается к тому,
+ * каким было до проверки. События повторяют сервис, а не украшают его, —
+ * иначе в браузере не повторились бы его собственные огрехи.
+ *
  * В приложении файл безвреден — там условие demo не выполняется,
  * нативный мост остаётся главным.
  */
@@ -247,6 +253,8 @@
   var state = {
     model: scenarios.default(),
     vpnState: 'disconnected',
+    // Прогресс проверки откликов едет вместе с состоянием — как в сервисе.
+    ping: emptyPing(),
     splitMode: 'all',
     splitPackages: new Set(),
     /*
@@ -324,7 +332,13 @@
   function emitVpn(next, message) {
     state.vpnState = next;
     if (window.onVpnState) {
-      window.onVpnState(JSON.stringify({ state: next, message: message || '' }));
+      // Настоящий мост кладёт в событие ещё и прогресс проверки: без него
+      // плашки откликов в браузере не появлялись бы вовсе.
+      window.onVpnState(JSON.stringify({
+        state: next,
+        message: message || '',
+        ping: state.ping
+      }));
     }
   }
 
@@ -334,10 +348,144 @@
     state.model.connectedAt = connectedAt;
   }
 
+  /**
+   * Туннель погашен, но время подключения ещё прежнее.
+   *
+   * Отдельная функция ради одной честной детали: сервис не обнуляет connectedAt
+   * при остановке, он меняется только при новом подключении. Если обнулять его
+   * здесь, счётчик времени прыгал бы в демо там, где в приложении стоит.
+   */
+  function clearActive() {
+    state.model.activeProfileId = '';
+  }
+
+  // ------------------------------------------------------- проверка профилей
+
+  /*
+   * Отклики профилей.
+   *
+   * События повторяют NodewayVpnService один в один, включая два лишних
+   * onProfilesChanged — на старте и на финише. Из-за них список пересобирался
+   * целиком, а вместе с ним заново проигрывала анимация «галочки» выбранного
+   * профиля. Убрать эти вызовы нельзя: без них моргание в браузере не
+   * воспроизводится и правку нечем проверить.
+   */
+
+  /** Длительность одного замера: в приложении это настоящий запрос по сети. */
+  var PING_STEP_MS = 900;
+
+  /** Номер прогона: следующий прогон отменяет предыдущий, как work?.cancel(). */
+  var pingRun = 0;
+
+  function emptyPing() {
+    return { running: false, index: 0, total: 0, profileId: '', results: {} };
+  }
+
+  function profileById(id) {
+    return state.model.profiles.filter(function (p) { return p.id === id; })[0];
+  }
+
+  /**
+   * Отклик профиля — выводится из id, а не из случайного числа: один и тот же
+   * профиль должен давать один и тот же результат от прогона к прогону.
+   * -1 — «не отвечает», в приложении так помечается профиль, оборванный по
+   * таймауту.
+   */
+  function mockLatency(id) {
+    var seed = 0;
+    for (var i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) % 1009;
+    return seed % 5 === 0 ? -1 : 40 + seed % 260;
+  }
+
+  function parseIds(jsonIds) {
+    try {
+      var list = JSON.parse(jsonIds);
+      if (!Array.isArray(list)) return [];
+      return list.filter(function (id) { return typeof id === 'string' && id.length > 0; });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function pingProfiles(jsonIds) {
+    var ids = parseIds(jsonIds);
+    if (!ids.length || state.ping.running) return;
+    runPing(ids);
+  }
+
+  function runPing(ids) {
+    // Состояние на момент нажатия сервис запоминает и возвращает после прогона.
+    var wasConnected = state.vpnState === 'connected' || state.vpnState === 'connecting';
+    var restoreId = state.model.activeProfileId;
+    var run = ++pingRun;
+
+    state.ping = { running: true, index: 0, total: ids.length, profileId: '', results: {} };
+
+    // Сервис поднимается под проверку с нуля и первым делом публикует
+    // «Отключено» отдельным onProfilesChanged: отсюда приходило моргание
+    // в момент нажатия.
+    clearActive();
+    emitVpn('disconnected', '');
+    emitProfiles();
+
+    step(0);
+
+    function step(index) {
+      if (run !== pingRun) return;
+      if (index >= ids.length) {
+        finish();
+        return;
+      }
+      state.ping.index = index;
+      state.ping.profileId = ids[index];
+      emitVpn('pinging', '');
+      setTimeout(function () {
+        if (run !== pingRun) return;
+        state.ping.results[ids[index]] = mockLatency(ids[index]);
+        // Событий на профиль два: до замера и с уже измеренным откликом.
+        emitVpn('pinging', '');
+        setTimeout(function () { step(index + 1); }, PING_STEP_MS / 2);
+      }, PING_STEP_MS);
+    }
+
+    function finish() {
+      if (run !== pingRun) return;
+      // total обнуляется: по нему страница понимает, что прогон кончен, и
+      // оставляет собранные плашки на месте.
+      state.ping = {
+        running: false,
+        index: 0,
+        total: 0,
+        profileId: '',
+        results: state.ping.results
+      };
+      if (wasConnected && restoreId) {
+        setConnection(restoreId, Date.now());
+        emitVpn('connecting', 'Переключаем профиль');
+        setTimeout(function () {
+          if (run !== pingRun) return;
+          emitVpn('connected', 'Подключено');
+          emitProfiles();
+        }, PING_STEP_MS);
+        return;
+      }
+      clearActive();
+      emitVpn('disconnected', '');
+      emitProfiles();
+    }
+  }
+
   window.NodewayVpn = {
     getInitialState: function () {
+      // Снимок повторяет настоящий: vpnState и ping лежат внутри state,
+      // а не рядом с ним. Копия — ключи не должны попасть в саму модель,
+      // откуда её потом уходит onProfilesChanged.
+      var snapshot = Object.assign({}, state.model, {
+        vpnState: state.vpnState,
+        ping: state.ping
+      });
       return JSON.stringify({
-        state: state.model,
+        state: snapshot,
         coreVersion: '26.9.30 (mock)',
         appVersion: '1.0',
         journalEnabled: state.journalEnabled
@@ -457,6 +605,10 @@
       state.model.selectedProfileId = id;
       emitProfiles();
     },
+
+    /* ---------- проверка откликов ---------- */
+
+    pingProfiles: pingProfiles,
 
     refreshSubscription: function (id) {
       var target = state.model.subscriptions.filter(function (s) { return s.id === id; })[0];
@@ -596,6 +748,11 @@
       emitProfiles();
       emitVpn(vpnState, '');
     });
+  });
+
+  // Проверка всех профилей подряд: тот же сценарий, что у кнопок в плашках групп.
+  addButton('проверка', function () {
+    pingProfiles(JSON.stringify(state.model.profiles.map(function (p) { return p.id; })));
   });
 
   addButton('подключить', function () { window.NodewayVpn.requestConnect(state.model.selectedProfileId); });
