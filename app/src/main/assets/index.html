@@ -4,84 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nodeway VPN</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Google+Sans:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
     :root {
-        /* Material 3 (Material You) Expressive Dynamic Palette (Baseline Indigo/Blue theme) */
-        --md-sys-color-primary: #1952e6;
-        --md-sys-color-on-primary: #ffffff;
-        --md-sys-color-primary-container: #dce1ff;
-        --md-sys-color-on-primary-container: #001551;
-
-        --md-sys-color-secondary: #585e71;
-        --md-sys-color-on-secondary: #ffffff;
-        --md-sys-color-secondary-container: #dce2f9;
-        --md-sys-color-on-secondary-container: #151b2c;
-
-        --md-sys-color-tertiary: #138753;
-        --md-sys-color-on-tertiary: #ffffff;
-        --md-sys-color-tertiary-container: #a6f2c6;
-        --md-sys-color-on-tertiary-container: #002111;
-
-        --md-sys-color-error: #ba1a1a;
-        --md-sys-color-on-error: #ffffff;
-        --md-sys-color-error-container: #ffdad6;
-        --md-sys-color-on-error-container: #410002;
-
-        --md-sys-color-background: #fdfbff;
-        --md-sys-color-on-background: #1a1b20;
-        --md-sys-color-surface: #fdfbff;
-        --md-sys-color-on-surface: #1a1b20;
-        --md-sys-color-surface-variant: #e2e2ec;
-        --md-sys-color-on-surface-variant: #45464f;
-        --md-sys-color-outline: #757680;
-        --md-sys-color-outline-variant: #c5c6d0;
-
-        --md-sys-color-surface-container-lowest: #ffffff;
-        --md-sys-color-surface-container-low: #f7f3f9;
-        --md-sys-color-surface-container: #f1edf3;
-        --md-sys-color-surface-container-high: #ebe8ee;
-        --md-sys-color-surface-container-highest: #e5e2e8;
-
-        /* Status & Connection colors */
-        --m3-state-connected: #2e7d32;
-        --m3-state-connected-container: #c8e6c9;
-        --m3-state-connected-on-container: #003314;
-        
-        --m3-state-connecting: #e65100;
-        --m3-state-connecting-container: #ffe0b2;
-
-        /* System Insets */
+        --bg: #F2F2F7;
+        --card: #FFFFFF;
+        --line: #E3E3E8;
+        --text: #000000;
+        --muted: #8A8A8E;
+        --blue: #007AFF;
+        --green: #34C759;
+        --red: #FF3B30;
+        /* Отступы под системные панели: приложение передаёт их из Kotlin (setInsets). */
         --inset-top: 0px;
         --inset-bottom: 0px;
-
-        /* M3 Shape radii */
-        --shape-xs: 4px;
-        --shape-sm: 8px;
-        --shape-md: 12px;
-        --shape-lg: 16px;
-        --shape-xl: 28px;
-        --shape-full: 9999px;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     html, body {
         margin: 0;
-        background: var(--md-sys-color-surface-container-low);
-        color: var(--md-sys-color-on-surface);
-        font-family: 'Roboto', 'Google Sans', -apple-system, sans-serif;
-        font-size: 16px;
-        line-height: 1.4;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+        font-size: 17px;
+        line-height: 1.35;
         -webkit-font-smoothing: antialiased;
-        height: auto;
     }
+
+    /*
+     * Прокручивается весь документ, а не вложенный блок страницы.
+     * Иначе на части устройств жест «заедает»: начатый над шапкой или кнопкой
+     * питания, он не листает, и докрутив блок до конца, страница не идёт дальше.
+     */
+    html, body { height: auto; }
 
     body {
         display: block;
-        padding-bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 24px);
+        padding-bottom: var(--inset-bottom);
     }
 
     .page { display: none; }
@@ -90,159 +49,63 @@
     button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
     svg { display: block; }
 
-    /* ---------- Material 3 Top App Bar ---------- */
-    .m3-top-bar {
-        position: sticky;
-        top: 0;
-        z-index: 30;
-        background: var(--md-sys-color-surface-container-low);
-        padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px);
-        padding-bottom: 10px;
-        padding-left: 16px;
-        padding-right: 16px;
+    /* ---------- верхняя панель ---------- */
+
+    .navbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        transition: background-color 0.2s ease;
+        padding: 8px 18px 10px;
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+		padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px);
     }
 
-    .m3-top-bar.hidden { display: none; }
+    /* На «Настройках» верхние кнопки («+» и шестерёнка) не нужны. */
+    .navbar.hidden { display: none; }
 
-    .m3-app-brand {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .m3-logo-badge {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        background: var(--md-sys-color-primary-container);
-        color: var(--md-sys-color-on-primary-container);
-        display: grid;
-        place-items: center;
-    }
-
-    .m3-app-title {
-        font-size: 20px;
-        font-weight: 700;
-        letter-spacing: -0.2px;
-        color: var(--md-sys-color-on-surface);
-        font-family: 'Google Sans', 'Roboto', sans-serif;
-    }
-
-    .m3-top-actions {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    /* M3 Standard Icon Button */
-    .m3-icon-btn {
-        width: 42px;
-        height: 42px;
-        border-radius: var(--shape-full);
-        display: grid;
-        place-items: center;
-        color: var(--md-sys-color-on-surface-variant);
-        position: relative;
-        overflow: hidden;
-        transition: background-color 0.2s, color 0.2s, transform 0.1s;
-    }
-
-    .m3-icon-btn:active {
-        background-color: var(--md-sys-color-surface-variant);
-        transform: scale(0.95);
-    }
-
-    .m3-icon-btn.tonal {
-        background: var(--md-sys-color-primary-container);
-        color: var(--md-sys-color-on-primary-container);
-    }
-    .m3-icon-btn.tonal:active {
-        opacity: 0.85;
-    }
-
-    /* ---------- Settings Top Bar ---------- */
+    /* Верхняя панель настроек: там живёт кнопка «Назад». */
     .settings-bar {
         position: sticky;
         top: 0;
-        z-index: 30;
-        background: var(--md-sys-color-surface-container-low);
-        padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px);
-        padding-bottom: 12px;
-        padding-left: 12px;
-        padding-right: 16px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        z-index: 20;
+        padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px) 18px 8px;
+        background: var(--bg);
     }
 
-    .settings-bar-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: var(--md-sys-color-on-surface);
-        font-family: 'Google Sans', sans-serif;
-    }
+    .nav-link { color: var(--blue); font-size: 17px; padding: 4px 0; }
+    .nav-link.big { font-size: 28px; line-height: 1; padding: 0 4px; }
+    .nav-link svg { width: 24px; height: 24px; }
 
-    /* ---------- Hero Power & Connection Section ---------- */
-    .hero-power-card {
-        margin: 10px 16px 20px;
-        background: var(--md-sys-color-surface-container-lowest);
-        border-radius: 32px;
-        padding: 32px 20px 28px;
+    /* ---------- кнопка питания ---------- */
+
+    .power-area {
         display: flex;
         flex-direction: column;
         align-items: center;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-        position: relative;
-        overflow: hidden;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
-    }
-
-    .hero-power-card::before {
-        content: "";
-        position: absolute;
-        top: -60px;
-        width: 220px;
-        height: 220px;
-        background: radial-gradient(circle, var(--md-sys-color-primary-container) 0%, transparent 70%);
-        opacity: 0.45;
-        border-radius: 50%;
-        pointer-events: none;
-        transition: background 0.3s ease;
-    }
-
-    .hero-power-card.connected::before {
-        background: radial-gradient(circle, var(--m3-state-connected-container) 0%, transparent 70%);
-        opacity: 0.7;
+        padding: 14px 16px 26px;
     }
 
     .uptime {
         text-align: center;
         margin-bottom: 24px;
-        position: relative;
-        z-index: 2;
     }
 
     .uptime-label {
         font-size: 13px;
         font-weight: 500;
-        letter-spacing: 0.4px;
-        color: var(--md-sys-color-on-surface-variant);
-        text-transform: uppercase;
+        color: var(--muted);
     }
 
     .uptime-value {
-        margin-top: 4px;
-        font-size: 38px;
+        margin-top: 2px;
+        font-size: 32px;
         font-weight: 700;
-        color: var(--md-sys-color-on-surface);
+        color: var(--text);
         font-variant-numeric: tabular-nums;
-        letter-spacing: 1px;
-        font-family: 'Roboto Mono', 'Google Sans', monospace;
+        letter-spacing: .5px;
     }
 
     /* Отклик через туннель. Не «пинг»: в цифру входит и путь до адреса замера. */
@@ -251,233 +114,110 @@
         min-height: 18px;
         font-size: 13px;
         font-weight: 500;
-        color: var(--md-sys-color-on-surface-variant);
+        color: var(--muted);
         font-variant-numeric: tabular-nums;
+        letter-spacing: 1px;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
     }
 
-    /* M3 Large Power FAB Button */
-    .power-outer-ring {
-        position: relative;
-        padding: 14px;
-        border-radius: 50%;
-        background: var(--md-sys-color-surface-container-high);
-        transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        z-index: 2;
-    }
-
-    .hero-power-card.connected .power-outer-ring {
-        background: var(--m3-state-connected-container);
-        box-shadow: 0 0 0 8px rgba(46, 125, 50, 0.12);
+    .power-box {
+        background: #E4E4EA;
+        border-radius: 28px;
+        padding: 12px;
     }
 
     .power-btn {
-        width: 104px;
-        height: 104px;
+        width: 92px;
+        height: 92px;
         border-radius: 50%;
-        background: var(--md-sys-color-primary);
-        color: var(--md-sys-color-on-primary);
+        background: var(--blue);
         display: grid;
         place-items: center;
-        box-shadow: 0 6px 16px rgba(25, 82, 230, 0.35);
-        transition: background 0.25s ease, transform 0.15s ease, box-shadow 0.25s ease;
-        position: relative;
+        transition: background .2s ease, transform .1s ease;
     }
 
-    .power-btn:active {
-        transform: scale(0.93);
-    }
+    .power-btn:active { transform: scale(.94); }
+    .power-btn.on { background: var(--green); }
+    .power-btn.busy { background: var(--muted); }
 
-    .power-btn.on {
-        background: var(--m3-state-connected);
-        box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
-    }
-
-    .power-btn.busy {
-        background: var(--md-sys-color-outline);
-        animation: m3Pulse 1.8s infinite ease-in-out;
-    }
-
-    @keyframes m3Pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(0.95); opacity: 0.85; }
-    }
-
-    /* M3 Status Assist Chip */
+    /* Material 3: чип статуса без шеврона, с серым/голубым контейнером. */
     .status-chip {
-        margin-top: 24px;
-        display: inline-flex;
+        margin-top: 20px;
+        display: flex;
         align-items: center;
-        gap: 8px;
-        background: var(--md-sys-color-surface-container-high);
-        color: var(--md-sys-color-on-surface-variant);
-        border-radius: var(--shape-full);
-        padding: 8px 22px;
+        background: #E1EFFF;
+        color: var(--blue);
+        border-radius: 999px;
+        padding: 9px 24px;
         font-size: 15px;
-        font-weight: 500;
-        z-index: 2;
-        transition: background 0.2s, color 0.2s;
+        font-weight: 600;
+        width: 145px;
+        justify-content: center;
     }
 
-    .status-chip .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: currentColor;
-    }
-
-    .status-chip.on {
-        background: var(--m3-state-connected-container);
-        color: var(--m3-state-connected-on-container);
-    }
-
-    .status-chip.busy {
-        background: var(--md-sys-color-secondary-container);
-        color: var(--md-sys-color-on-secondary-container);
-    }
-
-    .status-chip.error {
-        background: var(--md-sys-color-error-container);
-        color: var(--md-sys-color-on-error-container);
-    }
+    .status-chip.on { background: #DCF5E6; color: #1E8E3E; }
+    .status-chip.error { background: #FDE0E0; color: #C5221F; }
+    .status-chip.busy { background: #EEF0F4; color: var(--muted); }
 
     .status-hint {
-        margin-top: 12px;
+        margin-top: 10px;
         font-size: 13px;
-        color: var(--md-sys-color-outline);
+        color: var(--muted);
         text-align: center;
-        max-width: 310px;
-        line-height: 1.4;
-        z-index: 2;
+        max-width: 300px;
     }
 
-    /* ---------- Material 3 Section Headers & Cards ---------- */
+    /* ---------- группы ---------- */
+
     .section-title {
-        font-size: 14px;
-        font-weight: 700;
-        color: var(--md-sys-color-primary);
-        margin: 24px 20px 10px;
+        font-size: 13px;
+        color: var(--blue);
+        margin: 22px 32px 8px;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
+        letter-spacing: .4px;
     }
 
-    /* M3 Container / Card */
     .group {
-        background: var(--md-sys-color-surface-container-lowest);
-        border-radius: 24px;
-        margin: 0 16px 12px;
+        background: var(--card);
+        border-radius: 12px;
+        margin: 0 16px 8px;
         overflow: hidden;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
 
     .group-head {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         width: 100%;
-        padding: 16px 18px;
+        padding: 14px 16px;
         text-align: left;
-        background: var(--md-sys-color-surface-container-lowest);
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
-        transition: background-color 0.15s ease;
-    }
-
-    .group-head:active {
-        background-color: var(--md-sys-color-surface-container);
-    }
-
-    .group-head-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        background: var(--md-sys-color-secondary-container);
-        color: var(--md-sys-color-on-secondary-container);
-        display: grid;
-        place-items: center;
-        flex: none;
+        border-bottom: 1px solid var(--line);
+        /* Шапка перестала быть <button>: внутрь неё легла кнопка проверки,
+           а вложенные интерактивные элементы невалидны и ломают клик. */
+        cursor: pointer;
     }
 
     .group-title {
         flex: 1;
         min-width: 0;
-        font-size: 17px;
-        font-weight: 600;
+        font-size: 19px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        color: var(--md-sys-color-on-surface);
     }
 
-    .group-badge {
-        font-size: 12px;
-        font-weight: 600;
-        padding: 4px 10px;
-        border-radius: var(--shape-full);
-        background: var(--md-sys-color-surface-container-high);
-        color: var(--md-sys-color-on-surface-variant);
-    }
-
-    /* Кнопка проверки в шапке группы: дискретная, чтобы не спорить с кнопкой питания. */
-    .ping-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 34px;
-        height: 34px;
-        margin-left: 4px;
-        padding: 0;
-        border: none;
-        border-radius: var(--shape-full);
-        background: var(--md-sys-color-surface-container-high);
-        color: var(--md-sys-color-on-surface-variant);
-        cursor: pointer;
-    }
-
-    .ping-btn:disabled {
-        opacity: 0.4;
-        cursor: default;
-    }
-
-    .ping-btn:not(:disabled):active {
-        background: var(--md-sys-color-surface-container-highest);
-    }
-
-    /* Плашка отклика в карточке профиля, рядом с «i». */
-    .ping-badge {
-        font-size: 12px;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-        padding: 3px 8px;
-        border-radius: var(--shape-full);
-        background: var(--md-sys-color-surface-container-high);
-        color: var(--md-sys-color-on-surface-variant);
-    }
-
-    /* Пустая плашка не должна занимать место — она ждёт первого результата. */
-    .ping-badge:empty {
-        display: none;
-    }
-
-    .ping-badge.bad {
-        color: var(--md-sys-color-error);
-    }
-
-    .ping-badge.active {
-        color: var(--md-sys-color-primary);
-    }
-
-    .chevron {
-        color: var(--md-sys-color-on-surface-variant);
-        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
+    .group-title.small { font-size: 19px; }
+    .chevron { color: var(--blue); transition: transform .2s ease; }
     .group.collapsed .chevron { transform: rotate(-90deg); }
 
+    /*
+     * Плавное сворачивание: анимируем высоту строки grid 1fr → 0fr,
+     * поэтому переход идёт по реальной высоте содержимого, а не по display.
+     */
     .group-body {
         display: grid;
         grid-template-rows: 1fr;
-        transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: grid-template-rows .28s ease;
     }
 
     .group-inner {
@@ -486,306 +226,311 @@
     }
 
     .group.collapsed .group-body { grid-template-rows: 0fr; }
-    .group.collapsed .group-head { border-bottom: none; }
 
-    /* ---------- Profile Row (M3 List Item) ---------- */
+    /* Свёрнутая группа — только заголовок, без разделителя под ним. */
+    .group.collapsed .group-head { border-bottom: none; }
+    .group.collapsed .row:last-child,
+    .group.collapsed .group-inner > *:last-child { border-bottom: none; }
+
+    /* ---------- строка профиля ---------- */
+
     .row {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 12px;
         width: 100%;
         text-align: left;
-        padding: 14px 18px;
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
-        transition: background-color 0.15s ease;
-        position: relative;
+        padding: 12px 16px 12px 14px;
+        border-bottom: 1px solid var(--line);
     }
 
     .row:last-child { border-bottom: none; }
+    .row:active { background: #EFEFF4; }
 
-    .row:active {
-        background-color: var(--md-sys-color-surface-container-high);
-    }
+    /* Смещение нужно только в строках режима: их текст начинается с первой строки,
+       а маркер по умолчанию центрируется по всей строке. */
+    .mode-row .mark { margin-top: 3px }
 
-    /* M3 Radio selection indicator */
-    .mark {
-        flex: none;
-        position: relative;
-        width: 22px;
-        height: 22px;
-        border: 2px solid var(--md-sys-color-outline);
-        border-radius: 50%;
-        transition: border-color 0.2s;
-    }
-
-    .mark.on {
-        border-color: var(--md-sys-color-primary);
-    }
+    .mark.on { border-color: var(--blue); }
 
     .mark.on::after {
         content: "";
         position: absolute;
         inset: 3px;
         border-radius: 50%;
-        background: var(--md-sys-color-primary);
-        animation: m3Pop 0.18s ease-out;
-    }
-
-    @keyframes m3Pop {
-        0% { transform: scale(0.3); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
+        background: var(--blue);
     }
 
     .row-body { flex: 1; min-width: 0; }
 
     .row-title {
-        font-size: 16px;
-        font-weight: 500;
-        color: var(--md-sys-color-on-surface);
+        font-size: 17px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
     .row-sub {
-        margin-top: 2px;
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--md-sys-color-on-surface-variant);
+        font-size: 13px;
+        color: var(--muted);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        letter-spacing: 0.2px;
     }
 
-    /* Info button with M3 ripple touch target */
     .info-btn {
-        width: 36px;
-        height: 36px;
+        width: 25px;
+        height: 25px;
         border-radius: 50%;
-        background: var(--md-sys-color-surface-container);
-        color: var(--md-sys-color-primary);
+        border: 2px solid var(--blue);
+        color: var(--blue);
         display: grid;
         place-items: center;
         flex: none;
         font-size: 15px;
-        font-weight: 700;
-        transition: background-color 0.2s, transform 0.1s;
+        font-weight: 600;
+        line-height: 1;
     }
 
-    .info-btn:active {
-        background-color: var(--md-sys-color-primary-container);
-        transform: scale(0.92);
+    /* «i» всегда синяя: подключение на вид не влияет. */
+    .info-btn.active { color: var(--blue); border-color: var(--blue); background: none; }
+
+    /* Кнопка проверки в шапке группы: дискретная, чтобы не спорить с кнопкой питания. */
+    .ping-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex: none;
+        padding: 0;
+        border-radius: 50%;
+        background: var(--line);
+        color: var(--blue);
+        cursor: pointer;
     }
 
-    .info-btn.active {
-        background: var(--md-sys-color-primary-container);
-        color: var(--md-sys-color-on-primary-container);
+    .ping-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
     }
 
-    .empty {
-        padding: 24px 20px;
-        color: var(--md-sys-color-outline);
-        font-size: 14px;
-        text-align: center;
-        line-height: 1.5;
+    .ping-btn:not(:disabled):active { background: #E3E3E8; }
+
+    /* Плашка отклика в строке профиля, рядом с «i». */
+    .ping-badge {
+        display: flex;
+        align-items: center;
+        height: 25px;
+        flex: none;
+        padding: 0 8px;
+        border-radius: 12px;
+        background: var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
     }
 
-    /* ---------- Logs / Diagnostics Card ---------- */
+    /* Пустая плашка не должна занимать место — она ждёт первого результата. */
+    .ping-badge:empty { display: none; }
+
+    .ping-badge.bad { color: var(--red); }
+
+    .ping-badge.active { color: var(--blue); }
+
+    .empty { padding: 18px 16px; color: var(--muted); font-size: 15px; }
+
+    /* ---------- журнал ---------- */
+
     .log {
-        background: var(--md-sys-color-surface-container-lowest);
-        border-radius: 24px;
-        margin: 12px 16px 24px;
+        background: var(--card);
+        border-radius: 12px;
+        margin: 8px 16px 22px;
         overflow: hidden;
-        border: 1px solid var(--md-sys-color-outline-variant);
     }
 
     .log .group-head { border-bottom: none; }
-    .log .group-title {
-        font-size: 14px;
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        color: var(--md-sys-color-on-surface-variant);
-        font-weight: 700;
-    }
+    .log .group-title { font-size: 13px; text-transform: uppercase; color: var(--muted); }
 
     #logBody {
-        padding: 8px 18px 16px;
+        padding: 0 16px 12px;
         font-size: 12px;
-        color: var(--md-sys-color-on-surface-variant);
+        color: var(--muted);
         max-height: 220px;
         overflow-y: auto;
-        font-family: 'Roboto Mono', ui-monospace, monospace;
-        background: var(--md-sys-color-surface-container-lowest);
-        line-height: 1.5;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
     }
 
-    #logBody .log-line {
-        padding: 2px 0;
-        word-break: break-all;
-    }
+    /* Вывод ядер — тусклее сообщений приложения, иначе журнал нечитаем. */
+    #logBody .log-line.xray { color: #7f8fa6; }
+    #logBody .log-line.olcrtc { color: #6f9c86; }
 
-    #logBody .log-line.xray { color: #506176; }
-    #logBody .log-line.olcrtc { color: #22674e; }
-    #logBody .log-line.warn { color: #b07000; font-weight: 500; }
-    #logBody .log-line.error { color: var(--md-sys-color-error); font-weight: 600; }
+    /* Предупреждения и ошибки выделяются: их и ищут в первую очередь. */
+    #logBody .log-line.warn { color: #c9a227; }
+    #logBody .log-line.error { color: #e0625f; }
 
-    /* M3 Filter Chips */
+    /* Переключатель уровня журнала. */
     .log-filter {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 0 16px 12px;
+        padding: 0 16px 10px;
     }
 
     .log-filter button {
-        border: 1px solid var(--md-sys-color-outline-variant);
-        background: var(--md-sys-color-surface-container-lowest);
-        padding: 6px 14px;
-        border-radius: var(--shape-sm);
+        border: none;
+        background: none;
+        padding: 4px 10px;
+        border-radius: 999px;
         font-size: 12px;
-        font-weight: 500;
-        color: var(--md-sys-color-on-surface-variant);
+        color: var(--muted);
         cursor: pointer;
-        transition: all 0.2s;
     }
 
-    .log-filter button.active {
-        background: var(--md-sys-color-secondary-container);
-        color: var(--md-sys-color-on-secondary-container);
-        border-color: transparent;
-        font-weight: 600;
-    }
+    /* Активный фильтр — плашка поверх белой карточки, поэтому берём фон страницы:
+       белый по белому не читался, а переменной --fg в палитре не было. */
+    .log-filter button.active { background: var(--bg); color: var(--text); }
 
     .log-filter .log-hint {
         margin-left: auto;
         font-size: 11px;
-        color: var(--md-sys-color-outline);
+        color: var(--muted);
+        opacity: 0.7;
     }
 
-    /* ---------- Material 3 Switch Component ---------- */
+    /* Переключатель в настройках: выключатель, а не выбор из списка. */
     .switch {
         flex: none;
-        width: 52px;
-        height: 32px;
-        border-radius: var(--shape-full);
-        background: var(--md-sys-color-surface-container-highest);
-        border: 2px solid var(--md-sys-color-outline);
+        width: 51px;
+        height: 31px;
+        border-radius: 16px;
+        background: var(--line);
         position: relative;
-        transition: background-color 0.2s ease, border-color 0.2s ease;
+        transition: background .18s ease;
     }
 
     .switch::after {
         content: '';
         position: absolute;
-        top: 4px;
-        left: 4px;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--md-sys-color-outline);
-        transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), width 0.15s, background-color 0.2s;
-    }
-
-    .switch.on {
-        background: var(--md-sys-color-primary);
-        border-color: var(--md-sys-color-primary);
-    }
-
-    .switch.on::after {
-        transform: translateX(20px);
-        width: 24px;
-        height: 24px;
         top: 2px;
         left: 2px;
-        background: var(--md-sys-color-on-primary);
+        width: 27px;
+        height: 27px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+        transition: transform .18s ease;
     }
 
-    /* ---------- Settings Page Elements ---------- */
+    .switch.on { background: var(--blue); }
+    .switch.on::after { transform: translateX(20px); }
+
+    /* ---------- настройки ---------- */
+
     .settings-row {
         display: flex;
         align-items: center;
         width: 100%;
         text-align: left;
-        padding: 16px 20px;
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
-        font-size: 16px;
-        color: var(--md-sys-color-on-surface);
-        transition: background-color 0.15s;
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 17px;
     }
 
     .settings-row:last-child { border-bottom: none; }
-    .settings-row:active { background-color: var(--md-sys-color-surface-container); }
-
-    .settings-row.center {
-        justify-content: center;
-        color: var(--md-sys-color-primary);
-        font-weight: 600;
-    }
-
+    .settings-row.center { justify-content: center; color: var(--blue); }
     .settings-row .value {
         flex: none;
         margin-left: auto;
-        color: var(--md-sys-color-on-surface-variant);
-        font-size: 14px;
-        font-weight: 500;
+        color: var(--muted);
+        font-size: 15px;
     }
-
-    .settings-row .value.accent {
-        color: var(--md-sys-color-primary);
-        background: var(--md-sys-color-primary-container);
-        border-radius: var(--shape-full);
-        font-weight: 600;
-		padding: 4px 8px;
-		width: 81px;
-    }
-
     .settings-row small {
         display: block;
-        margin-top: 4px;
-        color: var(--md-sys-color-on-surface-variant);
-        font-size: 13px;
-    }
-
-    .settings-row.sub-row {
-        align-items: flex-start;
-    }
-    .settings-row.sub-row > span {
         flex: 1;
         min-width: 0;
-    }
-
-    /* Split Tunneling Row Specifics */
-    .mode-row { align-items: flex-start; }
-    .mode-copy { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
-    .mode-copy > span { font-weight: 500; }
-    .mode-copy small {
-        color: var(--md-sys-color-on-surface-variant);
+        color: var(--muted);
         font-size: 13px;
-        line-height: 1.35;
+        overflow-wrap: anywhere;
     }
 
-    /* M3 Button styling for "Выбрать приложения" */
-    #splitPick {
-        margin: 6px 16px 16px;
-        width: calc(100% - 32px);
-        padding: 12px 18px;
-        background: var(--md-sys-color-primary-container);
-        color: var(--md-sys-color-on-primary-container);
-        border-radius: var(--shape-full);
-        font-weight: 600;
-        font-size: 15px;
-        text-align: center;
+  /* Синие действия в настройках — как «Добавить из буфера». */
+  .settings-row .value.accent {
+    color: var(--blue);
+    width: 82px;
+  }
+
+  /* Плашка подписки: тело занимает три строки, кнопки прижаты к заголовку,
+     иначе align-items: center ставит их между «Профилей» и отсчётом. */
+  .settings-row.sub-row {
+    align-items: flex-start;
+  }
+
+  .settings-row.sub-row > span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Спиннер загрузки подписки: кольцо с вращающейся «шапкой». */
+  .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(11, 15, 20, .15);
+      border-top-color: var(--blue);
+      animation: spin .7s linear infinite;
+      vertical-align: -3px;
+  }
+
+  @keyframes spin {
+  to { transform: rotate(360deg); }
+  }
+
+  .settings-row .value:disabled {
+  opacity: .6;
+  pointer-events: none;
+  }
+
+    /* Раскладка страницы задана выше: display у .page переключается через .active. */
+
+    /* Атрибут hidden должен побеждать display из классов: иначе он не прячет. */
+    [hidden] { display: none !important; }
+
+    /* ---------- раздельное туннелирование ---------- */
+
+    .mode-row { align-items: flex-start; }
+
+    .mode-copy { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+
+    .mode-copy small {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.3;
     }
 
-    /* ---------- Material 3 Full-screen App Picker Sheet ---------- */
+    /* Кружок выбора: как в iOS, пустой или с точкой. Один и тот же и в режимах
+       туннелирования, и в списке профилей. */
+    .mark {
+        flex: none;
+        position: relative;
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--line);
+        border-radius: 50%;
+    }
+
+    /* ---------- лист выбора приложений ---------- */
+
     .picker {
         position: fixed;
         inset: 0;
-        z-index: 50;
+        z-index: 45;
         display: none;
         flex-direction: column;
-        background: var(--md-sys-color-surface-container-low);
+        background: var(--bg);
     }
 
     .picker.open { display: flex; }
@@ -793,142 +538,123 @@
     .picker-bar {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 12px) 16px 12px;
-        background: var(--md-sys-color-surface-container-lowest);
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        gap: 8px;
+        padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 10px) 8px 10px;
+        background: var(--card);
+        border-bottom: 1px solid var(--line);
     }
 
-    .picker-title {
-        flex: 1;
-        text-align: center;
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--md-sys-color-on-surface);
-    }
+    .picker-title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; }
+
+    .nav-link.accent { color: var(--blue); font-weight: 600; }
 
     .picker-tools {
-        padding: 14px 16px;
-        background: var(--md-sys-color-surface-container-lowest);
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
+        padding: 10px 16px;
+        background: var(--card);
+        border-bottom: 1px solid var(--line);
     }
-
-    .picker-search { position: relative; }
 
     .picker-input {
         width: 100%;
-        padding: 12px 42px 12px 16px;
-        border: 1px solid var(--md-sys-color-outline-variant);
-        border-radius: var(--shape-full);
-        background: var(--md-sys-color-surface-container-high);
-        color: var(--md-sys-color-on-surface);
-        font-size: 15px;
-        outline: none;
-        transition: border-color 0.2s;
+        padding: 10px 12px;
+        border: none;
+        border-radius: 10px;
+        background: var(--bg);
+        color: inherit;
+        font: inherit;
+        font-size: 16px;
     }
 
-    .picker-input:focus {
-        border-color: var(--md-sys-color-primary);
-        background: var(--md-sys-color-surface-container-lowest);
-    }
+    /* Крестик очистки лежит поверх поля, поэтому тексту нужен запас справа. */
+    .picker-search { position: relative; }
+    .picker-search .picker-input { padding-right: 40px; }
 
     .picker-search-clear {
         position: absolute;
         top: 50%;
-        right: 8px;
+        right: 4px;
         transform: translateY(-50%);
-        width: 32px;
-        height: 32px;
-        display: grid;
-        place-items: center;
-        color: var(--md-sys-color-on-surface-variant);
-        border-radius: 50%;
-    }
-
-    .picker-row {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        color: var(--muted);
     }
+
+    .picker-search-clear:active { background: rgba(0, 0, 0, 0.06); }
 
     .picker-switch {
         display: flex;
         align-items: center;
+        gap: 8px;
+        padding-top: 10px;
+        font-size: 14px;
+        color: var(--muted);
+    }
+
+    .picker-switch input { width: 18px; height: 18px; accent-color: var(--blue); }
+
+    /* Переключатель системных и кнопка очистки делят одну строку. */
+    .picker-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+    .picker-clear { flex: none; color: var(--blue); font-size: 14px; }
+    .picker-clear:disabled { color: var(--muted); opacity: 0.4; }
+
+    .picker-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Пока мост считает список приложений, вместо него показываем заглушку. */
+    .picker-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         gap: 10px;
-        font-size: 14px;
-        color: var(--md-sys-color-on-surface-variant);
-    }
-
-    .picker-switch input {
-        width: 20px;
-        height: 20px;
-        accent-color: var(--md-sys-color-primary);
-    }
-
-    .picker-clear {
-        color: var(--md-sys-color-primary);
-        font-size: 14px;
-        font-weight: 600;
-    }
-    .picker-clear:disabled { color: var(--md-sys-color-outline); opacity: 0.5; }
-
-    .picker-list {
-        flex: 1;
-        overflow-y: auto;
-        padding-bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 16px);
+        padding: 32px 16px;
+        color: var(--muted);
+        font-size: 15px;
     }
 
     .picker-group {
-        padding: 16px 20px 8px;
-        font-size: 12px;
-        font-weight: 700;
+        padding: 14px 16px 6px;
+        font-size: 13px;
         text-transform: uppercase;
-        letter-spacing: 0.7px;
-        color: var(--md-sys-color-primary);
+        color: var(--muted);
     }
 
     .app-row {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
         width: 100%;
         text-align: left;
-        padding: 12px 18px;
-        background: var(--md-sys-color-surface-container-lowest);
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        padding: 9px 16px;
+        border-bottom: 1px solid var(--line);
     }
 
     .app-icon {
         flex: none;
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        background: var(--md-sys-color-surface-variant);
-        object-fit: cover;
+        width: 40px;
+        height: 40px;
+        border-radius: 9px;
+        background: var(--line);
     }
 
     .app-copy { flex: 1; min-width: 0; }
-    .app-name { display: block; font-size: 16px; font-weight: 500; color: var(--md-sys-color-on-surface); }
-    .app-pkg { display: block; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
 
-    /* M3 Checkbox */
+    .app-name { display: block; font-size: 16px; overflow-wrap: anywhere; }
+    .app-pkg { display: block; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+
     .app-box {
         flex: none;
+        position: relative;
         width: 22px;
         height: 22px;
-        border: 2px solid var(--md-sys-color-outline);
+        border: 2px solid var(--line);
         border-radius: 6px;
-        position: relative;
-        transition: all 0.2s;
     }
 
-    .app-row.on .app-box {
-        background: var(--md-sys-color-primary);
-        border-color: var(--md-sys-color-primary);
-    }
+    .app-row.on .app-box { border-color: var(--blue); background: var(--blue); }
 
     .app-row.on .app-box::after {
         content: "";
@@ -942,280 +668,168 @@
         transform: rotate(45deg);
     }
 
-    /* ---------- Bottom Sheets & Modal Dialogs (M3 Elevation Level 3) ---------- */
+    /* ---------- шторка действий ---------- */
+
     .scrim {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.45);
+        background: rgba(0, 0, 0, .4);
         display: none;
         z-index: 40;
-        backdrop-filter: blur(2px);
     }
 
     .scrim.open { display: block; }
 
-    /* M3 Bottom Sheet */
     .sheet {
         position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--md-sys-color-surface-container-lowest);
-        border-top-left-radius: 28px;
-        border-top-right-radius: 28px;
-        padding-top: 14px;
-        padding-bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 16px);
+        left: 10px;
+        right: 10px;
+        bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 12px);
+        background: rgba(250, 250, 250, .96);
+        backdrop-filter: blur(20px);
+        border-radius: 14px;
         overflow: hidden;
-        z-index: 45;
+        z-index: 41;
+        /*
+         * Прячем через visibility/opacity: сдвиг вниз перестал бы прятать шторку,
+         * когда bottom учитывает высоту навигационной панели.
+         */
         visibility: hidden;
         opacity: 0;
-        transform: translateY(100%);
-        transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1), opacity 0.25s ease, visibility 0.3s;
-        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
-    }
-
-    .sheet-handle {
-        width: 36px;
-        height: 4px;
-        border-radius: 2px;
-        background: var(--md-sys-color-outline-variant);
-        margin: 0 auto 16px;
+        pointer-events: none;
+        transform: translateY(16px);
+        transition: opacity .22s ease, transform .22s ease, visibility .22s;
     }
 
     .sheet.open {
         visibility: visible;
         opacity: 1;
+        pointer-events: auto;
         transform: translateY(0);
     }
 
     .sheet-item {
-        display: flex;
-        align-items: center;
-        gap: 14px;
+        display: block;
         width: 100%;
-        text-align: left;
-        font-size: 16px;
-        font-weight: 500;
-        color: var(--md-sys-color-on-surface);
-        padding: 16px 24px;
-        transition: background-color 0.15s;
+        text-align: center;
+        font-size: 19px;
+        color: var(--blue);
+        padding: 17px 12px;
+        border-bottom: 1px solid var(--line);
     }
 
-    .sheet-item:active {
-        background-color: var(--md-sys-color-surface-container);
-    }
+    .sheet-item:last-child { border-bottom: none; color: var(--red); }
 
-    .sheet-item.danger { color: var(--md-sys-color-error); }
+    /* ---------- модальное окно профиля ---------- */
 
-    /* M3 Modal Dialog */
     .modal {
         position: fixed;
-        left: 24px;
-        right: 24px;
+        left: 16px;
+        right: 16px;
         top: 50%;
-        transform: translateY(-50%) scale(0.92);
-        max-width: 440px;
+        transform: translateY(-50%) scale(.9);
+        max-width: 420px;
         margin: 0 auto;
-        background: var(--md-sys-color-surface-container-lowest);
-        border-radius: 28px;
+        background: rgba(250, 250, 250, .97);
+        backdrop-filter: blur(20px);
+        border-radius: 14px;
         overflow: hidden;
-        z-index: 48;
+        z-index: 41;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+        transition: opacity .2s ease, transform .2s ease;
     }
 
-    .modal.open {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translateY(-50%) scale(1);
+    .modal.open { opacity: 1; pointer-events: auto; transform: translateY(-50%) scale(1); }
+
+    /* ---------- диалог подтверждения ---------- */
+
+    /*
+     * Свой диалог вместо системного window.confirm: тот выглядит чужеродно
+     * («The page at file:// says») и не поддаётся стилизации.
+     */
+    .modal.alert { text-align: center; }
+
+    .alert-head {
+        padding: 20px 18px 4px;
+        font-size: 17px;
+        font-weight: 600;
     }
 
-    .modal-head {
-        padding: 24px 24px 14px;
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--md-sys-color-on-surface);
-        font-family: 'Google Sans', sans-serif;
+    .alert-text {
+        padding: 0 18px 4px;
+        font-size: 14px;
+        line-height: 1.4;
+        color: var(--muted);
     }
 
-    .modal-body {
-        max-height: 50vh;
-        overflow-y: auto;
+    .alert-actions { display: flex; border-top: 1px solid var(--line); }
+
+    .alert-btn {
+        flex: 1;
+        padding: 15px 10px;
+        font-size: 17px;
+        color: var(--blue);
+        border-right: 1px solid var(--line);
     }
+
+    .alert-btn.danger { color: var(--red); font-weight: 600; border-right: none; }
+
+    .modal-head { padding: 18px 16px 10px; text-align: center; font-size: 17px; font-weight: 600; }
 
     .detail {
         display: flex;
         justify-content: space-between;
         gap: 16px;
-        padding: 12px 24px;
+        padding: 9px 18px;
         font-size: 14px;
-        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        border-bottom: 1px solid var(--line);
     }
 
-    .detail .k { color: var(--md-sys-color-on-surface-variant); flex: none; font-weight: 500; }
-    .detail .v { text-align: right; word-break: break-all; color: var(--md-sys-color-on-surface); }
-
-    .modal-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding: 16px 20px;
-        background: var(--md-sys-color-surface-container-lowest);
-    }
-
-    .m3-btn {
-        width: 100%;
-        padding: 12px 20px;
-        border-radius: var(--shape-full);
-        font-size: 15px;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        transition: background 0.2s, transform 0.1s;
-    }
-
-    .m3-btn:active { transform: scale(0.97); }
-
-    .m3-btn.filled {
-        background: var(--md-sys-color-primary);
-        color: var(--md-sys-color-on-primary);
-    }
-    .m3-btn.tonal {
-        background: var(--md-sys-color-secondary-container);
-        color: var(--md-sys-color-on-secondary-container);
-    }
-    .m3-btn.text {
-        color: var(--md-sys-color-primary);
-    }
-    .m3-btn.text-danger {
-        color: var(--md-sys-color-error);
-    }
-
-    /* M3 Alert Dialog */
-    .alert-head {
-        padding: 24px 24px 10px;
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--md-sys-color-on-surface);
-        font-family: 'Google Sans', sans-serif;
-    }
-
-    .alert-text {
-        padding: 0 24px 20px;
-        font-size: 14px;
-        line-height: 1.5;
-        color: var(--md-sys-color-on-surface-variant);
-    }
-
-    .alert-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        padding: 14px 20px;
-        background: var(--md-sys-color-surface-container-lowest);
-    }
-
-    .alert-btn {
-        padding: 10px 18px;
-        font-size: 14px;
-        font-weight: 600;
-        border-radius: var(--shape-full);
-        color: var(--md-sys-color-primary);
-    }
-
-    .alert-btn.danger {
-        color: var(--md-sys-color-error);
-        background: var(--md-sys-color-error-container);
-    }
-
-    /* Spinner */
-    .spinner {
-        display: inline-block;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        border: 2.5px solid var(--md-sys-color-primary-container);
-        border-top-color: var(--md-sys-color-primary);
-        animation: spin 0.75s linear infinite;
-        vertical-align: -3px;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    [hidden] { display: none !important; }
+    .detail .k { color: var(--muted); flex: none; }
+    .detail .v { text-align: right; word-break: break-all; }
 </style>
 </head>
 <body>
 
-<!-- Material 3 Top App Bar -->
-<header class="m3-top-bar" id="mainHeader">
-    <div class="m3-app-brand">
-        <div class="m3-logo-badge">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
-        </div>
-        <span class="m3-app-title">Nodeway</span>
-    </div>
-    <div class="m3-top-actions">
-        <button class="m3-icon-btn tonal" id="addBtn" aria-label="Добавить профиль" title="Добавить">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-            </svg>
-        </button>
-        <button class="m3-icon-btn" id="settingsBtn" aria-label="Настройки" title="Настройки">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.12.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.08.62-.08.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/>
-            </svg>
-        </button>
-    </div>
+<header class="navbar">
+    <button class="nav-link big" id="addBtn" aria-label="Добавить">&#65291;</button>
+    <button class="nav-link" id="settingsBtn" aria-label="Настройки">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M19.14,12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24,0-.43.17-.47.41l-.36,2.54c-.59.24-1.12.57-1.62.94l-2.39-.96c-.22-.08-.47,0-.59.22L2.74,8.87c-.12.21-.08.47.12.61l2.03,1.58c-.05.3-.08.62-.08.94s.02.64.07.94l-2.03,1.58c-.18.14-.23.41-.12.61l1.92,3.32c.12.22.37.29.59.22l2.39-.96c.5.38,1.03.7,1.62.94l.36,2.54c.05.24.24.41.48.41h3.84c.24,0,.44-.17.47-.41l.36-2.54c.59-.24,1.13-.56,1.62-.94l2.39.96c.22.08.47,0,.59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12,15.6a3.6,3.6 0 1,1 0-7.2,3.6,3.6,0 0,1 0,7.2z"></path>
+        </svg>
+    </button>
 </header>
 
 <!-- ================= Главная ================= -->
 <main class="page active" id="pageHome">
-    <!-- Hero M3 Card -->
-    <section class="hero-power-card" id="heroCard">
+    <section class="power-area">
         <div class="uptime">
             <div class="uptime-label">Время подключения</div>
             <div class="uptime-value" id="uptime">00:00:00</div>
             <div class="latency" id="latency"></div>
         </div>
-
-        <div class="power-outer-ring">
-            <button class="power-btn" id="powerBtn" aria-label="Подключение">
-                <!-- SVG Icon populated via JS -->
-            </button>
+        <div class="power-box">
+            <button class="power-btn" id="powerBtn" aria-label="Подключение"></button>
         </div>
-
         <div class="status-chip" id="statusChip">
-            <span class="dot"></span>
             <span id="statusText">Отключено</span>
         </div>
         <div class="status-hint" id="statusHint">Выберите профиль и нажмите кнопку питания</div>
     </section>
 
-    <!-- Subscriptions dynamic list -->
     <div id="subscriptions"></div>
 
-    <!-- Local profiles container -->
     <div class="group" id="localGroup"></div>
 
-    <!-- M3 Diagnostic / Log section -->
     <div class="log" id="logCard">
         <button class="group-head" id="logHead">
-            <div class="group-head-icon" style="background:var(--md-sys-color-surface-container-high); color:var(--md-sys-color-on-surface-variant)">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2z"/>
-                </svg>
-            </div>
-            <span class="group-title">Журнал событий</span>
+            <span class="group-title">Журнал</span>
             <span class="chevron" id="logChev"></span>
         </button>
         <div class="log-filter" id="logFilter">
-            <button data-level="all" class="active">Все записи</button>
-            <button data-level="problems">Только проблемы</button>
+            <button data-level="all" class="active">всё</button>
+            <button data-level="problems">проблемы</button>
             <span class="log-hint" id="logHint"></span>
         </div>
         <div id="logBody"></div>
@@ -1225,12 +839,7 @@
 <!-- ================= Настройки ================= -->
 <main class="page" id="pageSettings">
     <div class="settings-bar">
-        <button class="m3-icon-btn" id="backBtn" aria-label="Назад">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-            </svg>
-        </button>
-        <span class="settings-bar-title">Настройки</span>
+        <button class="nav-link" id="backBtn">Назад</button>
     </div>
 
     <h3 class="section-title">Подписки</h3>
@@ -1238,12 +847,7 @@
 
     <h3 class="section-title">Импорт</h3>
     <div class="group">
-        <button class="settings-row center" id="importProfiles">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right:8px">
-                <path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/>
-            </svg>
-            Добавить из буфера обмена
-        </button>
+        <button class="settings-row center" id="importProfiles">Добавить из буфера</button>
     </div>
 
     <h3 class="section-title">Раздельное туннелирование</h3>
@@ -1251,7 +855,7 @@
         <button class="settings-row mode-row" id="splitAll">
             <span class="mode-copy">
                 <span>Все приложения</span>
-                <small>Весь сетевой трафик проходит через зашифрованный туннель</small>
+                <small>Все приложения идут через туннель</small>
             </span>
             <span class="mark"></span>
         </button>
@@ -1275,7 +879,7 @@
     <h3 class="section-title">Диагностика</h3>
     <div class="group">
       <button class="settings-row" id="journalRow">
-        <span>Логи ядер<small>Детальный вывод olcrtc и Xray и системные события</small></span>
+        <span>Логи<small>Вывод ядер olcrtc и Xray и события подключения</small></span>
         <span class="switch" id="journalSwitch"></span>
       </button>
     </div>
@@ -1283,45 +887,30 @@
     <h3 class="section-title">О приложении</h3>
     <div class="group">
         <div class="settings-row">
-            <span>Ядро Xray</span><span class="value" id="coreVersion">—</span>
+            <span>Ядро</span><span class="value" id="coreVersion">—</span>
         </div>
         <div class="settings-row">
-            <span>Версия клиента</span><span class="value" id="appVersion">—</span>
+            <span>Версия приложения</span><span class="value" id="appVersion">—</span>
         </div>
     </div>
 </main>
 
 <div class="scrim" id="scrim"></div>
 
-<!-- M3 Bottom Action Sheet -->
 <div class="sheet" id="sheet">
-    <div class="sheet-handle"></div>
-    <button class="sheet-item" data-action="import">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="color:var(--md-sys-color-primary)">
-            <path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/>
-        </svg>
-        <span>Добавить из буфера обмена</span>
-    </button>
-    <button class="sheet-item" data-action="cancel" style="color:var(--md-sys-color-outline)">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-        </svg>
-        <span>Отмена</span>
-    </button>
+    <button class="sheet-item" data-action="import">Добавить из буфера</button>
+    <button class="sheet-item" data-action="cancel">Отмена</button>
 </div>
 
-<!-- M3 Profile Modal Dialog -->
 <div class="modal" id="modal">
-    <div class="modal-head" id="modalTitle">Информация о профиле</div>
-    <div class="modal-body" id="modalBody"></div>
-    <div class="modal-actions">
-        <button class="m3-btn filled" data-action="modal-connect" id="modalConnect">Подключиться</button>
-        <button class="m3-btn tonal text-danger" data-action="modal-remove">Удалить профиль</button>
-        <button class="m3-btn text" data-action="modal-close">Закрыть</button>
-    </div>
+    <div class="modal-head" id="modalTitle">Профиль</div>
+    <div id="modalBody"></div>
+    <button class="sheet-item" data-action="modal-connect" id="modalConnect">Подключиться</button>
+    <button class="sheet-item danger" data-action="modal-remove">Удалить</button>
+    <button class="sheet-item" data-action="modal-close" style="color:var(--muted)">Закрыть</button>
 </div>
 
-<!-- M3 Confirmation Alert Dialog -->
+<!-- Подтверждение опасных действий: свой диалог вместо системного window.confirm -->
 <div class="modal alert" id="alert" role="alertdialog">
     <div class="alert-head" id="alertTitle"></div>
     <div class="alert-text" id="alertText"></div>
@@ -1331,37 +920,35 @@
     </div>
 </div>
 
-<!-- M3 App Picker -->
+<!-- Выбор приложений: полноэкранный лист с поиском и закреплённым списком выбранных -->
 <div class="picker" id="appPicker">
     <div class="picker-bar">
-        <button class="m3-icon-btn" id="pickerClose">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-            </svg>
-        </button>
-        <span class="picker-title" id="pickerTitle">Выбрать приложения</span>
-        <button class="m3-btn tonal" id="pickerDone" style="width:auto; padding:6px 18px">Готово</button>
+        <button class="nav-link" id="pickerClose">Отмена</button>
+        <span class="picker-title" id="pickerTitle">Приложения</span>
+        <button class="nav-link accent" id="pickerDone">Готово</button>
     </div>
     <div class="picker-tools">
         <div class="picker-search">
-            <input class="picker-input" id="pickerQuery" type="text" placeholder="Поиск приложений..."
+            <input class="picker-input" id="pickerQuery" type="text" placeholder="Поиск приложения"
                    aria-label="Поиск приложения" autocomplete="off">
             <button class="picker-search-clear" id="pickerSearchClear" type="button" hidden
                     aria-label="Очистить поиск">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 6 L18 18 M18 6 L6 18" fill="none" stroke="currentColor"
+                          stroke-width="2" stroke-linecap="round"/>
                 </svg>
             </button>
         </div>
         <div class="picker-row">
             <label class="picker-switch"><input type="checkbox" id="pickerSystem"><span>Показывать системные</span></label>
-            <button class="picker-clear" id="pickerClear" type="button">Сбросить выбор</button>
+            <button class="picker-clear" id="pickerClear" type="button">Очистить</button>
         </div>
     </div>
-    <div class="picker-loading" id="pickerLoading" hidden style="display:flex; justify-content:center; align-items:center; gap:10px; padding:32px; color:var(--md-sys-color-on-surface-variant)"><span class="spinner"></span><span>Загрузка приложений…</span></div>
+    <div class="picker-loading" id="pickerLoading" hidden><span class="spinner"></span><span>Загрузка приложений…</span></div>
     <div class="picker-list" id="pickerList"></div>
 </div>
 
+<!-- Мок моста для отладки в браузере: работает только при ?demo=1, в приложении безвреден. -->
 <script src="dev-mock.js"></script>
 
 <script>
@@ -1371,8 +958,6 @@
     var bridge = window.NodewayVpn;
 
     var state = 'disconnected';
-    /** Ход проверки профилей: очередь, текущий и уже полученные отклики. */
-    var ping = { running: false, index: 0, total: 0, profileId: '', results: {} };
     var model = {
         profiles: [],
         subscriptions: [],
@@ -1380,16 +965,38 @@
         activeProfileId: '',
         connectedAt: 0
     };
+    /**
+     * Прогресс проверки откликов.
+     *
+     * Живёт отдельно от модели: за один прогон приходит десяток событий, и
+     * ради каждого перерисовывать список было бы нельзя — плашки обновляются
+     * точечно, по одной на профиль.
+     */
+    var ping = { running: false, index: 0, total: 0, profileId: '', results: {} };
     var coreVersion = '';
     var modalProfileId = '';
     var logCollapsed = false;
 
+    /** Записи журнала целиком: перерисовка под фильтр идёт из этого массива. */
     var journalEntries = [];
+
+    /** 'all' или 'problems'. */
     var logFilter = 'all';
+
+    /** Ведётся ли журнал — выключатель из настроек. */
     var journalEnabled = false;
+
+    /** Сколько записей из буфера уже выведено в #logBody. */
     var renderedUpTo = 0;
+
+    /** Когда список в DOM надо перерисовать целиком, а не дополнить. */
     var renderFull = true;
 
+    /**
+     * Свёрнутые группы: по id подписки и отдельно для локальных профилей.
+     * Состояние переживает перезапуск приложения — лежит в localStorage,
+     * поэтому перерисовка групп его не сбрасывает.
+     */
     var COLLAPSED_KEY = 'nodeway.collapsed';
     var collapsed = loadCollapsed();
 
@@ -1412,14 +1019,13 @@
     function saveCollapsed() {
       try {
         localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed));
-      } catch (e) { }
+      } catch (e) { /* приватный режим — просто не сохраняем */ }
     }
 
     var el = {
-        heroCard: document.getElementById('heroCard'),
         powerBtn: document.getElementById('powerBtn'),
         uptime: document.getElementById('uptime'),
-    latency: document.getElementById('latency'),
+        latency: document.getElementById('latency'),
         statusText: document.getElementById('statusText'),
         statusHint: document.getElementById('statusHint'),
         statusChip: document.getElementById('statusChip'),
@@ -1440,24 +1046,31 @@
         modalBody: document.getElementById('modalBody'),
         modalConnect: document.getElementById('modalConnect'),
         coreVersion: document.getElementById('coreVersion'),
-        alert: document.getElementById('alert'),
-        alertTitle: document.getElementById('alertTitle'),
-        alertText: document.getElementById('alertText'),
-        alertOk: document.getElementById('alertOk'),
-        alertCancel: document.getElementById('alertCancel')
+    alert: document.getElementById('alert'),
+    alertTitle: document.getElementById('alertTitle'),
+    alertText: document.getElementById('alertText'),
+    alertOk: document.getElementById('alertOk'),
+    alertCancel: document.getElementById('alertCancel')
     };
 
+    // Подключено: две одинаковые полоски по центру круга, как в iOS.
     var ICON_POWER_ON =
-        '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M9 7v10"/><path d="M15 7v10"/></svg>';
+        '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" ' +
+        'stroke-linecap="round"><path d="M9.1 6.9v10.2"/><path d="M14.9 6.9v10.2"/></svg>';
     var ICON_POWER_OFF =
-        '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 4v8"/><path d="M7.4 7.4a7 7 0 1 0 9.2 0"/></svg>';
+        '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" ' +
+        'stroke-linecap="round"><path d="M12 4.5v7.5"/><path d="M7.6 7a6.8 6.8 0 1 0 8.8 0"/></svg>';
 
     /** Иконка «проверить профили» для шапки группы. */
     var ICON_PING =
-        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h3l2-6 3 12 2.5-8 1.5 4H21"/></svg>';
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round"><path d="M3 12h3l2-6 3 12 2.5-8 1.5 4H21"/></svg>';
 
     var ICON_CHEV =
-        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+        'stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg>';
+
+    // ------------------------------------------------------------------ utils
 
     function clear(node) {
         while (node.firstChild) node.removeChild(node.firstChild);
@@ -1469,12 +1082,14 @@
         return wrap.firstChild;
     }
 
+    /** У SVG свойство className только для чтения, поэтому задаём атрибутом. */
     function chevron() {
         var node = svg(ICON_CHEV);
         node.setAttribute('class', 'chevron');
         return node;
     }
 
+    /** Спиннер загрузки: кольцо с вращающейся «шапкой». */
     function spinner() {
         var node = document.createElement('span');
         node.className = 'spinner';
@@ -1485,16 +1100,26 @@
         try { return JSON.parse(json); } catch (e) { return null; }
     }
 
+    /** Сколько строк держим в журнале. */
     var MAX_LOG_LINES = 200;
+
+    /** Сколько записей держим в памяти страницы. */
     var MAX_JOURNAL_ENTRIES = 400;
 
     function pad(value) { return ('0' + value).slice(-2); }
 
+    /** ЧЧ:ММ:СС с ведущими нулями. */
     function clockOf(millis) {
         var d = new Date(millis);
         return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
     }
 
+    /**
+ * Рисует порцию записей журнала.
+ *
+ * Записи приходят из нативной части: там подписка на источник и чтение логов ядер.
+ * Собственные сообщения страницы идут через log() в тот же список.
+ */
     function appendJournal(entries, reset) {
         if (!journalEnabled) {
             journalEntries = [];
@@ -1508,6 +1133,15 @@
         renderJournal();
     }
 
+    /**
+     * Обновляет список журнала.
+     *
+     * Новые строки дописываются в конец, а не пересоздаётся весь список: ядра
+     * пишут по несколько строк в секунду, и полная перерисовка на каждой пачке
+     * съедала бы CPU впустую.
+     *
+     * Свёрнутый журнал не трогаем вообще — строить невидимые узлы незачем.
+     */
     function renderJournal() {
         var shown = 0;
         journalEntries.forEach(function (entry) {
@@ -1546,16 +1180,24 @@
         return line;
     }
 
+    /** В режиме «проблемы» показываем только предупреждения и ошибки. */
     function visibleIn(entry) {
         if (logFilter === 'all') return true;
         return entry.l === 'warn' || entry.l === 'error';
     }
 
+    /** Собственное сообщение страницы: попадает в журнал без источника. */
     function log(message) {
         if (!message || !journalEnabled) return;
         appendJournal([{ t: Date.now(), s: 'app', l: 'info', m: message }], false);
     }
 
+    /**
+     * Применяет состояние выключателя журнала.
+     *
+     * Выключенный журнал — это не пустой список, а отсутствие карточки:
+     * иначе на главном экране остаётся рамка с пустотой.
+     */
     function applyJournalEnabled(value) {
         journalEnabled = !!value;
         el.journalSwitch.classList.toggle('on', journalEnabled);
@@ -1583,6 +1225,7 @@
         return model.profiles.filter(function (p) { return p.id === id; })[0] || null;
     }
 
+    /** ЧЧ:ММ:СС с ведущими нулями. */
     function formatUptime(millis) {
         var total = Math.max(0, Math.floor(millis / 1000));
         var hours = Math.floor(total / 3600);
@@ -1600,6 +1243,21 @@
         }
         var running = state === 'connected' && model.connectedAt > 0;
         el.uptime.textContent = running ? formatUptime(Date.now() - model.connectedAt) : '00:00:00';
+    }
+
+    /**
+     * Отклик, измеренный через туннель. Показываем именно формулировкой про
+     * туннель, а не «пинг»: в цифру входит ещё и путь до адреса, который опрашиваем.
+     * 0 означает «замера не было» — туннель может быть жив, но первый замер
+     * ещё не успел вернуться, и пустая строка тут честнее нуля.
+     */
+    function renderLatency() {
+      var ms = Number(model.latency) || 0;
+      if (state !== 'connected' || ms <= 0) {
+        el.latency.textContent = '';
+        return;
+      }
+      el.latency.textContent = 'Отклик через туннель: ' + ms + ' мс';
     }
 
     /** Приводит прогресс из моста к предсказуемому виду. */
@@ -1623,7 +1281,7 @@
      * Обновляет плашки без перерисовки списков.
      *
      * Списки перерисовывать нельзя: каждое событие проверки сбрасывало бы
-     * прокрутку и состояние раскрытых групп.
+     * прокрутку и состояние развёрнутых групп.
      */
     function updatePingBadges() {
         var rows = document.querySelectorAll('.row[data-profile-id]');
@@ -1655,24 +1313,11 @@
         bridge.pingProfiles(JSON.stringify(ids));
     }
 
-    /**
-     * Отклик, измеренный через туннель. Показываем именно формулировкой про
-     * туннель, а не «пинг»: в цифру входит ещё и путь до адреса, который опрашиваем.
-     * 0 означает «замера не было» — туннель может быть жив, но первый замер
-     * ещё не успел вернуться, и пустая строка тут честнее нуля.
-     */
-    function renderLatency() {
-        var ms = Number(model.latency) || 0;
-        if (state !== 'connected' || ms <= 0) {
-            el.latency.textContent = '';
-            return;
-        }
-        el.latency.textContent = 'Отклик через туннель: ' + ms + ' мс';
-    }
-
     function selectedProfile() {
         return profileById(model.selectedProfileId);
     }
+
+    // ------------------------------------------------------------------ render
 
     /**
      * Подписи данных, из которых собраны списки.
@@ -1680,8 +1325,7 @@
      * Пока подпись не менялась, список не пересобираем. Пересборка создаёт строки
      * заново, а вместе с ними и «галочку» выбранного профиля, у которой своя
      * анимация появления, — та моргала бы на глазах при каждом событии состояния,
-     * даже когда сами профили не менялись. А событий состояния на одну проверку
-     * откликов приходит десятками.
+     * даже когда сами профили не менялись.
      */
     var rowsSignature = null;
     var subsSignature = null;
@@ -1741,8 +1385,6 @@
         el.powerBtn.innerHTML = on ? ICON_POWER_ON : ICON_POWER_OFF;
         el.powerBtn.disabled = busy || checking;
 
-        el.heroCard.classList.toggle('connected', on);
-
         var active = profileById(model.activeProfileId);
         el.statusChip.className = 'status-chip' + (checking ? ' busy'
             : on ? ' on' : busy ? ' busy' : state === 'error' ? ' error' : '');
@@ -1750,10 +1392,10 @@
             ? 'Проверка: ' + (ping.index + 1) + ' из ' + ping.total
             : {
                 disconnected: 'Отключено',
-                connecting: 'Подключение...',
-                connected: 'Защищено (Подключено)',
-                disconnecting: 'Отключение...',
-                error: 'Ошибка подключения'
+                connecting: 'Подключение',
+                connected: 'Подключено',
+                disconnecting: 'Отключение',
+                error: 'Ошибка'
             }[state] || 'Отключено';
 
         var hint;
@@ -1761,34 +1403,34 @@
             var current = profileById(ping.profileId);
             hint = current ? 'Проверяем: ' + current.name : 'Проверяем профиль…';
         } else if (state === 'error') {
-            hint = lastMessage || 'Не удалось установить соединение';
+            hint = lastMessage || 'Не удалось подключиться';
         } else if (on && active) {
-            hint = 'Активный узел: ' + active.name;
+            hint = active.name;
         } else {
             var selected = selectedProfile();
-            hint = selected ? 'Выбран: ' + selected.name : 'Выберите узел и нажмите кнопку питания';
+            hint = selected ? 'Выбрано: ' + selected.name : 'Выберите профиль и нажмите кнопку питания';
         }
         el.statusHint.textContent = hint;
     }
 
+    /**
+     * Группа профилей со сворачиваемым заголовком.
+     *
+     * Подписки и локальные профили отличаются только заголовком, набором строк
+     * и текстом пустого состояния, поэтому собираются здесь одним кодом.
+     * Группа переиспользует переданный узел, если он уже есть в разметке.
+     */
     function profileGroup(options, group) {
         group = group || document.createElement('div');
+        // Состояние свёртки храним отдельно, иначе перерисовка его сбрасывает.
         group.className = 'group' + (options.collapsed ? ' collapsed' : '');
 
+        // Шапка — div с ролью кнопки, а не <button>: внутрь легла кнопка проверки,
+        // а вложенные интерактивные элементы невалидны и ломают клик по шапке.
         var head = document.createElement('div');
         head.className = 'group-head';
-        // Кнопку проверки нельзя положить внутрь <button>: вложенные интерактивные
-        // элементы невалидны и ломают клик по самой шапке. Поэтому шапка — div с
-        // ролью кнопки и фокусом, а нажатие разбираем вручную.
         head.setAttribute('role', 'button');
         head.setAttribute('tabindex', '0');
-
-        var iconWrap = document.createElement('div');
-        iconWrap.className = 'group-head-icon';
-        iconWrap.innerHTML = options.isCloud
-            ? '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z"/></svg>'
-            : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>';
-        head.appendChild(iconWrap);
 
         var title = document.createElement('span');
         title.className = options.titleClass || 'group-title';
@@ -1809,10 +1451,11 @@
             head.appendChild(pingBtn);
         }
 
+        // Счётчик есть только у локальных профилей: у подписки его роль играет облако.
         if (options.count != null) {
             var badge = document.createElement('span');
-            badge.className = 'group-badge';
-            badge.textContent = options.count ? String(options.count) : '0';
+            badge.className = 'row-sub';
+            badge.textContent = options.count ? String(options.count) : '';
             head.appendChild(badge);
         }
 
@@ -1852,20 +1495,24 @@
     function renderSubscriptions() {
         clear(el.subscriptions);
         if (!model.subscriptions.length) {
+            var hint = document.createElement('div');
+            hint.className = 'empty';
+            hint.textContent = 'Подписок нет — добавьте ссылку подписки из буфера обмена';
+            el.subscriptions.appendChild(hint);
             return;
         }
 
         model.subscriptions.forEach(function (sub) {
             var subName = sub.name || 'Подписка';
+            // Название может уже содержать эмодзи облака — не дублируем.
+            var title = subName.indexOf('☁') === -1 ? '☁️ ' + subName : subName;
             el.subscriptions.appendChild(profileGroup({
-                title: subName,
-                isCloud: true,
+                title: title,
                 pingable: true,
-                count: model.profiles.filter(function (p) { return p.subscriptionId === sub.id; }).length,
                 collapsed: collapsed.subscriptions[sub.id],
                 remember: function (value) { collapsed.subscriptions[sub.id] = value; },
                 rows: model.profiles.filter(function (p) { return p.subscriptionId === sub.id; }),
-                emptyText: 'В подписке пока нет профилей'
+                emptyText: 'Пока нет профилей'
             }));
         });
     }
@@ -1875,14 +1522,13 @@
         var locals = model.profiles.filter(function (p) { return !p.fromSubscription; });
         profileGroup({
             title: 'Локальные профили',
-            titleClass: 'group-title',
-            isCloud: false,
+            titleClass: 'group-title small',
             pingable: true,
             count: locals.length,
             collapsed: collapsed.local,
             remember: function (value) { collapsed.local = value; },
             rows: locals,
-            emptyText: 'Профилей нет — скопируйте VLESS / OLCRTC ссылку и добавьте из буфера'
+            emptyText: 'Профилей нет — скопируйте vless- или olcrtc-ссылку и импортируйте из буфера'
         }, el.localGroup);
     }
 
@@ -1891,7 +1537,7 @@
         if (!model.subscriptions.length) {
             var empty = document.createElement('div');
             empty.className = 'empty';
-            empty.textContent = 'Подписок пока нет';
+            empty.textContent = 'Подписок нет';
             el.subAdmin.appendChild(empty);
             return;
         }
@@ -1901,17 +1547,25 @@
 
             var body = document.createElement('span');
             var name = document.createElement('span');
-            name.style.fontWeight = '600';
             name.textContent = sub.name || 'Подписка';
             body.appendChild(name);
 
+            // Плашка настроек: адрес убран, вместо него то, что важно при работе
+            // с подпиской, — сколько профилей пришло и когда ждать следующего.
+            body.appendChild(document.createElement('br'));
+
             var countLine = document.createElement('small');
-            countLine.textContent = 'Профилей в подписке: ' + (sub.count || 0);
+            countLine.textContent = 'Профилей: ' + (sub.count || 0);
             body.appendChild(countLine);
 
+            // Без автообновления отсчёта не существует — строку прячем целиком.
             if (sub.refreshMinutes > 0) {
+                // Перед строкой отсчёта <br> не нужен: <small> и так блочный,
+                // а <br> между двумя блоками даёт пустую строку.
                 var leftLine = document.createElement('small');
                 leftLine.textContent = 'Обновление через: ' + countdownText(sub);
+                // Исходные значения держим в data-*: тик правит только текст и не должен
+                // зависеть от узлов, которые renderSubAdmin при следующем render() заменит.
                 leftLine.dataset.refreshMinutes = sub.refreshMinutes;
                 leftLine.dataset.updatedAt = sub.updatedAt || 0;
                 leftLine.dataset.addedAt = sub.addedAt || 0;
@@ -1923,6 +1577,7 @@
             var refresh = document.createElement('button');
             refresh.className = 'value accent';
             if (sub.loading) {
+              // Подписка грузится: вместо надписи — спиннер, повторный клик не нужен.
               refresh.disabled = true;
               refresh.appendChild(spinner());
             } else {
@@ -1936,8 +1591,7 @@
 
             var remove = document.createElement('button');
             remove.className = 'value';
-            remove.style.color = 'var(--md-sys-color-error)';
-			remove.style.paddingTop = '4px';
+            remove.style.color = 'var(--red)';
             remove.textContent = 'Удалить';
             remove.onclick = function () {
                 var name = sub.name || 'Подписка';
@@ -1946,7 +1600,7 @@
                     bridge.removeSubscription(sub.id);
                     log('подписка удалена');
                 }, 'Подписка «' + name + '» и её профили' +
-                    (count ? ' (' + count + ')' : '') + ' будут безвозвратно удалены.');
+                    (count ? ' (' + count + ')' : '') + ' будут удалены без возможности восстановления.');
             };
             row.appendChild(remove);
 
@@ -1955,6 +1609,13 @@
         syncCountdownTimer();
     }
 
+    /**
+     * Сколько осталось до следующего автообновления.
+     *
+     * Опора — последнее обновление, а если его не было ни разу, то момент
+     * добавления подписки: иначе новая подписка показывала бы пустоту вместо
+     * первого интервала.
+     */
     function countdownText(sub) {
         var minutes = sub.refreshMinutes || 0;
         if (minutes <= 0) return '';
@@ -1962,6 +1623,8 @@
         if (!since) return '—';
         var left = Math.floor((since + minutes * 60000 - Date.now()) / 1000);
         if (left <= 0) return 'сейчас';
+        // Детализация только на последнем шаге: «57 мин 51 сек» и «8 ч 59 мин»
+        // не влезают в колонку рядом с кнопками и рвутся пополам.
         if (left < 60) return left + ' сек';
         if (left < 3600) return Math.floor(left / 60) + ' мин';
         return Math.ceil(left / 3600) + ' ч';
@@ -1971,6 +1634,13 @@
         return el.subAdmin.querySelectorAll('small[data-refresh-minutes]');
     }
 
+    /**
+     * Секундный тик отсчёта.
+     *
+     * Живёт только пока в настройках есть хоть одна строка с отсчётом: иначе таймер
+     * крутился бы вхолостую на главном экране. Перерисовывает исключительно текст —
+     * полный render() дёргал бы всё дерево раз в секунду без нужды.
+     */
     function syncCountdownTimer() {
         if (countdownTimer && !countdownNodes().length) {
             clearInterval(countdownTimer);
@@ -1997,6 +1667,8 @@
         row.className = 'row';
         row.setAttribute('data-profile-id', profile.id);
 
+        // Маркер один на строку: выбранный профиль помечен, как включённый режим
+        // туннелирования. Подключение показывает кнопка питания и строка «Выбрано».
         var mark = document.createElement('span');
         mark.className = 'mark' + (profile.id === model.selectedProfileId ? ' on' : '');
         row.appendChild(mark);
@@ -2011,9 +1683,9 @@
         var sub = document.createElement('span');
         sub.className = 'row-sub';
         sub.textContent = profile.type === 'olcrtc'
-            ? 'OLCRTC • ' + (profile.provider || '—').toUpperCase() + ' • '
+            ? 'OLCRTC / ' + (profile.provider || '—').toUpperCase() + ' / '
                 + (profile.transport || '—')
-            : 'VLESS • ' + (profile.network || 'TCP').toUpperCase() + ' • '
+            : 'VLESS / ' + (profile.network || 'TCP').toUpperCase() + ' / '
                 + (profile.security || 'none').toUpperCase();
 
         body.appendChild(name);
@@ -2029,7 +1701,7 @@
 
         var info = document.createElement('span');
         info.className = 'info-btn' + (profile.id === model.activeProfileId ? ' active' : '');
-        info.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
+        info.textContent = 'i';
         info.onclick = function (event) {
             event.stopPropagation();
             openModal(profile.id);
@@ -2037,12 +1709,16 @@
         row.appendChild(info);
 
         row.onclick = function () {
+            // Тап по строке только выбирает профиль. Повторный тап по уже выбранному
+            // ничего не делает — VPN включает только кнопка питания.
             if (profile.id === model.selectedProfileId) return;
             bridge.selectProfile(profile.id);
         };
 
         return row;
     }
+
+    // ------------------------------------------------------------------ модалка
 
     function openModal(profileId) {
         var profile = profileById(profileId);
@@ -2051,22 +1727,24 @@
         el.modalTitle.textContent = profile.name;
         clear(el.modalBody);
 
+        // Пара лежит в списке: голый ['Источник', value] в concat() разворачивается
+        // в два отдельных элемента, и дальше значение достаётся по индексам строки.
         var source = [['Источник', profile.fromSubscription
             ? (profile.subscriptionName || 'подписка') : 'буфер обмена']];
 
         var details = profile.type === 'olcrtc' ? [
-            ['Тип протокола', 'OLCRTC'],
+            ['Тип', 'OLCRTC'],
             ['Провайдер', (profile.provider || '—').toUpperCase()],
             ['Транспорт', profile.transport || '—'],
             ['Комната', profile.room || '—']
         ].concat(source) : [
-            ['Адрес сервера', profile.address + (profile.port ? ':' + profile.port : '')],
+            ['Адрес', profile.address + (profile.port ? ':' + profile.port : '')],
             ['Сеть', (profile.network || 'tcp').toUpperCase()],
-            ['Безопасность', (profile.security || 'none').toUpperCase()],
-            ['SNI хост', profile.sni || '—']
+            ['Защита', (profile.security || 'none').toUpperCase()],
+            ['SNI', profile.sni || '—']
         ].concat(source);
 
-        details.concat([['URI ссылка', profile.link]]).forEach(function (pair) {
+        details.concat([['Ссылка', profile.link]]).forEach(function (pair) {
             var row = document.createElement('div');
             row.className = 'detail';
             var key = document.createElement('span');
@@ -2080,7 +1758,7 @@
             el.modalBody.appendChild(row);
         });
 
-        el.modalConnect.textContent = profile.id === model.activeProfileId ? 'Отключить соединение' : 'Подключиться к узлу';
+        el.modalConnect.textContent = profile.id === model.activeProfileId ? 'Отключиться' : 'Подключиться';
         el.modal.classList.add('open');
         el.scrim.classList.add('open');
     }
@@ -2092,6 +1770,10 @@
         el.scrim.classList.remove('open');
     }
 
+    /**
+     * Подтверждение опасного действия своим диалогом, а не системным окном.
+     * `text` — короткий вопрос, `detail` — чем грозит действие.
+     */
     function confirm(text, onYes, detail) {
         closeOverlays();
         el.alertTitle.textContent = text;
@@ -2101,6 +1783,7 @@
         el.alert.classList.add('open');
         el.scrim.classList.add('open');
 
+        // Колбэк живёт до нажатия кнопки: диалог живёт дольше текущего клика.
         el.alertOk.onclick = function () {
             closeOverlays();
             onYes();
@@ -2108,7 +1791,10 @@
         el.alertCancel.onclick = closeOverlays;
     }
 
+    // ------------------------------------------------- раздельное туннелирование
+
     var splitMode = 'all';
+    /** Выбранные пакеты как объект-ключ: проверка в O(1) без пересборки массивов. */
     var splitPackages = {};
 
     var elSplit = {
@@ -2135,6 +1821,10 @@
         renderSplit();
     }
 
+    /**
+     * Выбранный режим отмечается на самом маркере, а не на строке: строка нужна
+     * целиком под нажатие, и никакого своего выделения она не несёт.
+     */
     function setModeMark(row, on) {
         row.querySelector('.mark').classList.toggle('on', on);
     }
@@ -2145,10 +1835,11 @@
         setModeMark(elSplit.exclude, splitMode === 'exclude');
         var count = Object.keys(splitPackages).length;
         elSplit.pick.hidden = splitMode === 'all';
-        elSplit.pick.textContent = count ? 'Выбрать приложения (' + count + ')' : 'Выбрать приложения';
+        elSplit.pick.textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
         elSplit.clear.disabled = count === 0;
     }
 
+    /** При отказе ядра режим и список пакетов остаются прежними. */
     function setSplitMode(mode) {
         if (mode === splitMode) return;
         var reply = parse(bridge.setSplitTunnelMode(mode)) || {};
@@ -2160,6 +1851,10 @@
         renderSplit();
     }
 
+    /**
+     * Показывается с задержкой в 150 мс: список на быстрых устройствах приходит
+     * быстрее, и мигающий спиннер выглядел бы хуже отсутствия спиннера.
+     */
     var loadingTimer = null;
 
     function showPickerLoading() {
@@ -2173,6 +1868,9 @@
     }
 
     function openPicker() {
+        elSplit.title.textContent = splitMode === 'allow'
+            ? 'Приложения через VPN'
+            : 'Приложения в обход';
         elSplit.query.value = '';
         syncSearchClear();
         elSplit.system.checked = false;
@@ -2186,6 +1884,13 @@
 
     var pickerRequest = 0;
 
+    /**
+     * Основной путь асинхронный: мост считает список в отдельном потоке и
+     * отвечает вызовом window.onSplitApps. Синхронный вызов на сотнях пакетов
+     * заметно тормозит и замораживает страницу на слабых устройствах, причём
+     * индикатор загрузки успевает скрыться, не показавшись.
+     * Синхронный путь остался запасным, если асинхронных методов у моста нет.
+     */
     function requestApps() {
         var token = ++pickerRequest;
         showPickerLoading();
@@ -2207,6 +1912,7 @@
         }, 0);
     }
 
+    /** Принимает список приложений, отбрасывая устаревшие ответы. */
     function applyApps(token, payload) {
         if (Number(token) !== pickerRequest) return;
         hidePickerLoading();
@@ -2215,17 +1921,21 @@
 
     window.onSplitApps = applyApps;
 
+    /**
+     * Иконки не запрашиваются здесь: их отрисовка идёт порциями по мере прокрутки,
+     * иначе сотня синхронных вызовов моста замораживает страницу.
+     */
     function renderApps(apps) {
         clear(elSplit.list);
         var chosen = apps.filter(function (app) { return splitPackages[app.pkg]; });
         var rest = apps.filter(function (app) { return !splitPackages[app.pkg]; });
 
         if (chosen.length) {
-            elSplit.list.appendChild(pickerGroup('Выбранные (' + chosen.length + ')'));
+            elSplit.list.appendChild(pickerGroup('Выбранные'));
             chosen.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
         }
         if (rest.length) {
-            if (chosen.length) elSplit.list.appendChild(pickerGroup('Остальные приложения'));
+            if (chosen.length) elSplit.list.appendChild(pickerGroup('Остальные'));
             rest.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
         }
         if (!apps.length) {
@@ -2271,6 +1981,7 @@
 
         row.appendChild(document.createElement('span')).className = 'app-box';
 
+        // Отметка меняется локально: к ядру уходит только по кнопке «Готово».
         row.onclick = function () {
             if (splitPackages[app.pkg]) delete splitPackages[app.pkg];
             else splitPackages[app.pkg] = true;
@@ -2281,6 +1992,10 @@
         return row;
     }
 
+    /**
+ * Режим без единого приложения ничего не делает, поэтому при уходе
+ * с настроек, сворачивании или следующем запуске он сбрасывается в «Все приложения».
+ */
     function enforceSplitFallback() {
         if (splitMode === 'all') return;
         if (Object.keys(splitPackages).length) return;
@@ -2290,83 +2005,52 @@
         log('режим сброшен: не выбрано ни одного приложения');
     }
 
-    var iconCache = {};
-    var iconQueue = [];
-    var iconWaiting = {};
-    var iconBusy = false;
-    var ICON_CHUNK = 8;
+    /*
+     * Иконки приложений.
+     *
+     * Страница просит иконку обычной картинкой по адресу nodeway.internal/icon/<pkg>,
+     * а нативная часть отдаёт её прямо из PackageManager, перехватив запрос. Раньше
+     * иконка ехала мостом и вставлялась в картинку строкой base64: переход в JS,
+     * перекодирование, ожидание ответа — из-за чего здесь и выросли очередь с
+     * пачками, кэш и разбор ответа. Теперь браузер сам решает, что грузить и когда.
+     *
+     * Ленивость осталась: строки заводятся только близкие к экрану, иначе список
+     * из сотни приложений дёргал бы загрузку при каждой прокрутке.
+     */
+
+    /** Адрес, который в приложении перехватывается, а в сети ничего не значит. */
+    var ICON_BASE_URL = 'https://nodeway.internal/icon/';
+
+    /**
+     * Откуда брать иконку пакета.
+     *
+     * В демо-режиме перехвата нет и такой адрес не резолвится, поэтому мок
+     * подставляет свой через window.__nodewayIconUrl. Это единственное место,
+     * где страница знает о моке.
+     */
+    function iconUrlFor(pkg) {
+        if (window.__nodewayIconUrl) return window.__nodewayIconUrl(pkg);
+        return ICON_BASE_URL + encodeURIComponent(pkg);
+    }
 
     var iconObserver = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
             if (!entry.isIntersecting) return;
             iconObserver.unobserve(entry.target);
-            iconQueue.push(entry.target.querySelector('img'));
+            var img = entry.target.querySelector('img[data-pkg]');
+            if (img) img.src = iconUrlFor(img.getAttribute('data-pkg'));
         });
-        pumpIcons();
     }, { root: elSplit.list, rootMargin: '240px 0px' });
 
     function watchIcons() {
         iconObserver.disconnect();
-        iconQueue = [];
         var images = elSplit.list.querySelectorAll('img[data-pkg]');
         Array.prototype.forEach.call(images, function (img) {
-            var pkg = img.getAttribute('data-pkg');
-            if (hasIcon(pkg)) img.src = iconCache[pkg];
-            else iconObserver.observe(img.parentNode);
+            // Уже запрошенная иконка остаётся на месте: перерисовка списка
+            // не должна начинать всё заново.
+            if (img.getAttribute('src')) return;
+            iconObserver.observe(img.parentNode);
         });
-    }
-
-    function pumpIcons() {
-        if (iconBusy || !iconQueue.length) return;
-        iconBusy = true;
-        var chunk = iconQueue.splice(0, ICON_CHUNK);
-        setTimeout(function () {
-            chunk.forEach(function (img) {
-                var pkg = img.getAttribute('data-pkg');
-                if (hasIcon(pkg)) {
-                    applyIcon(img, iconCache[pkg]);
-                    return;
-                }
-                requestIcon(pkg, img);
-            });
-            iconBusy = false;
-            pumpIcons();
-        }, 0);
-    }
-
-    function requestIcon(pkg, img) {
-        if (bridge.getAppIconAsync) {
-            iconWaiting[pkg] = iconWaiting[pkg] || [];
-            iconWaiting[pkg].push(img);
-            bridge.getAppIconAsync(pkg);
-            return;
-        }
-        var url = bridge.getAppIcon(pkg);
-        if (url && typeof url.then === 'function') {
-            url.then(function (data) { storeIcon(pkg, data, [img]); });
-            return;
-        }
-        storeIcon(pkg, url, [img]);
-    }
-
-    function storeIcon(pkg, url, images) {
-        iconCache[pkg] = url || '';
-        images.forEach(function (img) { applyIcon(img, url); });
-    }
-
-    window.onAppIcon = function (pkg, url) {
-        var images = iconWaiting[pkg];
-        if (!images) return;
-        delete iconWaiting[pkg];
-        storeIcon(pkg, url, images);
-    };
-
-    function hasIcon(pkg) {
-        return Object.prototype.hasOwnProperty.call(iconCache, pkg);
-    }
-
-    function applyIcon(img, url) {
-        if (url) img.src = url;
     }
 
     elSplit.all.onclick = function () { setSplitMode('all'); };
@@ -2376,6 +2060,10 @@
     document.getElementById('pickerClose').onclick = closePicker;
     elSplit.system.onchange = requestApps;
 
+    /**
+     * К ядру список уходит только по кнопке «Готово», поэтому очистка обратима:
+     * закрытый лист ничего не меняет.
+     */
     elSplit.clear.onclick = function () {
         if (!Object.keys(splitPackages).length) return;
         splitPackages = {};
@@ -2383,10 +2071,12 @@
         renderSplit();
     };
 
+    /* Сворачивание приложения тоже считаем уходом: режим без выбора не сохраняем. */
     document.addEventListener('visibilitychange', function () {
         if (document.hidden) enforceSplitFallback();
     });
 
+    /* Поиск ждёт паузу в наборе: запрос на каждый символ лишний. */
     var searchTimer = null;
     elSplit.query.oninput = function () {
         clearTimeout(searchTimer);
@@ -2394,6 +2084,10 @@
         searchTimer = setTimeout(requestApps, 250);
     };
 
+    /**
+     * Показывает себя только при непустом поле: пустой крестик только мешает.
+     * После очистки фокус возвращается в поле, чтобы можно было сразу печатать.
+     */
     function syncSearchClear() {
         elSplit.searchClear.hidden = !elSplit.query.value.length;
     }
@@ -2417,6 +2111,8 @@
         log('в списке приложений: ' + packages.length);
     };
 
+    // ------------------------------------------------------------------ события
+
     var lastMessage = '';
 
     el.powerBtn.onclick = function () {
@@ -2434,6 +2130,8 @@
         bridge.requestConnect(profile.id);
     };
 
+    /* Чип статуса информационный: тап по нему ничего не делает. */
+
     document.getElementById('addBtn').onclick = function () {
         el.sheet.classList.add('open');
         el.scrim.classList.add('open');
@@ -2445,6 +2143,7 @@
         el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
         collapsed.log = logCollapsed;
         saveCollapsed();
+        // При разворачивании список в DOM ещё пуст — рисуем с нуля.
         if (!logCollapsed) {
             renderFull = true;
             renderJournal();
@@ -2467,6 +2166,8 @@
         var reply = parse(bridge.setJournalEnabled(!journalEnabled));
         if (!reply) return;
         applyJournalEnabled(reply.enabled);
+        // Файл логов ядро открывает только на старте, поэтому включённый на ходу
+        // журнал наберёт полноту после следующего подключения — говорим об этом.
         if (!wasEnabled && state === 'connected') {
             log('вывод Xray появится со следующего подключения');
         }
@@ -2483,26 +2184,29 @@
     document.getElementById('backBtn').onclick = function () { showPage('pageHome'); };
 
     function showPage(id) {
+        // Уход с настроек без отмеченных приложений возвращает режим «Все приложения».
         if (id !== 'pageSettings') enforceSplitFallback();
         document.querySelectorAll('.page').forEach(function (page) {
             page.classList.toggle('active', page.id === id);
         });
-        document.getElementById('mainHeader').classList.toggle('hidden', id !== 'pageHome');
+        // «+» и шестерёнка относятся только к списку профилей.
+        document.querySelector('.navbar').classList.toggle('hidden', id !== 'pageHome');
         window.scrollTo(0, 0);
     }
 
     el.sheet.addEventListener('click', function (event) {
-        var action = event.target.closest('[data-action]')?.getAttribute('data-action');
+        var action = event.target.getAttribute('data-action');
         if (!action) return;
         closeOverlays();
         if (action === 'import') {
+            // Подписка или отдельные ссылки — определяется по содержимому буфера.
             var reply = parse(bridge.importFromClipboard());
             if (reply) log(reply.message);
         }
     });
 
     el.modal.addEventListener('click', function (event) {
-        var action = event.target.closest('[data-action]')?.getAttribute('data-action');
+        var action = event.target.getAttribute('data-action');
         if (!action) return;
         if (action === 'modal-close') closeOverlays();
         if (action === 'modal-connect') {
@@ -2525,6 +2229,13 @@
         }
     });
 
+    // ------------------------------------------------------------------ мост
+
+    /**
+     * Высота системных панелей в CSS-пикселях — её сообщает приложение.
+     * В WebView `env(safe-area-inset-*)` пустой, поэтому значения приходят из Kotlin.
+     * В браузере остаётся запасной вариант через `env()` в CSS.
+     */
     window.setInsets = function (top, bottom) {
         document.documentElement.style.setProperty('--inset-top', (top || 0) + 'px');
         document.documentElement.style.setProperty('--inset-bottom', (bottom || 0) + 'px');
@@ -2555,6 +2266,7 @@
             }
         }
         renderPower();
+        // В журнал пишет нативная часть — оттуда он переживает перезагрузку страницы.
         renderUptime();
         renderLatency();
         updatePingBadges();
@@ -2575,15 +2287,16 @@
         render();
     };
 
+    // ------------------------------------------------------------------ init
+
     if (bridge) {
         var initial = parse(bridge.getInitialState());
         if (initial) {
             model = initial.state;
-			// Состояние туннеля приходит в стартовом снимке: пока сервис молчит,
+            // Состояние туннеля приходит в стартовом снимке: пока сервис молчит,
             // а страница загрузилась заново, иначе показала бы «Отключено».
             state = model.vpnState || 'disconnected';
-        ping = normalizePing(model.ping);
-        updatePingButtons();
+            ping = normalizePing(model.ping);
             coreVersion = initial.coreVersion || '';
             applyJournalEnabled(!!initial.journalEnabled);
             if (initial.appVersion) {
