@@ -86,11 +86,7 @@ class VpnWebBridge(private val host: Host) {
             query: String,
         )
 
-        /** Иконка приложения в виде data-URL для WebView. */
-        fun onGetAppIconRequested(packageName: String): String
-
-        /** Иконка считается в отдельном потоке, ответ приходит в `window.onAppIcon`. */
-        fun onGetAppIconAsyncRequested(packageName: String)
+        
 
         /** Ведётся ли журнал: выключатель в настройках. */
         fun journalEnabled(): Boolean
@@ -166,11 +162,7 @@ class VpnWebBridge(private val host: Host) {
     fun listInstalledAppsAsync(token: String, includeSystem: Boolean, query: String) =
         host.onListInstalledAppsAsyncRequested(token, includeSystem, query)
 
-    @JavascriptInterface
-    fun getAppIcon(packageName: String): String = host.onGetAppIconRequested(packageName)
-
-    @JavascriptInterface
-    fun getAppIconAsync(packageName: String) = host.onGetAppIconAsyncRequested(packageName)
+    
 
     @JavascriptInterface
     fun setJournalEnabled(enabled: Boolean): String = host.onSetJournalEnabledRequested(enabled)

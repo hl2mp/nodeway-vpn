@@ -2227,83 +2227,42 @@
         log('режим сброшен: не выбрано ни одного приложения');
     }
 
-    var iconCache = {};
-    var iconQueue = [];
-    var iconWaiting = {};
-    var iconBusy = false;
-    var ICON_CHUNK = 8;
+    /*
+     * Иконки приложений.
+     *
+     * Страница просит иконку обычной картинкой по адресу nodeway.internal/icon/<pkg>,
+     * а нативная часть отдаёт её прямо из PackageManager, перехватив запрос: моста
+     * в этом нет. Ленивость остаётся — строки заводятся только близкие к экрану,
+     * иначе список из сотни приложений дёргал бы загрузку при каждой прокрутке.
+     */
+
+    /** Адрес, который в приложении перехватывается, а в сети ничего не значит. */
+    var ICON_BASE_URL = 'https://nodeway.internal/icon/';
+
+    /** В демо-режиме адрес подставляет мок: перехвата в браузере нет. */
+    function iconUrlFor(pkg) {
+        if (window.__nodewayIconUrl) return window.__nodewayIconUrl(pkg);
+        return ICON_BASE_URL + encodeURIComponent(pkg);
+    }
 
     var iconObserver = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
             if (!entry.isIntersecting) return;
             iconObserver.unobserve(entry.target);
-            iconQueue.push(entry.target.querySelector('img'));
+            var img = entry.target.querySelector('img[data-pkg]');
+            if (img) img.src = iconUrlFor(img.getAttribute('data-pkg'));
         });
-        pumpIcons();
     }, { root: elSplit.list, rootMargin: '240px 0px' });
 
     function watchIcons() {
         iconObserver.disconnect();
-        iconQueue = [];
         var images = elSplit.list.querySelectorAll('img[data-pkg]');
         Array.prototype.forEach.call(images, function (img) {
-            var pkg = img.getAttribute('data-pkg');
-            if (hasIcon(pkg)) img.src = iconCache[pkg];
-            else iconObserver.observe(img.parentNode);
+            // Уже запрошенная иконка остаётся на месте: перерисовка списка
+            // не должна начинать всё заново.
+            if (img.getAttribute('src')) return;
+            iconObserver.observe(img.parentNode);
         });
-    }
-
-    function pumpIcons() {
-        if (iconBusy || !iconQueue.length) return;
-        iconBusy = true;
-        var chunk = iconQueue.splice(0, ICON_CHUNK);
-        setTimeout(function () {
-            chunk.forEach(function (img) {
-                var pkg = img.getAttribute('data-pkg');
-                if (hasIcon(pkg)) {
-                    applyIcon(img, iconCache[pkg]);
-                    return;
-                }
-                requestIcon(pkg, img);
-            });
-            iconBusy = false;
-            pumpIcons();
-        }, 0);
-    }
-
-    function requestIcon(pkg, img) {
-        if (bridge.getAppIconAsync) {
-            iconWaiting[pkg] = iconWaiting[pkg] || [];
-            iconWaiting[pkg].push(img);
-            bridge.getAppIconAsync(pkg);
-            return;
-        }
-        var url = bridge.getAppIcon(pkg);
-        if (url && typeof url.then === 'function') {
-            url.then(function (data) { storeIcon(pkg, data, [img]); });
-            return;
-        }
-        storeIcon(pkg, url, [img]);
-    }
-
-    function storeIcon(pkg, url, images) {
-        iconCache[pkg] = url || '';
-        images.forEach(function (img) { applyIcon(img, url); });
-    }
-
-    window.onAppIcon = function (pkg, url) {
-        var images = iconWaiting[pkg];
-        if (!images) return;
-        delete iconWaiting[pkg];
-        storeIcon(pkg, url, images);
-    };
-
-    function hasIcon(pkg) {
-        return Object.prototype.hasOwnProperty.call(iconCache, pkg);
-    }
-
-    function applyIcon(img, url) {
-        if (url) img.src = url;
     }
 
     elSplit.all.onclick = function () { setSplitMode('all'); };

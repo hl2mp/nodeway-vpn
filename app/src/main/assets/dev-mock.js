@@ -538,7 +538,20 @@
     }
   }
 
-  window.NodewayVpn = {
+  /*
+ * Иконки.
+ *
+ * В приложении картинку отдаёт нативная часть, перехватывая запрос по адресу
+ * nodeway.internal/icon/<pkg>: моста в этом нет. В браузере перехвата нет, и
+ * такой адрес не резолвится, поэтому страница спрашивает адрес у этого крючка,
+ * а мок отдаёт SVG-заглушку.
+ */
+window.__nodewayIconUrl = function (pkg) {
+  var app = mockApps.filter(function (item) { return item.pkg === pkg; })[0];
+  return app ? mockIcon(app) : '';
+};
+
+window.NodewayVpn = {
     getInitialState: function () {
       // Снимок повторяет настоящий: vpnState и ping лежат внутри state,
       // а не рядом с ним. Копия — ключи не должны попасть в саму модель,
@@ -623,19 +636,7 @@
       });
     },
 
-    getAppIcon: function (pkg) {
-      var app = mockApps.filter(function (item) { return item.pkg === pkg; })[0];
-      if (!app) return respond('');
-      return respond(mockIcon(app));
-    },
 
-    /** Асинхронный вариант: ответ приходит вызовом window.onAppIcon. */
-    getAppIconAsync: function (pkg) {
-      var url = this.getAppIcon(pkg);
-      Promise.resolve(url).then(function (data) {
-        window.onAppIcon && window.onAppIcon(pkg, data || '');
-      });
-    },
 
     requestConnect: function (profileId) {
       if (!profileId) return;

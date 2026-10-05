@@ -8,19 +8,18 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
+
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Base64
 import android.util.Log
-import android.util.LruCache
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.enableEdgeToEdge
@@ -31,7 +30,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
+
 import java.util.Collections
 import java.util.concurrent.Executors
 import kotlin.math.roundToInt
@@ -63,11 +62,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     /** Список установленных приложений, пересчитывается только после смены настроек. */
     @Volatile
     private var installedAppsCache: List<InstalledApp>? = null
-
-    /** Иконки приложений в base64, чтобы не перерисовывать их при каждом показе. */
-    private val iconCache = object : LruCache<String, String>(ICON_CACHE_SIZE) {
-        override fun sizeOf(key: String, value: String): Int = value.length
-    }
 
     /** Высота статус-бара и нижней панели навигации в CSS-пикселях. */
     private var insetTop = 0
@@ -260,6 +254,20 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
                     // Страница перерисована — отдаём ей журнал целиком, без дублей.
                     startJournal()
                 }
+
+                /**
+                 * Иконки приложений отдаём сами, из PackageManager.
+                 *
+                 * Перехват вместо моста с base64: браузер сам решает, что грузить и
+                 * когда, поэтому перерисовка списка не ждёт ответа из JS, а иконка
+                 * не едет туда-обратно строкой.
+                 */
+                override fun shouldInterceptRequest(
+                    view: WebView,
+                    request: WebResourceRequest,
+                ): WebResourceResponse? =
+                    AppIcons.packageOf(request.url.toString())
+                        ?.let { AppIcons.respond(this@MainActivity, it) }
             }
             webChromeClient = object : WebChromeClient() {
                 override fun onConsoleMessage(message: ConsoleMessage): Boolean {
@@ -590,14 +598,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         return array.toString()
     }
 
-    override fun onGetAppIconRequested(packageName: String): String {
-        val pkg = packageName.trim()
-        if (pkg.isEmpty()) return ""
-        iconCache.get(pkg)?.let { return it }
-        val dataUrl = runCatching { encodeIcon(pkg) }.getOrDefault("")
-        if (dataUrl.isNotEmpty()) iconCache.put(pkg, dataUrl)
-        return dataUrl
-    }
+    
 
     /**
      * Асинхронные варианты для страницы списка приложений.
@@ -618,26 +619,13 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
     }
 
-    override fun onGetAppIconAsyncRequested(packageName: String) {
-        val pkg = packageName.trim()
-        appsExecutor.execute {
-            val dataUrl = onGetAppIconRequested(pkg)
-            runOnUiThread { pushAppIcon(pkg, dataUrl) }
-        }
-    }
-
     /** Отдаёт список приложений странице: `window.onSplitApps(token, json)`. */
     private fun pushSplitApps(token: String, payload: String) {
         val script = "window.onSplitApps && window.onSplitApps('${escape(token)}', '${escape(payload)}');"
         runOnUiThread { runCatching { webView.evaluateJavascript(script, null) } }
     }
 
-    /** Отдаёт иконку странице: `window.onAppIcon(pkg, url)`. */
-    private fun pushAppIcon(packageName: String, dataUrl: String) {
-        val script =
-            "window.onAppIcon && window.onAppIcon('${escape(packageName)}', '${escape(dataUrl)}');"
-        runOnUiThread { runCatching { webView.evaluateJavascript(script, null) } }
-    }
+    
 
     /**
      * Прогревает кэш списка приложений заранее.
@@ -674,27 +662,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         return apps
     }
 
-    /** Иконка приложения как data-URL: WebView умеет показывать такие картинки напрямую. */
-    private fun encodeIcon(packageName: String): String {
-        val drawable = packageManager.getApplicationIcon(packageName)
-        val width = drawable.intrinsicWidth
-        val height = drawable.intrinsicHeight
-        if (width <= 0 || height <= 0) return ""
-
-        val bitmap = Bitmap.createBitmap(ICON_SIZE_PX, ICON_SIZE_PX, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        // Масштабируем с сохранением пропорций и центрируем, иначе иконки будут растянуты.
-        val scale = maxOf(ICON_SIZE_PX.toFloat() / width, ICON_SIZE_PX.toFloat() / height)
-        canvas.translate((ICON_SIZE_PX - width * scale) / 2f, (ICON_SIZE_PX - height * scale) / 2f)
-        canvas.scale(scale, scale)
-        drawable.setBounds(0, 0, width, height)
-        drawable.draw(canvas)
-
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        bitmap.recycle()
-        return "data:image/png;base64," + Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
-    }
+    
 
     /** Пересоздаёт туннель с теми же настройками, если VPN уже поднят. */
     private fun restartTunnelWithSplitSettings() = runOnUiThread {
@@ -1061,11 +1029,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         const val BRIDGE_NAME = "NodewayVpn"
         const val BACKGROUND_COLOR = 0xFF0B0F14.toInt()
 
-        /** Сторона иконки приложения, отдаваемой в WebView. */
-        const val ICON_SIZE_PX = 96
-
-        /** Предельный объём кэша иконок в символах base64. */
-        const val ICON_CACHE_SIZE = 512 * 1024
+        
 
         /** Как часто проверяем, не пора ли обновить подписку. */
         const val REFRESH_CHECK_INTERVAL_MS = 60_000L

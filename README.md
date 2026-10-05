@@ -233,6 +233,7 @@ powershell -ExecutionPolicy Bypass -File tools/build-olcrtc.ps1
 | `Journal.kt` | буфер журнала приложения и обоих ядер |
 | `XrayLogTailer.kt` | чтение файла логов Xray-core |
 | `VpnWebBridge.kt` | JS interface для страницы |
+| `AppIcons.kt` | иконки приложений: перехват запросов вместо моста |
 | `assets/index.html` | весь UI: разметка, стили, логика |
-| `assets/index_old.html`, `assets/theme-ios.html` | резервные темы той же страницы, синхронизированы с `index.html` |
+| `assets/theme-m3.html`, `assets/theme-ios.html` | резервные темы той же страницы, синхронизированы с `index.html` |
 | `assets/dev-mock.js` | мок данных для демо-режима |
