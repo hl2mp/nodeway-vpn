@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Фон адаптивной иконки: вертикальный градиент фирменного синего.
+    Фон адаптивной иконки: тёмный Material 3 градиент.
 
-    Заливка ровно 108x108 — так и положено: система сама накладывает маску
-    (круг, squircle, каплю) и вырезает внешние 18dp с каждой стороны.
-    Поверх этого слоя лежит только белое облако из ic_launcher_foreground,
-    поэтому при сдвиге фона (параллакс) картинка остаётся цельной.
-
-    Цвета сняты с исходного nodeway.png: сверху #185BDE, снизу #143DBD.
+    Цвета из icon.svg: сверху #28292c, низ #202124. Поверх этого слоя
+    лежит белое облако из ic_launcher_foreground, поэтому при сдвиге фона
+    (параллакс) картинка остаётся цельной.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
@@ -19,12 +16,12 @@
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
-                android:startX="54"
+                android:startX="0"
                 android:startY="0"
-                android:endX="54"
+                android:endX="108"
                 android:endY="108">
-                <item android:color="#FF185BDE" android:offset="0" />
-                <item android:color="#FF143DBD" android:offset="1" />
+                <item android:color="#FF28292c" android:offset="0" />
+                <item android:color="#FF202124" android:offset="1" />
             </gradient>
         </aapt:attr>
     </path>

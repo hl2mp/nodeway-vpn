@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Передний план адаптивной иконки: белое облако Material 3.
+
+    Путь масштабирован из icon.svg 512x512 под вьюпорт 108x108.
+    Заливка — градиент #FFFFFF → #E8EAED.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M36.7,74.2 C29.9,74.2 24.4,68.8 24.4,62.0 C24.4,56.0 28.7,51.0 34.3,50.0 C35.2,41.5 42.2,35.0 51.0,35.0 C57.3,35.0 63.1,38.4 66.0,43.5 C67.7,42.6 69.8,42.2 72.1,42.2 C78.5,42.2 83.8,47.5 83.8,54.0 C83.8,55.1 83.7,56.0 83.5,56.9 C87.5,58.4 90.2,62.5 90.2,67.0 C90.2,71.0 87.0,74.2 83.0,74.2Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="51"
+                android:startY="35"
+                android:endX="51"
+                android:endY="74">
+                <item android:color="#FFFFFFFF" android:offset="0" />
+                <item android:color="#FFE8EAED" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>
