@@ -8,7 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-
+import android.content.res.Configuration
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -20,6 +20,7 @@ import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.enableEdgeToEdge
@@ -27,7 +28,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -225,6 +229,9 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
         store = ProfileStore(this)
         prefs = Prefs(this)
+        // Вид панелей — сразу по теме приложения: enableEdgeToEdge() смотрел на
+        // системную, а при выбранной теме они расходятся.
+        applySystemBars(pageTheme() == "dark")
         // Настройка журнала применяется раньше любой записи в него.
         Journal.enabled = prefs.journalEnabled
         webView = WebView(this).apply {
@@ -244,6 +251,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
                 allowFileAccess = true
                 allowContentAccess = true
                 mediaPlaybackRequiresUserGesture = false
+                disableForceDark(this)
             }
             if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
             webViewClient = object : WebViewClient() {
@@ -251,6 +259,9 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
                     super.onPageFinished(view, url)
                     // Первая отрисовка может обогнать применение инсетов.
                     pushInsets()
+                    // Режим оформления уже задан адресом страницы, а сделанный
+                    // выбор подписан в строке настроек — его страница узнаёт отсюда.
+                    pushTheme(pageTheme(), prefs.themeMode)
                     // Страница перерисована — отдаём ей журнал целиком, без дублей.
                     startJournal()
                 }
@@ -306,10 +317,127 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         handleImportLink(intent)
         intent.data = null
 
-        webView.loadUrl("file:///android_asset/index.html")
+        webView.loadUrl("file:///android_asset/index.html?theme=${pageTheme()}")
         // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
         warmInstalledAppsCache()
         requestNotificationPermissionIfNeeded()
+    }
+
+    /**
+     * Режим оформления страницы: светлый или тёмный.
+     *
+     * Приходит адресом, а не вызовом после загрузки: иначе на тёмной теме
+     * система успела бы показать светлый фон. Позже, при смене темы системы,
+     * режим догоняется через setUiMode — активность не пересоздаётся, потому
+     * что uiMode помечен в манифесте как configChanges.
+     */
+    private fun pageTheme(): String {
+        // Явный выбор пользователя перекрывает системный, иначе берём системный.
+        when (prefs.themeMode) {
+            "light" -> return "light"
+            "dark" -> return "dark"
+        }
+        val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        return if (night == Configuration.UI_MODE_NIGHT_YES) "dark" else "light"
+    }
+
+    /**
+     * Вид системных панелей — по теме приложения, а не по системной.
+     *
+     * `enableEdgeToEdge()` выбирает его один раз, по теме системы, и активность при
+     * её смене не пересоздаётся. Поэтому при выборе темы в приложении вид панелей
+     * надо обновлять самому: иначе на светлой странице в тёмной системе остаются
+     * белые иконки статус-бара, а на тёмной — тёмные, и полосы не читаются.
+     */
+    private fun applySystemBars(dark: Boolean) {
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.isAppearanceLightStatusBars = !dark
+        controller.isAppearanceLightNavigationBars = !dark
+    }
+
+    /**
+     * Выключает принудительную тёмную тему WebView: оформление задаёт приложение.
+     *
+     * Иначе на Android 10 — и при включённой в настройках разработчика
+     * «Принудительной тёмной теме» — WebView перекрашивает страницу сам,
+     * разворачивая цвета. Страница не описывает `prefers-color-scheme`: режим
+     * приходит атрибутом `data-theme`, — и для WebView она выглядит страницей
+     * без поддержки тёмной темы, а значит кандидатом на перекрашивание.
+     */
+    // setForceDark помечен устаревшим, но на WebView от Android 10 это единственный
+    // доступный способ; на новых WebView его заменяет algorithmic darkening.
+    @Suppress("DEPRECATION")
+    private fun disableForceDark(settings: WebSettings) {
+        /*
+         * Платформенный вызов идёт первым и без проверки версии WebView.
+         *
+         * На Android 10 со старым WebView проверки WebViewFeature не проходят:
+         * algorithmic darkening появился только в WebView 105, а FORCE_DARK на
+         * приложениях с targetSdk от 33 WebView игнорирует. Остаётся платформенное
+         * свойство — единственное, что ещё действует там, где всё остальное нет.
+         */
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            settings.forceDark = WebSettings.FORCE_DARK_OFF
+        }
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+            WebSettingsCompat.setForceDark(settings, WebSettingsCompat.FORCE_DARK_OFF)
+        }
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+            WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, false)
+        }
+        /*
+         * Стратегия запрещает перекрашивание целиком: WebView берёт тему у самой
+         * страницы и рисует ровно то, что она выдала, даже если попросили тёмную,
+         * а страница ответила светлой. Именно этот случай и возникает при выборе
+         * светлой темы в приложении при тёмной системной.
+         */
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK_STRATEGY)) {
+            WebSettingsCompat.setForceDarkStrategy(
+                settings,
+                WebSettingsCompat.DARK_STRATEGY_WEB_THEME_DARKENING_ONLY,
+            )
+        }
+    }
+
+    /**
+     * Применяет выбор темы из настроек.
+     *
+     * Странице уходят два значения: какой режим действует сейчас (setUiMode)
+     * и какой выбран (onThemeMode — им подписан пункт настроек). При SYSTEM
+     * действующий меняется сам вслед за системой, поэтому его и спрашиваем заново.
+     */
+    override fun onSetThemeModeRequested(mode: String) {
+        val applied = when (mode) {
+            "light", "dark" -> {
+                prefs.themeMode = mode
+                mode
+            }
+            else -> {
+                prefs.themeMode = "system"
+                pageTheme()
+            }
+        }
+        pushTheme(applied, prefs.themeMode)
+    }
+
+    /** Сообщает странице и режим оформления, и сделанный выбор. */
+    private fun pushTheme(applied: String, chosen: String) {
+        val script = "window.setUiMode && window.setUiMode('$applied');" +
+                "window.onThemeMode && window.onThemeMode('$chosen');"
+        // Выбор приходит из JS-моста, а тот зовётся в отдельном потоке WebView:
+        // evaluateJavascript оттуда не работает, и без переноса вызов просто теряется.
+        runOnUiThread {
+            applySystemBars(applied == "dark")
+            runCatching { webView.evaluateJavascript(script, null) }
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Активность выживает при смене темы, значит сообщить о ней должна страница.
+        // При явном выборе темы это пустая перерисовка: так система не может
+        // переопределить то, что выбрал пользователь.
+        pushTheme(pageTheme(), prefs.themeMode)
     }
 
     /**

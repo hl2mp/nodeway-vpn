@@ -97,6 +97,14 @@ class VpnWebBridge(private val host: Host) {
          * @return JSON с новым состоянием.
          */
         fun onSetJournalEnabledRequested(enabled: Boolean): String
+
+        /**
+         * Выбор темы оформления: "system", "light" или "dark".
+         *
+         * Применяется сразу, без перезагрузки страницы, и возвращается обратно
+         * тем же вызовом: настройка видна в том же экране, где её выбрали.
+         */
+        fun onSetThemeModeRequested(mode: String)
     }
 
     @JavascriptInterface
@@ -166,6 +174,10 @@ class VpnWebBridge(private val host: Host) {
 
     @JavascriptInterface
     fun setJournalEnabled(enabled: Boolean): String = host.onSetJournalEnabledRequested(enabled)
+
+    /** Тема оформления. Режим сразу применяется, ответ приходит в onThemeMode. */
+    @JavascriptInterface
+    fun setThemeMode(mode: String) = host.onSetThemeModeRequested(mode)
 
     private fun uiState(): String = JSONObject().apply {
         put("state", JSONObject(host.uiState()))

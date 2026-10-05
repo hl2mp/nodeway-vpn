@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- The whole UI is rendered by assets/index.html inside a WebView. -->
 
     <!--
@@ -14,6 +14,24 @@
         <item name="android:windowBackground">@color/nodeway_background</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
+
+        <!--
+            Отказ от принудительной тёмной темы, и единственный пункт, который
+            удерживает перекрашивание снаружи приложения.
+
+            Настройка разработчика «Принудительная тёмная тема» (Override
+            force-dark) красит окна сама и делает это повторно при каждом
+            изменении конфигурации, перебивая настройки WebView: приложение
+            выставляет запрет при создании, а система возвращает его обратно.
+            Поэтому отказ возможен только здесь — через тему. На Xiaomi тёмная
+            тема включается именно так, поэтому тема должна оставаться DayNight.
+
+            Отдельно от этого: системная тёмная тема приложению сообщается как
+            обычно, и режим «Как в системе» за ней следует. Проблема была не в
+            этом, а в том, что подмена красит окна поверх — даже когда тема
+            приложения светлая, и цвета выходят чужие.
+        -->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
     </style>
 
     <style name="Theme.NodewayVPN" parent="Theme.NodewayVPN.Base" />

@@ -3,9 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>Nodeway VPN</title>
+<script>
+  /*
+   * Режим оформления ставится до первой отрисовки.
+   *
+   * Приложение передаёт его адресом страницы (?theme=dark): вызовом после
+   * загрузки система успела бы показать светлый фон на тёмной теме.
+   */
+  (function () {
+    document.documentElement.setAttribute(
+        'data-theme', /[?&]theme=dark/.test(location.search) ? 'dark' : 'light');
+  })();
+</script>
 <style>
+    /*
+     * Палитра.
+     *
+     * Значения живут в двух наборах: светлом, он же умолчательный, и тёмном,
+     * который включается атрибутом data-theme на <html>. Режим сообщает
+     * приложение — при старте адресом страницы, при смене темы системы вызовом.
+     *
+     * Цвета, у которых есть смысловое имя, названы по нему: так видно их в
+     * одном месте, вместо разбросанных по правилам литералов.
+     */
     :root {
+        /* Нативные контролы — чекбоксы в пикере, курсор, полосы прокрутки —
+           без этого WebView рисует их в светлой схеме даже на тёмной теме. */
+        color-scheme: light;
         --bg: #F2F2F7;
         --card: #FFFFFF;
         --line: #E3E3E8;
@@ -14,9 +40,116 @@
         --blue: #007AFF;
         --green: #34C759;
         --red: #FF3B30;
+
+        /* Всё, что не выводится прямо из базовых цветов. */
+        --power-ring: #E4E4EA;
+        --chip-info-bg: #E1EFFF;
+        --chip-ok-bg: #DCF5E6;
+        --chip-ok-fg: #1E8E3E;
+        --chip-error-bg: #FDE0E0;
+        --chip-error-fg: #C5221F;
+        --chip-idle-bg: #EEF0F4;
+        --pressed-row: #EFEFF4;
+        --pressed-btn: #E3E3E8;
+        --knob: #FFFFFF;
+        --track: rgba(11, 15, 20, .15);
+        --press-tint: rgba(0, 0, 0, .06);
+        --sheet: rgba(250, 250, 250, .96);
+        --sheet-strong: rgba(250, 250, 250, .97);
+        --log-xray: #7f8fa6;
+        --log-olcrtc: #6f9c86;
+        --log-warn: #c9a227;
+        --log-error: #e0625f;
+
         /* Отступы под системные панели: приложение передаёт их из Kotlin (setInsets). */
         --inset-top: 0px;
         --inset-bottom: 0px;
+    }
+
+    /*
+     * Тёмный набор: те же роли в тёмных тонах.
+     *
+     * Значения из тёмной палитры iOS — чёрный фон, #1C1C1E для карточек.
+     * Второстепенный текст здесь светлее, чем на светлом фоне: на чёрном
+     * тот же оттенок нечитаем.
+     */
+    :root[data-theme='dark'] {
+        color-scheme: dark;
+        --bg: #000000;
+        --card: #1C1C1E;
+        --line: #38383A;
+        --text: #FFFFFF;
+        --muted: #8E8E93;
+        --blue: #0A84FF;
+        --green: #30D158;
+        --red: #FF453A;
+
+        --power-ring: #2C2C2E;
+        --chip-info-bg: #12263F;
+        --chip-ok-bg: #16351F;
+        --chip-ok-fg: #30D158;
+        --chip-error-bg: #3A1B1B;
+        --chip-error-fg: #FF6B5E;
+        --chip-idle-bg: #2C2C2E;
+        --pressed-row: #2C2C2E;
+        --pressed-btn: #3A3A3C;
+        --knob: #FFFFFF;
+        --track: rgba(255, 255, 255, .18);
+        --press-tint: rgba(255, 255, 255, .12);
+        --sheet: rgba(28, 28, 30, .96);
+        --sheet-strong: rgba(30, 30, 32, .97);
+        --log-xray: #8FA3BA;
+        --log-olcrtc: #7FB89E;
+        --log-warn: #E0B54A;
+        --log-error: #FF7B72;
+    }
+
+    /*
+     * Тот же тёмный набор по системной теме — иначе страница выглядит для
+     * WebView «не умеющей» в тёмную: он спрашивает prefers-color-scheme,
+     * получает отказ и перекрашивает всё сам алгоритмически. Цвета выходят
+     * «чуть не те», и на Android 10 это происходит даже при явном выборе
+     * светлой темы в приложении.
+     *
+     * :not([data-theme='light']) оставляет выбор пользователя главнее системы:
+     * режим приходит атрибутом, и он всегда выставлен, так что правило срабатывает
+     * только когда атрибута нет вовсе — то есть почти никогда. Оно нужно ради
+     * самого факта, что страница на prefers-color-scheme отвечает.
+     *
+     * Правила с разными условиями в одно не объединить, а править набор нужно в
+     * обоих — так он и продублирован.
+     */
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+            color-scheme: dark;
+            --bg: #000000;
+            --card: #1C1C1E;
+            --line: #38383A;
+            --text: #FFFFFF;
+            --muted: #8E8E93;
+            --blue: #0A84FF;
+            --green: #30D158;
+            --red: #FF453A;
+
+            --power-ring: #2C2C2E;
+            --chip-info-bg: #12263F;
+            --chip-ok-bg: #16351F;
+            --chip-ok-fg: #30D158;
+            --chip-error-bg: #3A1B1B;
+            --chip-error-fg: #FF6B5E;
+            --chip-idle-bg: #2C2C2E;
+            --pressed-row: #2C2C2E;
+            --pressed-btn: #3A3A3C;
+            --knob: #FFFFFF;
+            --track: rgba(255, 255, 255, .18);
+            --press-tint: rgba(255, 255, 255, .12);
+            --sheet: rgba(28, 28, 30, .96);
+            --sheet-strong: rgba(30, 30, 32, .97);
+            --log-xray: #8FA3BA;
+            --log-olcrtc: #7FB89E;
+            --log-warn: #E0B54A;
+            --log-error: #FF7B72;
+        }
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -121,7 +254,7 @@
     }
 
     .power-box {
-        background: #E4E4EA;
+        background: var(--power-ring);
         border-radius: 28px;
         padding: 12px;
     }
@@ -145,7 +278,7 @@
         margin-top: 20px;
         display: flex;
         align-items: center;
-        background: #E1EFFF;
+        background: var(--chip-info-bg);
         color: var(--blue);
         border-radius: 999px;
         padding: 9px 24px;
@@ -155,9 +288,9 @@
         justify-content: center;
     }
 
-    .status-chip.on { background: #DCF5E6; color: #1E8E3E; }
-    .status-chip.error { background: #FDE0E0; color: #C5221F; }
-    .status-chip.busy { background: #EEF0F4; color: var(--muted); }
+    .status-chip.on { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
+    .status-chip.error { background: var(--chip-error-bg); color: var(--chip-error-fg); }
+    .status-chip.busy { background: var(--chip-idle-bg); color: var(--muted); }
 
     .status-hint {
         margin-top: 10px;
@@ -245,7 +378,7 @@
     }
 
     .row:last-child { border-bottom: none; }
-    .row:active { background: #EFEFF4; }
+    .row:active { background: var(--pressed-row); }
 
     /* Смещение нужно только в строках режима: их текст начинается с первой строки,
        а маркер по умолчанию центрируется по всей строке. */
@@ -315,7 +448,7 @@
         cursor: default;
     }
 
-    .ping-btn:not(:disabled):active { background: #E3E3E8; }
+    .ping-btn:not(:disabled):active { background: var(--pressed-btn); }
 
     /* Плашка отклика в строке профиля, рядом с «i». */
     .ping-badge {
@@ -363,12 +496,12 @@
     }
 
     /* Вывод ядер — тусклее сообщений приложения, иначе журнал нечитаем. */
-    #logBody .log-line.xray { color: #7f8fa6; }
-    #logBody .log-line.olcrtc { color: #6f9c86; }
+    #logBody .log-line.xray { color: var(--log-xray); }
+    #logBody .log-line.olcrtc { color: var(--log-olcrtc); }
 
     /* Предупреждения и ошибки выделяются: их и ищут в первую очередь. */
-    #logBody .log-line.warn { color: #c9a227; }
-    #logBody .log-line.error { color: #e0625f; }
+    #logBody .log-line.warn { color: var(--log-warn); }
+    #logBody .log-line.error { color: var(--log-error); }
 
     /* Переключатель уровня журнала. */
     .log-filter {
@@ -418,7 +551,7 @@
         width: 27px;
         height: 27px;
         border-radius: 50%;
-        background: #fff;
+        background: var(--knob);
         box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
         transition: transform .18s ease;
     }
@@ -478,7 +611,7 @@
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      border: 2px solid rgba(11, 15, 20, .15);
+      border: 2px solid var(--track);
       border-top-color: var(--blue);
       animation: spin .7s linear infinite;
       vertical-align: -3px;
@@ -583,7 +716,7 @@
         color: var(--muted);
     }
 
-    .picker-search-clear:active { background: rgba(0, 0, 0, 0.06); }
+    .picker-search-clear:active { background: var(--press-tint); }
 
     .picker-switch {
         display: flex;
@@ -685,7 +818,7 @@
         left: 10px;
         right: 10px;
         bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 12px);
-        background: rgba(250, 250, 250, .96);
+        background: var(--sheet);
         backdrop-filter: blur(20px);
         border-radius: 14px;
         overflow: hidden;
@@ -720,6 +853,9 @@
 
     .sheet-item:last-child { border-bottom: none; color: var(--red); }
 
+    /* Выбранный пункт листа отмечен галочкой: без неё три варианта неотличимы. */
+    .sheet-item.current::after { content: ' ✓'; }
+
     /* ---------- модальное окно профиля ---------- */
 
     .modal {
@@ -730,7 +866,7 @@
         transform: translateY(-50%) scale(.9);
         max-width: 420px;
         margin: 0 auto;
-        background: rgba(250, 250, 250, .97);
+        background: var(--sheet-strong);
         backdrop-filter: blur(20px);
         border-radius: 14px;
         overflow: hidden;
@@ -884,6 +1020,14 @@
       </button>
     </div>
 
+    <h3 class="section-title">Оформление</h3>
+    <div class="group">
+      <button class="settings-row" id="themeRow">
+        <span>Тема<small>Светлая, тёмная или как в системе</small></span>
+        <span class="value" id="themeValue">Как в системе</span>
+      </button>
+    </div>
+
     <h3 class="section-title">О приложении</h3>
     <div class="group">
         <div class="settings-row">
@@ -899,6 +1043,14 @@
 
 <div class="sheet" id="sheet">
     <button class="sheet-item" data-action="import">Добавить из буфера</button>
+    <button class="sheet-item" data-action="cancel">Отмена</button>
+</div>
+
+<!-- Выбор темы: тот же лист, но свой набор пунктов. -->
+<div class="sheet" id="themeSheet">
+    <button class="sheet-item" data-theme-mode="system">Как в системе</button>
+    <button class="sheet-item" data-theme-mode="light">Светлая</button>
+    <button class="sheet-item" data-theme-mode="dark">Тёмная</button>
     <button class="sheet-item" data-action="cancel">Отмена</button>
 </div>
 
@@ -977,6 +1129,12 @@
     var modalProfileId = '';
     var logCollapsed = false;
 
+    /** Выбранная тема: 'system', 'light' или 'dark'. */
+    var themeMode = 'system';
+
+    /** Как темы выглядят в строке настроек. */
+    var THEME_NAMES = { system: 'Как в системе', light: 'Светлая', dark: 'Тёмная' };
+
     /** Записи журнала целиком: перерисовка под фильтр идёт из этого массива. */
     var journalEntries = [];
 
@@ -1041,6 +1199,9 @@
         journalSwitch: document.getElementById('journalSwitch'),
         scrim: document.getElementById('scrim'),
         sheet: document.getElementById('sheet'),
+        themeSheet: document.getElementById('themeSheet'),
+        themeRow: document.getElementById('themeRow'),
+        themeValue: document.getElementById('themeValue'),
         modal: document.getElementById('modal'),
         modalTitle: document.getElementById('modalTitle'),
         modalBody: document.getElementById('modalBody'),
@@ -1765,10 +1926,27 @@
 
     function closeOverlays() {
         el.sheet.classList.remove('open');
+        el.themeSheet.classList.remove('open');
         el.modal.classList.remove('open');
         el.alert.classList.remove('open');
         el.scrim.classList.remove('open');
     }
+
+    /** Подпись в строке настроек и галочка в листе выбора темы. */
+    function renderTheme() {
+        el.themeValue.textContent = THEME_NAMES[themeMode] || THEME_NAMES.system;
+        var items = el.themeSheet.querySelectorAll('[data-theme-mode]');
+        Array.prototype.forEach.call(items, function (item) {
+            var on = item.getAttribute('data-theme-mode') === themeMode;
+            item.classList.toggle('current', on);
+        });
+    }
+
+    /** Выбор темы приходит из приложения: там он и хранится, переживая перезапуск. */
+    window.onThemeMode = function (mode) {
+        themeMode = mode || 'system';
+        renderTheme();
+    };
 
     /**
      * Подтверждение опасного действия своим диалогом, а не системным окном.
@@ -2194,7 +2372,20 @@
         window.scrollTo(0, 0);
     }
 
-    el.sheet.addEventListener('click', function (event) {
+    el.themeRow.onclick = function () {
+    renderTheme();
+    el.themeSheet.classList.add('open');
+    el.scrim.classList.add('open');
+  };
+
+  el.themeSheet.addEventListener('click', function (event) {
+    var mode = event.target.getAttribute('data-theme-mode');
+    closeOverlays();
+    if (!mode) return;
+    bridge.setThemeMode(mode);
+  });
+
+  el.sheet.addEventListener('click', function (event) {
         var action = event.target.getAttribute('data-action');
         if (!action) return;
         closeOverlays();
@@ -2240,6 +2431,14 @@
         document.documentElement.style.setProperty('--inset-top', (top || 0) + 'px');
         document.documentElement.style.setProperty('--inset-bottom', (bottom || 0) + 'px');
     };
+
+  /**
+   * Режим оформления: светлый или тёмный. Сообщает приложение, тем же путём,
+   * что и отступы. Меняется только набор токенов — разметка та же.
+   */
+  window.setUiMode = function (mode) {
+    document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+  };
 
     window.onVpnState = function (payload) {
         var data = parse(payload);

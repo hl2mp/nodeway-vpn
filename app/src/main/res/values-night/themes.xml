@@ -1,12 +1,13 @@
 <resources>
     <!-- The whole UI is rendered by assets/index.html inside a WebView. -->
-    <style name="Theme.NodewayVPN" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/nodeway_accent</item>
-        <item name="colorPrimaryVariant">@color/nodeway_accent_dark</item>
+
+    <!--
+        Ночью отличается только цвет надписи на акцентной заливке: синий темнеет,
+        и чёрный на нём читается лучше белого. Остальное наследуется из Base —
+        включая отказ от принудительной тёмной темы, который обязан действовать
+        в обеих схемах.
+    -->
+    <style name="Theme.NodewayVPN" parent="Theme.NodewayVPN.Base">
         <item name="colorOnPrimary">@color/black</item>
-        <item name="colorSecondary">@color/nodeway_accent</item>
-        <item name="android:windowBackground">@color/nodeway_background</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 </resources>

@@ -104,6 +104,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.material)
+    // Настройки WebView, недоступные на платформе: отключение принудительной
+    // тёмной темы, которой иначе Android 10 перекрашивает нашу страницу сам.
+    implementation(libs.androidx.webkit)
 
     /*
      * Xray-core 26.9.30, собран из XTLS/libXray@v26.9.30 через gomobile bind:

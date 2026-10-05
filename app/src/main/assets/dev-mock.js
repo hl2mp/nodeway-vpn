@@ -265,7 +265,13 @@
      * сразу: иначе карточка скрыта и половину вёрстки не видно.
      * Переключается кнопкой «логи» в панели внизу.
      */
-    journalEnabled: true
+    journalEnabled: true,
+
+    /**
+     * Выбор темы. Значение по умолчанию важно: без него первая отрисовка в демо
+     * уехала бы в светлую схему на тёмной системе.
+     */
+    themeMode: 'system'
   };
 
   // ------------------------------------------------------------------ журнал
@@ -579,6 +585,13 @@ window.NodewayVpn = {
       return JSON.stringify({ enabled: state.journalEnabled });
     },
 
+    /* ---------- тема оформления ---------- */
+
+setThemeMode: function (mode) {
+      state.themeMode = mode === 'light' || mode === 'dark' ? mode : 'system';
+      applyTheme();
+    },
+
     /* ---------- раздельное туннелирование ---------- */
 
     getSplitTunnelSettings: function () {
@@ -837,6 +850,19 @@ window.NodewayVpn = {
   }
 
   /*
+   * Тему в демо применяем сами: в приложении этим занимается Kotlin.
+   *
+   * Выбор живёт в state и перезагрузку страницы не переживает — хранить его
+   * тут незачем, в демо это кнопка для проверки вёрстки в обеих схемах.
+   */
+  function applyTheme() {
+    var system = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var applied = state.themeMode === 'system' ? (system ? 'dark' : 'light') : state.themeMode;
+    if (window.setUiMode) window.setUiMode(applied);
+    if (window.onThemeMode) window.onThemeMode(state.themeMode);
+  }
+
+  /*
    * Стартовые строки отдаём по событию load, а не по setTimeout.
    *
    * Мок подключается отдельным <script> перед разметкой страницы и выполняется
@@ -848,6 +874,7 @@ window.NodewayVpn = {
   window.addEventListener('load', function () {
     emitJournalReset();
     applyJournalButton();
+    applyTheme();
   });
 
   applyPanelState();
