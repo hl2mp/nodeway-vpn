@@ -124,6 +124,7 @@ class NodewayVpnService : VpnService() {
                     return START_NOT_STICKY
                 }
                 activeProfileId = intent.getStringExtra(EXTRA_PROFILE_ID).orEmpty()
+                startForeground(NOTIFICATION_ID, buildNotification(VpnState.CONNECTING, link))
                 publishState(VpnState.CONNECTING, "Переключаем профиль")
                 work?.cancel()
                 work = serviceScope.launch {
@@ -398,6 +399,9 @@ class NodewayVpnService : VpnService() {
         publishState(VpnState.CONNECTING, "Запускаем olcrtc…")
         val socksPort = try {
             olcrtc.start(profile)
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            Log.i(TAG, "olcrtc start cancelled by switch")
+            return
         } catch (e: Exception) {
             Log.e(TAG, "olcrtc failed to start", e)
             fail(e.message ?: "olcrtc не запустился")
