@@ -876,6 +876,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     /** Загружает подписку в фоне и отдаёт результат в `window.onImportResult`. */
     private fun loadSubscription(source: SubscriptionSource, isNew: Boolean) {
+        NodewayVpnService.cancelPing(this)
         subscriptionsInFlight.add(source.id)
         // Пока грузим — кнопка «Обновить» у этой подписки показывает спиннер.
         store.loadingSubscriptions.add(source.id)

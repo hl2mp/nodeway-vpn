@@ -12,6 +12,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -148,6 +149,20 @@ class NodewayVpnService : VpnService() {
                 startForeground(NOTIFICATION_ID, buildNotification(VpnState.PINGING))
                 work?.cancel()
                 work = serviceScope.launch { runPing(links, ids) }
+            }
+
+            ACTION_CANCEL_PING -> {
+                work?.cancel()
+                pinging = false
+                pingIndex = 0
+                pingTotal = 0
+                pingProfileId = ""
+                pingResults.clear()
+                publishState(VpnState.DISCONNECTED)
+                if (state != VpnState.CONNECTED && state != VpnState.CONNECTING) {
+                    stopForegroundCompat()
+                    stopSelf()
+                }
             }
 
             else -> {
@@ -652,6 +667,7 @@ class NodewayVpnService : VpnService() {
         const val ACTION_DISCONNECT = "com.nodewayvpn.pro.action.DISCONNECT"
         const val ACTION_STATE = "com.nodewayvpn.pro.action.STATE"
         const val ACTION_PING = "com.nodewayvpn.pro.action.PING"
+        const val ACTION_CANCEL_PING = "com.nodewayvpn.pro.action.CANCEL_PING"
 
         const val EXTRA_LINK = "extra_link"
         const val EXTRA_STATE = "extra_state"
@@ -742,6 +758,16 @@ class NodewayVpnService : VpnService() {
                 .putExtra(EXTRA_PING_LINKS, links)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        fun cancelPing(context: Context) {
+            val intent = Intent(context, NodewayVpnService::class.java)
+                .setAction(ACTION_CANCEL_PING)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(context, intent)
             } else {
                 context.startService(intent)
             }
