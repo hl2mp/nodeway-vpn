@@ -18,7 +18,7 @@
 [CmdletBinding()]
 param(
     [string] $Abis = 'arm64-v8a,armeabi-v7a,x86_64,x86',
-    [string] $SourceDir = 'olcrtc',
+    [string] $SourceDir = '../olcrtc',
     [string] $OutputDir = 'app/src/main/jniLibs'
 )
 

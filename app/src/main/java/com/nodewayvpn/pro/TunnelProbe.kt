@@ -18,7 +18,7 @@ import java.net.URLConnection
  *
  * Маршрут зависит от транспорта, и это не деталь реализации:
  *  - VLESS — пакет приложения всегда внутри туннеля (в режиме `all` там все, в
- *    `allow` мы добавляем себя явно, в `exclude` сами себя вычищаем), поэтому
+ *    `allow` мы добавляем себя явно, в `exclude` сами себя вычищем), поэтому
  *    запрос уходит прямо в TUN;
  *  - olcrtc — наш пакет нарочно вне туннеля, иначе процесс olcrtc не смог бы
  *    поднять туннель. Наивный запрос здесь измерил бы прямое соединение и
@@ -41,10 +41,41 @@ object TunnelProbe {
     private const val TIMEOUT_MS = 5_000
 
     /**
+     * Сколько замеров делать после прогрева. Два достаточно, чтобы сгладить
+     * джиттер ОС и пиковые задержки, не удлиняя проверку профилей.
+     */
+    private const val MEASUREMENT_COUNT = 2
+
+    /**
      * @param socksPort порт локального SOCKS5 от olcrtc, либо null для VLESS.
      * @return отклик в миллисекундах либо null, если туннель не ответил.
+     *
+     * Первый запрос — прогрев. Он поглощает DNS-резолюцию, TCP-рукопожатие и
+     * медленный старт TCP, поэтому без него каждый профиль показывал время
+     * старта соединения вместо реального отклика: хорошие сервера выглядели
+     * медленными, а первый замер был завышен десятками-сотнями миллисекунд.
+     * Следующие замеры идут уже по «тёплому» пути и берутся за минимум, чтобы
+     * не ловить случайные пики загрузки системы.
      */
     suspend fun measure(socksPort: Int?): Int? = withContext(Dispatchers.IO) {
+        // Прогрев: если туннель не ответил на первого запроса — он мёртв,
+        // остальные замеры бессмысленны.
+        if (probeOnce(socksPort) == null) return@withContext null
+
+        val results = ArrayList<Int>(MEASUREMENT_COUNT)
+        repeat(MEASUREMENT_COUNT) {
+            probeOnce(socksPort)?.let(results::add)
+        }
+        results.minOrNull()
+    }
+
+    /**
+     * Единичный HTTP-запрос с замером TTFB.
+     *
+     * @return отклик в мс либо null, если соединение не установилось или
+     * ответ не пришёл в пределах [TIMEOUT_MS].
+     */
+    private fun probeOnce(socksPort: Int?): Int? {
         val connection = runCatching {
             (openTarget(socksPort) as HttpURLConnection).apply {
                 requestMethod = "GET"
@@ -57,10 +88,10 @@ object TunnelProbe {
             }
         }.getOrElse { error ->
             Log.d(TAG, "Probe could not start", error)
-            return@withContext null
+            return null
         }
 
-        try {
+        return try {
             val startedAt = System.nanoTime()
             // Код ответа приходит с заголовками, то есть это и есть TTFB.
             val code = connection.responseCode

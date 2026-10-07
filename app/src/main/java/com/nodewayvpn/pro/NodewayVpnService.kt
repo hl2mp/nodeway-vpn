@@ -329,18 +329,19 @@ class NodewayVpnService : VpnService() {
                 publishState(VpnState.PINGING)
 
                 val result = withTimeoutOrNull(PING_PROFILE_TIMEOUT_MS) {
-                    connect(link)
-                    // Подпись должна называть ядро того профиля, который проверяется
-                    // сейчас: publishState уведомление не трогает, иначе оно осталось
-                    // бы от прошлого подключения.
-                    updateNotification(VpnState.PINGING)
-                    if (state == VpnState.CONNECTED) TunnelProbe.measure(probeSocksPort) else null
+                    if (OlcrtcProfile.isOlcrtcLink(link)) {
+                        // olcrtc: быстрый замер через SOCKS5 БЕЗ TUN и Xray
+                        connectOlcrtcForPing(link)
+                    } else {
+                        // VLESS: быстрый замер через SOCKS5 Xray БЕЗ TUN
+                        connectVlessForPing(link)
+                    }
                 }
                 // -1 — «не отвечает», рисуется иначе, чем хороший отклик.
                 pingResults[ids[index]] = result ?: -1
                 publishState(VpnState.PINGING)
 
-                shutdown()
+                // shutdown не нужен: оба метода сами чистят за собой (olcrtc.stop / XrayCore.stop)
             }
         } finally {
             pinging = false
@@ -436,6 +437,40 @@ class NodewayVpnService : VpnService() {
             ),
             description = profile.describe(),
         )
+    }
+
+    /**
+     * Быстрая проверка olcrtc-профиля БЕЗ поднятия TUN и Xray.
+     *
+     * olcrtc сам по себе поднимает рабочий SOCKS5 на 127.0.0.1:10808,
+     * который является полноценным выходом в интернет через WebRTC.
+     * Xray здесь только проксирует трафик из TUN в этот SOCKS5,
+     * поэтому для замеров пинга мы можем ходить в SOCKS5 напрямую.
+     *
+     * @return замер в мс или null, если профиль не работает
+     */
+    private suspend fun connectOlcrtcForPing(link: String): Int? {
+        val profile = try {
+            OlcrtcProfile.parse(link)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Invalid olcrtc link for ping: $link", e)
+            return null
+        }
+
+        val socksPort = try {
+            olcrtc.start(profile)
+        } catch (e: Exception) {
+            Log.w(TAG, "olcrtc failed to start for ping: $link", e)
+            return null
+        }
+        Log.i(TAG, "olcrtc (ping) ready on 127.0.0.1:$socksPort")
+
+        try {
+            // Прямой замер через SOCKS5 olcrtc, минуя TUN и Xray
+            return TunnelProbe.measure(socksPort)
+        } finally {
+            olcrtc.stop()
+        }
     }
 
     private fun shutdown() {
@@ -640,6 +675,77 @@ class NodewayVpnService : VpnService() {
 
     private fun shorten(message: String): String =
         if (message.length <= MAX_ERROR_LENGTH) message else message.take(MAX_ERROR_LENGTH) + "…"
+
+    /**
+     * Быстрая проверка VLESS-профиля БЕЗ поднятия TUN.
+     *
+     * Xray запускается с SOCKS5-inbound на localhost (порт из пула 10809+).
+     * TunnelProbe ходит в этот SOCKS5, Xray форвардит в VLESS-сервер.
+     * Никакого VPN-интерфейса, никакого разрешения пользователя.
+     *
+     * @return замер в мс или null, если профиль не работает
+     */
+    private suspend fun connectVlessForPing(link: String): Int? {
+        val profile = try {
+            VlessProfile.parse(link)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Invalid VLESS link for ping: $link", e)
+            return null
+        }
+
+        // Берём свободный порт из пула для параллельности в будущем
+        val socksPort = findFreeSocksPort()
+        Log.i(TAG, "VLESS (ping) starting Xray on 127.0.0.1:$socksPort")
+
+        val config = XrayConfigBuilder.buildForSocks5Vless(
+            profile = profile,
+            socksPort = socksPort,
+            logLevel = xrayLogLevel(),
+            logFile = xrayLogFile(),
+        )
+
+        // Хвост прошлой сессии не должен попасть в журнал
+        deleteXrayLogFile()
+        if (Journal.enabled) xrayLog.start()
+
+        val delegate = ProtectDelegate()
+        XrayCore.registerDialer(delegate)
+        XrayCore.setupDns("1.1.1.1:53", delegate)
+
+        val error = try {
+            XrayCore.start(config)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Xray failed to start for ping: $link", e)
+            e.message ?: "Ядро не запустилось"
+        }
+
+        if (error.isNotEmpty()) {
+            Log.w(TAG, "Xray error for ping: $error")
+            xrayLog.stop()
+            XrayCore.releaseDns()
+            return null
+        }
+
+        try {
+            // Прямой замер через SOCKS5 Xray, минуя TUN
+            return TunnelProbe.measure(socksPort)
+        } finally {
+            XrayCore.stop()
+            xrayLog.stop()
+            XrayCore.releaseDns()
+        }
+    }
+
+    /** Пул портов для SOCKS5 inbound при проверке профилей. */
+    private var nextSocksPort = 10809
+
+    /** Находит свободный порт для SOCKS5 inbound. */
+    private fun findFreeSocksPort(): Int = synchronized(this) {
+        val port = nextSocksPort
+        nextSocksPort++
+        if (nextSocksPort > 10850) nextSocksPort = 10809
+        port
+    }
 
     companion object {
         private const val TAG = "NodewayVpnService"

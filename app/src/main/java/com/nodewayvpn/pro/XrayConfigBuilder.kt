@@ -55,6 +55,63 @@ object XrayConfigBuilder {
     ): String =
         assemble(tunFd, logLevel, logFile, socksOutbound(socksPort), olcrtcRouting(), olcrtcDns())
 
+    /**
+     * Конфиг для быстрой проверки VLESS-профиля через локальный SOCKS5.
+     *
+     * Вместо TUN-inbound используем SOCKS5-inbound на localhost.
+     * Это позволяет мерять пинг БЕЗ поднятия VPN-интерфейса и без
+     * разрешения пользователя на VPN.
+     *
+     * @param socksPort порт, на котором Xray будет слушать SOCKS5 (например, 10809)
+     * @return JSON-конфиг для Xray-core
+     */
+    fun buildForSocks5Vless(
+        profile: VlessProfile,
+        socksPort: Int,
+        logLevel: String = DEFAULT_LOG_LEVEL,
+        logFile: String? = null,
+    ): String = assembleSocks5Inbound(socksPort, logLevel, logFile, vlessOutbound(profile), routing(), dns())
+
+    /**
+     * Собирает конфиг с SOCKS5-inbound (вместо TUN).
+     * Используется для проверки профилей без VPN.
+     */
+    private fun assembleSocks5Inbound(
+        socksPort: Int,
+        logLevel: String,
+        logFile: String?,
+        outbound: JSONObject,
+        routing: JSONObject,
+        dns: JSONObject,
+    ): String {
+        val config = JSONObject()
+
+        config.put("log", logConfig(logLevel, logFile))
+
+        config.put("inbounds", JSONArray().put(socksInbound(socksPort)))
+        config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()))
+        config.put("routing", routing)
+        config.put("dns", dns)
+
+        return config.toString()
+    }
+
+    /**
+     * SOCKS5 inbound на localhost для принятия трафика от TunnelProbe.
+     * auth: "noauth" — без аутентификации, так как это локальный loopback.
+     * udp: true — на случай, если понадобится UDP через прокси.
+     */
+    private fun socksInbound(port: Int): JSONObject = JSONObject().apply {
+        put("tag", "socks-in")
+        put("port", port)
+        put("listen", "127.0.0.1")
+        put("protocol", "socks")
+        put("settings", JSONObject().apply {
+            put("auth", "noauth")
+            put("udp", true)
+        })
+    }
+
     private fun assemble(
         tunFd: Int,
         logLevel: String,
