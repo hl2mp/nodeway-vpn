@@ -44,7 +44,7 @@ object TunnelProbe {
      * Сколько замеров делать после прогрева. Два достаточно, чтобы сгладить
      * джиттер ОС и пиковые задержки, не удлиняя проверку профилей.
      */
-    private const val MEASUREMENT_COUNT = 2
+    private const val MEASUREMENT_COUNT = 1
 
     /**
      * @param socksPort порт локального SOCKS5 от olcrtc, либо null для VLESS.
