@@ -2079,7 +2079,7 @@
             : 'Приложения в обход';
         elSplit.query.value = '';
         syncSearchClear();
-        elSplit.system.checked = false;
+        elSplit.system.checked = localStorage.getItem('splitSystemCheckbox') === 'true';
         elSplit.picker.classList.add('open');
         requestApps();
     }
@@ -2223,8 +2223,10 @@
     elSplit.exclude.onclick = function () { setSplitMode('exclude'); };
     elSplit.pick.onclick = openPicker;
     document.getElementById('pickerClose').onclick = closePicker;
-    elSplit.system.onchange = requestApps;
-
+    elSplit.system.onchange = function () {
+        localStorage.setItem('splitSystemCheckbox', this.checked);
+        requestApps();
+    };
     elSplit.clear.onclick = function () {
         if (!Object.keys(splitPackages).length) return;
         splitPackages = {};
