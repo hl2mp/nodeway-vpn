@@ -105,7 +105,7 @@ data class OlcrtcProfile(
 
         private val SCHEME = "olcrtc://"
 
-        private val PROVIDERS = setOf("jitsi", "telemost", "wbstream", "none")
+        private val PROVIDERS = setOf("vkcalls", "jitsi", "telemost", "wbstream", "none")
         private val TRANSPORTS = setOf("datachannel", "vp8channel", "seichannel", "videochannel")
 
         private val KEY_REGEX = Regex("^[0-9a-fA-F]{64}$")
