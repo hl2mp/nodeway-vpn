@@ -255,7 +255,7 @@
 
     .power-box {
         background: var(--power-ring);
-        border-radius: 28px;
+        border-radius: 20px;
         padding: 12px;
     }
 
@@ -280,7 +280,7 @@
         align-items: center;
         background: var(--chip-info-bg);
         color: var(--blue);
-        border-radius: 999px;
+        border-radius: 20px;
         padding: 9px 24px;
         font-size: 15px;
         font-weight: 600;
@@ -737,7 +737,7 @@
     .picker-clear { flex: none; color: var(--blue); font-size: 14px; }
     .picker-clear:disabled { color: var(--muted); opacity: 0.4; }
 
-    .picker-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .picker-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; background: var(--card); }
 
     /* Пока мост считает список приложений, вместо него показываем заглушку. */
     .picker-loading {
@@ -751,10 +751,11 @@
     }
 
     .picker-group {
-        padding: 14px 16px 6px;
+        padding: 14px 16px 14px;
         font-size: 13px;
         text-transform: uppercase;
         color: var(--muted);
+		background: var(--bg);
     }
 
     .app-row {
