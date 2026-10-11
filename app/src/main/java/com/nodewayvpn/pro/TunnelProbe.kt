@@ -2,127 +2,141 @@ package com.nodewayvpn.pro
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.Proxy
-import java.net.URL
-import java.net.URLConnection
+import java.net.Socket
+import kotlin.coroutines.resume
 
 /**
  * Замер отклика через живой туннель.
  *
- * Считает TTFB до `generate_204` — того самого адреса, который меряют другие
- * клиенты. Именно «через туннель», а не до сервера: проверка обычным сокетом
- * ничего не сказала бы о работоспособности профиля.
- *
- * Маршрут зависит от транспорта, и это не деталь реализации:
- *  - VLESS — пакет приложения всегда внутри туннеля (в режиме `all` там все, в
- *    `allow` мы добавляем себя явно, в `exclude` сами себя вычищем), поэтому
- *    запрос уходит прямо в TUN;
- *  - olcrtc — наш пакет нарочно вне туннеля, иначе процесс olcrtc не смог бы
- *    поднять туннель. Наивный запрос здесь измерил бы прямое соединение и
- *    показал отличные 30 мс при мёртвом туннеле, поэтому идём через локальный
- *    SOCKS5 — это и есть выход туннеля.
+ * Что изменилось по сравнению с версией на HttpURLConnection:
+ *  - прогрев повторяется до [WARMUP_ATTEMPTS] раз: одна потерянная SYN-ка или
+ *    медленный Reality-хендшейк на свежем ядре больше не убивают профиль;
+ *  - если прогрев прошёл, профиль не может стать «-1»: даже если все три замера
+ *    после него упали, возвращается время прогрева;
+ *  - запрос идёт сырым сокетом, а для SOCKS5 имя хоста уходит прокси как есть
+ *    (createUnresolved), поэтому www.google.com резолвится на стороне туннеля,
+ *    а не системным DNS телефона (и не берётся IPv6-адрес, до которого VPS
+ *    может не дотянуться);
+ *  - в логе (tag TunnelProbe) каждая неудача пишется с типом исключения, чтобы
+ *    было видно, timeout это, reset или EOF;
+ *  - отмена мгновенная: блокирующий сокет корутина сама не прерывает, поэтому при
+ *    отмене (кнопка «стоп» или таймаут профиля) сокет закрывается снаружи, и
+ *    чтение немедленно падает вместо ожидания до [ATTEMPT_TIMEOUT_MS].
  */
 object TunnelProbe {
 
     private const val TAG = "TunnelProbe"
 
-    /**
-     * Именно `www`: без него сервер отвечает редиректом, и лишний круг уходит
-     * в измерение вместо туннеля.
-     *
-     * Схема `http`, а не `https`, тоже намеренно: TLS-рукопожатие здесь стоило бы
-     * дороже самого замера. Внутри туннеля трафик и так шифруется апстримом.
-     */
-    private const val PROBE_URL = "http://www.google.com/generate_204"
+    private const val HOST = "www.google.com"
+    private const val PORT = 80
 
-    private const val TIMEOUT_MS = 5_000
+    /** Таймаут и на connect (рукопожатие SOCKS), и на ожидание первой строки ответа. */
+    private const val ATTEMPT_TIMEOUT_MS = 4_000
 
-    /**
-     * Сколько замеров делать после прогрева. Два достаточно, чтобы сгладить
-     * джиттер ОС и пиковые задержки, не удлиняя проверку профилей.
-     */
-    private const val MEASUREMENT_COUNT = 1
-
-    /**
-     * @param socksPort порт локального SOCKS5 от olcrtc, либо null для VLESS.
-     * @return отклик в миллисекундах либо null, если туннель не ответил.
-     *
-     * Первый запрос — прогрев. Он поглощает DNS-резолюцию, TCP-рукопожатие и
-     * медленный старт TCP, поэтому без него каждый профиль показывал время
-     * старта соединения вместо реального отклика: хорошие сервера выглядели
-     * медленными, а первый замер был завышен десятками-сотнями миллисекунд.
-     * Следующие замеры идут уже по «тёплому» пути и берутся за минимум, чтобы
-     * не ловить случайные пики загрузки системы.
-     */
-    suspend fun measure(socksPort: Int?): Int? = withContext(Dispatchers.IO) {
-        // Прогрев: если туннель не ответил на первого запроса — он мёртв,
-        // остальные замеры бессмысленны.
-        if (probeOnce(socksPort) == null) return@withContext null
-
-        val results = ArrayList<Int>(MEASUREMENT_COUNT)
-        repeat(MEASUREMENT_COUNT) {
-            probeOnce(socksPort)?.let(results::add)
-        }
-        results.minOrNull()
-    }
-
-    /**
-     * Единичный HTTP-запрос с замером TTFB.
-     *
-     * @return отклик в мс либо null, если соединение не установилось или
-     * ответ не пришёл в пределах [TIMEOUT_MS].
-     */
-    private fun probeOnce(socksPort: Int?): Int? {
-        val connection = runCatching {
-            (openTarget(socksPort) as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = TIMEOUT_MS
-                readTimeout = TIMEOUT_MS
-                // Редиректы и кэш мешают: нас интересует ровно один круг до адреса.
-                instanceFollowRedirects = false
-                useCaches = false
-                setRequestProperty("Cache-Control", "no-cache")
-            }
-        }.getOrElse { error ->
-            Log.d(TAG, "Probe could not start", error)
-            return null
-        }
-
-        return try {
-            val startedAt = System.nanoTime()
-            // Код ответа приходит с заголовками, то есть это и есть TTFB.
-            val code = connection.responseCode
-            val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
-            // Любой HTTP-ответ доказывает, что туннель ходит: сам код не важен,
-            // важно что соединение дошло до сервера и вернулось.
-            Log.d(TAG, "Probe: $code in ${elapsedMs}ms via ${socksPort?.let { "socks:$it" } ?: "tun"}")
-            elapsedMs.toInt()
-        } catch (e: Exception) {
-            Log.d(TAG, "Probe failed", e)
-            null
-        } finally {
-            runCatching { connection.disconnect() }
-        }
-    }
-
-    /**
-     * Прямое соединение для VLESS и SOCKS5-обёртка для olcrtc.
-     *
-     * Именно так, а не через `openConnection(proxyFor(...))`: передача null вместо
-     * прокси бросает `IllegalArgumentException`, и ветка VLESS молча умирала бы на
-     * каждом замере. Прямое соединение — это вариант без аргумента.
-     */
-    private fun openTarget(socksPort: Int?): URLConnection {
-        val url = URL(PROBE_URL)
-        return if (socksPort == null) {
-            url.openConnection()
-        } else {
-            url.openConnection(Proxy(Proxy.Type.SOCKS, InetSocketAddress(LOOPBACK, socksPort)))
-        }
-    }
+    private const val WARMUP_ATTEMPTS = 3
+    private const val RETRY_PAUSE_MS = 300L
+    private const val MEASUREMENT_COUNT = 3
 
     private const val LOOPBACK = "127.0.0.1"
+
+    private val REQUEST = (
+            "GET /generate_204 HTTP/1.1\r\n" +
+                    "Host: $HOST\r\n" +
+                    "Connection: close\r\n" +
+                    "Cache-Control: no-cache\r\n" +
+                    "\r\n"
+            ).toByteArray(Charsets.US_ASCII)
+
+    /**
+     * @param socksPort порт локального SOCKS5, либо null — прямое соединение
+     * (VLESS в режиме TUN: пакет приложения и так внутри туннеля).
+     * @return отклик в мс либо null, если туннель не ответил ни в одной из попыток прогрева.
+     */
+    suspend fun measure(socksPort: Int?): Int? = withContext(Dispatchers.IO) {
+        var warmup: Int? = null
+        for (attempt in 1..WARMUP_ATTEMPTS) {
+            warmup = probeOnce(socksPort, attempt)
+            if (warmup != null) break
+            if (attempt < WARMUP_ATTEMPTS) delay(RETRY_PAUSE_MS)
+        }
+        val first = warmup ?: return@withContext null
+
+        val results = ArrayList<Int>(MEASUREMENT_COUNT)
+        repeat(MEASUREMENT_COUNT) { index ->
+            probeOnce(socksPort, index + 1)?.let(results::add)
+        }
+        // Прогрев уже доказал, что профиль жив: не превращаем его в «не отвечает».
+        results.minOrNull() ?: first
+    }
+
+    /**
+     * Один запрос с мгновенной отменой.
+     *
+     * Блокирующая работа идёт прямо в теле `suspendCancellableCoroutine`, а
+     * обработчик отмены вызывается на потоке того, кто отменяет, и закрывает
+     * сокет: connect/read выходят с исключением сразу. Результат отменённой
+     * корутины всё равно отбрасывается, поэтому ошибку закрытия не логируем.
+     */
+    private suspend fun probeOnce(socksPort: Int?, attempt: Int): Int? =
+        suspendCancellableCoroutine<Int?> { cont ->
+            val socket = runCatching { createSocket(socksPort) }.getOrNull()
+            if (socket == null) {
+                cont.resume(null)
+                return@suspendCancellableCoroutine
+            }
+            cont.invokeOnCancellation { runCatching { socket.close() } }
+
+            val result = try {
+                socket.use { blockingProbe(it, socksPort, attempt) }
+            } catch (e: Exception) {
+                if (!cont.isCancelled) {
+                    Log.i(TAG, "attempt $attempt failed via ${routeName(socksPort)}: ${e.javaClass.simpleName}: ${e.message}")
+                }
+                null
+            }
+            cont.resume(result)
+        }
+
+    private fun createSocket(socksPort: Int?): Socket =
+        if (socksPort == null) {
+            Socket()
+        } else {
+            Socket(Proxy(Proxy.Type.SOCKS, InetSocketAddress(LOOPBACK, socksPort)))
+        }
+
+    private fun routeName(socksPort: Int?): String = socksPort?.let { "socks:$it" } ?: "direct"
+
+    /** connect + отправка + первая строка ответа. Исключения уходят вызывающему. */
+    private fun blockingProbe(socket: Socket, socksPort: Int?, attempt: Int): Int? {
+        socket.soTimeout = ATTEMPT_TIMEOUT_MS
+        socket.tcpNoDelay = true
+
+        // Через SOCKS5 имя отдаём прокси неразрешённым: резолвит туннель.
+        val target = if (socksPort == null) {
+            InetSocketAddress(HOST, PORT)
+        } else {
+            InetSocketAddress.createUnresolved(HOST, PORT)
+        }
+
+        val startedAt = System.nanoTime()
+        socket.connect(target, ATTEMPT_TIMEOUT_MS)
+        socket.getOutputStream().apply {
+            write(REQUEST)
+            flush()
+        }
+        val status = socket.getInputStream().bufferedReader(Charsets.US_ASCII).readLine()
+        val elapsedMs = ((System.nanoTime() - startedAt) / 1_000_000).toInt()
+
+        if (status == null || !status.startsWith("HTTP/")) {
+            Log.i(TAG, "attempt $attempt: bad reply (${status ?: "EOF"})")
+            return null
+        }
+        Log.d(TAG, "attempt $attempt: $status in ${elapsedMs}ms via ${routeName(socksPort)}")
+        return elapsedMs
+    }
 }

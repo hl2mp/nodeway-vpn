@@ -29,6 +29,13 @@ class VpnWebBridge(private val host: Host) {
      */
     fun onPingRequested(profileIds: List<String>)
 
+    /**
+     * Отмена текущей проверки профилей.
+     *
+     * Вызывается когда пользователь нажал "Остановить" в UI во время пинга.
+     */
+    fun onCancelPingRequested()
+
         /**
          * Синхронно: читает буфер обмена и импортирует его содержимое.
          *
@@ -147,6 +154,14 @@ class VpnWebBridge(private val host: Host) {
         }
         if (ids.isNotEmpty()) host.onPingRequested(ids)
     }
+
+    /**
+     * Отмена текущей проверки профилей.
+     *
+     * Вызывается из JS когда пользователь нажал "Остановить".
+     */
+    @JavascriptInterface
+    fun cancelPing() = host.onCancelPingRequested()
 
     @JavascriptInterface
     fun getSplitTunnelSettings(): String = host.onGetSplitTunnelSettings()

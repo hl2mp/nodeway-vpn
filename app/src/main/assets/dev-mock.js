@@ -159,13 +159,19 @@
    */
   function sub(number, name, url, refreshMinutes, updatedMinutes) {
     var now = Date.now();
+    var updatedAt = updatedMinutes === null ? 0 : now - updatedMinutes * 60000;
+    // Те же правила, что в ProfileStore.nextRefreshAt: минимум 15 минут, непройденная — «сейчас».
+    var nextRefreshAt = refreshMinutes > 0 && updatedAt > 0
+      ? updatedAt + Math.max(refreshMinutes, 15) * 60000
+      : 0;
     return {
       id: 'sub-' + number,
       name: name,
       url: url,
       host: url.replace(/^https?:\/\//, '').split('/')[0],
       refreshMinutes: refreshMinutes,
-      updatedAt: updatedMinutes === null ? 0 : now - updatedMinutes * 60000,
+      updatedAt: updatedAt,
+      nextRefreshAt: nextRefreshAt,
       addedAt: now - (3 * 60) * 60000,
       loading: false,
       count: 2
@@ -482,6 +488,27 @@
     runPing(ids);
   }
 
+  /**
+   * Отмена проверки, как в сервисе: без восстановления подключения,
+   * итог — «Отключено», уже собранные плашки остаются на экране.
+   */
+  function cancelPing() {
+    if (!state.ping.running) return;
+    pingRun++;
+    setTimeout(function () {
+      state.ping = {
+        running: false,
+        index: 0,
+        total: 0,
+        profileId: '',
+        results: state.ping.results
+      };
+      clearActive();
+      emitVpn('disconnected', '');
+      emitProfiles();
+    }, PING_STEP_MS / 2);
+  }
+
   function runPing(ids) {
     // Состояние на момент нажатия сервис запоминает и возвращает после прогона.
     var wasConnected = state.vpnState === 'connected' || state.vpnState === 'connecting';
@@ -686,6 +713,7 @@ setThemeMode: function (mode) {
     /* ---------- проверка откликов ---------- */
 
     pingProfiles: pingProfiles,
+    cancelPing: cancelPing,
 
     refreshSubscription: function (id) {
       var target = state.model.subscriptions.filter(function (s) { return s.id === id; })[0];

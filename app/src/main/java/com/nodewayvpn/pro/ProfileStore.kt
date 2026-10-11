@@ -5,6 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
 import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Хранилище профилей и подписок.
@@ -115,7 +116,34 @@ class ProfileStore(context: Context) {
         synchronized(lock) {
             subscriptions = subscriptions.filterNot { it.id == id }
             profiles = profiles.filterNot { it.subscriptionId == id }
+            lastAutoAttemptAt.remove(id)
         }
+    }
+
+    /** Когда подписку последний раз пытались обновить автоматически (id -> мс). Только в памяти. */
+    private val lastAutoAttemptAt = ConcurrentHashMap<String, Long>()
+
+    /** Запоминает автоматическую попытку: от неё считается пауза перед повтором при сбое. */
+    fun markAutoAttempt(id: String) {
+        lastAutoAttemptAt[id] = System.currentTimeMillis()
+    }
+
+    /**
+     * Момент, когда подписку пора обновлять автоматически (мс, wall clock).
+     *
+     * Единственное место, где считается срок: по нему и планировщик в Activity,
+     * и отсчёт на странице, поэтому они не расходятся. Подписка, которая ещё не
+     * обновлялась, просрочена сразу. После неудачной попытки `updatedAt` не
+     * меняется, и пауза перед повтором не даёт дёргать сервер на каждом тике.
+     */
+    fun nextRefreshAt(source: SubscriptionSource): Long {
+        val byInterval = if (source.updatedAt > 0L) {
+            source.updatedAt + maxOf(source.refreshMillis, MIN_REFRESH_INTERVAL_MS)
+        } else {
+            0L
+        }
+        val retryAt = lastAutoAttemptAt[source.id]?.plus(RETRY_AFTER_ATTEMPT_MS) ?: 0L
+        return maxOf(byInterval, retryAt)
     }
 
     fun updateSubscription(source: SubscriptionSource) {
@@ -174,6 +202,9 @@ class ProfileStore(context: Context) {
                     put("updatedAt", subscription.updatedAt)
                     // addedAt — опора для отсчёта, пока подписка не обновлялась ни разу.
                     put("addedAt", subscription.addedAt)
+                    // Готовый срок следующего обновления: страница показывает по нему отсчёт,
+                    // чтобы он совпадал с тем, когда обновление реально начнётся.
+                    put("nextRefreshAt", if (subscription.refreshMinutes > 0) nextRefreshAt(subscription) else 0L)
                     // true, пока подписка грузится: кнопка «Обновить» показывает спиннер.
                     put("loading", loadingSubscriptions.contains(subscription.id))
                     put("count", profiles.count { it.subscriptionId == subscription.id })
@@ -215,5 +246,11 @@ class ProfileStore(context: Context) {
         const val KEY_SUBSCRIPTIONS = "subscriptions"
         const val KEY_SELECTED = "selected_profile_id"
         const val KEY_CONNECTED_AT = "connected_at"
+
+        /** Ниже этого интервала не обновляем, даже если сервер просит `#refresh: 1m`. */
+        const val MIN_REFRESH_INTERVAL_MS = 15 * 60_000L
+
+        /** Пауза перед повтором автообновления, если прошлая попытка не удалась. */
+        const val RETRY_AFTER_ATTEMPT_MS = 5 * 60_000L
     }
 }

@@ -449,6 +449,9 @@
 
     .ping-btn:not(:disabled):active { background: var(--pressed-btn); }
 
+    /* Во время проверки та же кнопка превращается в «стоп»: красный квадрат. */
+    .ping-btn.stop { color: var(--red); }
+
     /* Плашка отклика в строке профиля, рядом с «i». */
     .ping-badge {
         display: flex;
@@ -1124,6 +1127,12 @@
      * точечно, по одной на профиль.
      */
     var ping = { running: false, index: 0, total: 0, profileId: '', results: {} };
+
+    /** Нажали «стоп», ждём, пока сервис дойдёт до точки отмены. */
+    var pingStopping = false;
+
+    /** Какую группу запустили: до первого события сервиса profileId ещё пуст. */
+    var pingStartKey = '';
     var coreVersion = '';
     var modalProfileId = '';
     var logCollapsed = false;
@@ -1225,6 +1234,11 @@
     var ICON_PING =
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
         'stroke-linecap="round"><path d="M3 12h3l2-6 3 12 2.5-8 1.5 4H21"/></svg>';
+
+    /** Иконка «остановить проверку»: закруглённый квадрат на месте «пульса». */
+    var ICON_STOP =
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">' +
+        '<rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
 
     var ICON_CHEV =
         '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
@@ -1459,18 +1473,54 @@
         }
     }
 
-    /** Гасит кнопки проверки, пока очередь занята. */
+    /**
+     * Кнопки проверки на время прогона.
+     *
+     * Кнопка той группы, что проверяется, превращается в «стоп» и остаётся
+     * нажимаемой; кнопки других групп гаснут. Если владельца определить не
+     * удалось (страница перезагружена посреди прогона), стопом становятся все:
+     * остановить проверку должно быть можно всегда.
+     */
     function updatePingButtons() {
-        var buttons = document.querySelectorAll('.ping-btn');
-        for (var i = 0; i < buttons.length; i++) {
-            buttons[i].disabled = ping.running;
-            buttons[i].classList.toggle('busy', ping.running);
+        if (!ping.running) {
+            pingStopping = false;
+            pingStartKey = '';
         }
+        var buttons = Array.prototype.slice.call(document.querySelectorAll('.ping-btn'));
+        var owners = buttons.filter(function (btn) {
+            if (!ping.running) return false;
+            var ids = btn._pingIds || [];
+            if (ping.profileId) return ids.indexOf(ping.profileId) >= 0;
+            return !!pingStartKey && ids.join(',') === pingStartKey;
+        });
+        if (ping.running && !owners.length && ping.profileId) owners = buttons;
+
+        buttons.forEach(function (btn) {
+            var isOwner = owners.indexOf(btn) >= 0;
+            var stop = ping.running && isOwner;
+            btn.classList.toggle('stop', stop);
+            btn.disabled = ping.running && (!isOwner || pingStopping);
+            if (btn._stop !== stop) {
+                btn._stop = stop;
+                btn.innerHTML = stop ? ICON_STOP : ICON_PING;
+                btn.setAttribute('aria-label', stop ? 'Остановить проверку' : btn._idleLabel);
+            }
+        });
     }
 
     function startPing(ids) {
         if (!ids.length || ping.running) return;
+        pingStartKey = ids.join(',');
         bridge.pingProfiles(JSON.stringify(ids));
+    }
+
+    function stopPing() {
+        if (!ping.running || pingStopping) return;
+        // Отмена доходит до сервиса не мгновенно: сразу показываем, что команда принята.
+        pingStopping = true;
+        bridge.cancelPing();
+        renderPower();
+        updatePingButtons();
     }
 
     function selectedProfile() {
@@ -1549,7 +1599,7 @@
         el.statusChip.className = 'status-chip' + (checking ? ' busy'
             : on ? ' on' : busy ? ' busy' : state === 'error' ? ' error' : '');
         el.statusText.textContent = checking
-            ? 'Проверка: ' + (ping.index + 1) + ' из ' + ping.total
+            ? (pingStopping ? 'Остановка…' : 'Проверка: ' + (ping.index + 1) + ' из ' + ping.total)
             : {
                 disconnected: 'Отключено',
                 connecting: 'Подключение',
@@ -1562,13 +1612,15 @@
         if (checking) {
             var current = profileById(ping.profileId);
             hint = current ? 'Проверяем: ' + current.name : 'Проверяем профиль…';
-        } else if (state === 'error') {
-            hint = lastMessage || 'Не удалось подключиться';
-        } else if (on && active) {
-            hint = active.name;
         } else {
-            var selected = selectedProfile();
-            hint = selected ? 'Выбрано: ' + selected.name : 'Выберите профиль и нажмите кнопку питания';
+            if (state === 'error') {
+                hint = lastMessage || 'Не удалось подключиться';
+            } else if (on && active) {
+                hint = active.name;
+            } else {
+                var selected = selectedProfile();
+                hint = selected ? 'Выбрано: ' + selected.name : 'Выберите профиль и нажмите кнопку питания';
+            }
         }
         el.statusHint.textContent = hint;
     }
@@ -1602,11 +1654,20 @@
             var pingBtn = document.createElement('button');
             pingBtn.type = 'button';
             pingBtn.className = 'ping-btn';
-            pingBtn.setAttribute('aria-label', 'Проверить профили группы «' + options.title + '»');
+            var pingIds = options.rows.map(function (p) { return p.id; });
+            pingBtn._pingIds = pingIds;
+            pingBtn._idleLabel = 'Проверить профили группы «' + options.title + '»';
+            pingBtn._stop = false;
+            pingBtn.setAttribute('aria-label', pingBtn._idleLabel);
             pingBtn.innerHTML = ICON_PING;
+            // Одна кнопка на два действия: во время прогона она же останавливает его.
             pingBtn.onclick = function (event) {
                 event.stopPropagation();
-                startPing(options.rows.map(function (p) { return p.id; }));
+                if (ping.running) {
+                    stopPing();
+                } else {
+                    startPing(pingIds);
+                }
             };
             head.appendChild(pingBtn);
         }
@@ -1729,6 +1790,9 @@
                 leftLine.dataset.refreshMinutes = sub.refreshMinutes;
                 leftLine.dataset.updatedAt = sub.updatedAt || 0;
                 leftLine.dataset.addedAt = sub.addedAt || 0;
+                if (typeof sub.nextRefreshAt === 'number') {
+                    leftLine.dataset.nextRefreshAt = sub.nextRefreshAt;
+                }
                 body.appendChild(leftLine);
             }
 
@@ -1779,9 +1843,18 @@
     function countdownText(sub) {
         var minutes = sub.refreshMinutes || 0;
         if (minutes <= 0) return '';
-        var since = (sub.updatedAt || 0) > 0 ? sub.updatedAt : (sub.addedAt || 0);
-        if (!since) return '—';
-        var left = Math.floor((since + minutes * 60000 - Date.now()) / 1000);
+        var due;
+        if (typeof sub.nextRefreshAt === 'number') {
+            // Срок считает нативная часть: с её минимальным интервалом и паузой
+            // после сбоя, поэтому отсчёт доходит до нуля ровно когда начнётся обновление.
+            due = sub.nextRefreshAt;
+        } else {
+            // Запасной путь для старой нативной части без nextRefreshAt.
+            var since = (sub.updatedAt || 0) > 0 ? sub.updatedAt : (sub.addedAt || 0);
+            if (!since) return '—';
+            due = since + minutes * 60000;
+        }
+        var left = Math.floor((due - Date.now()) / 1000);
         if (left <= 0) return 'сейчас';
         // Детализация только на последнем шаге: «57 мин 51 сек» и «8 ч 59 мин»
         // не влезают в колонку рядом с кнопками и рвутся пополам.
@@ -1814,7 +1887,10 @@
                 node.textContent = 'Обновление через: ' + countdownText({
                     refreshMinutes: +node.dataset.refreshMinutes,
                     updatedAt: +node.dataset.updatedAt,
-                    addedAt: +node.dataset.addedAt
+                    addedAt: +node.dataset.addedAt,
+                    nextRefreshAt: node.dataset.nextRefreshAt === undefined
+                        ? undefined
+                        : +node.dataset.nextRefreshAt
                 });
             });
         }, 1000);

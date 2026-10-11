@@ -80,12 +80,14 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
      */
     private val refreshHandler = Handler(Looper.getMainLooper())
 
-    private val refreshTick = object : Runnable {
-        override fun run() {
-            refreshDueSubscriptions()
-            refreshHandler.postDelayed(this, REFRESH_CHECK_INTERVAL_MS)
-        }
+    private val refreshTick = Runnable {
+        refreshDueSubscriptions()
+        scheduleNextRefreshCheck()
     }
+
+    /** Активность на экране: пока false, планировщик не перезаводится. */
+    @Volatile
+    private var refreshActive = false
 
     /** Источник журнала: строки от обоих ядер и от сервиса. */
     private val journalListener = Journal.Listener { entries -> pushJournal(entries) }
@@ -456,7 +458,10 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         // Страница к этому моменту могла ещё не загрузиться, но на повторном
         // показе состояние сверяется снова — на случай смены между onStart и onResume.
         restoreVpnStateFromService()
-        refreshHandler.postDelayed(refreshTick, REFRESH_CHECK_INTERVAL_MS)
+        // Первая проверка сразу, а не через минуту: срок мог истечь, пока приложения не было.
+        refreshActive = true
+        refreshHandler.removeCallbacks(refreshTick)
+        refreshHandler.post(refreshTick)
     }
 
     override fun onResume() {
@@ -470,6 +475,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     }
 
     override fun onStop() {
+        refreshActive = false
         refreshHandler.removeCallbacks(refreshTick)
         super.onStop()
     }
@@ -501,6 +507,23 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     override fun onPingRequested(profileIds: List<String>) {
         runOnUiThread { handlePingRequest(profileIds) }
+    }
+
+    override fun onCancelPingRequested() {
+        runOnUiThread { handleCancelPingRequest() }
+    }
+
+    /**
+     * Останавливает текущую проверку профилей.
+     *
+     * Вызывается когда пользователь нажал "Остановить" в UI во время пинга.
+     * Предыдущее VPN-подключение НЕ восстанавливается.
+     */
+    private fun handleCancelPingRequest() {
+        if (vpnState != VpnState.PINGING.code) return
+        NodewayVpnService.cancelPing(this)
+        // Мгновенный визуальный отклик до прихода broadcast от сервиса
+        pushState(VpnState.DISCONNECTED.code, "Проверка остановлена")
     }
 
     /**
@@ -594,6 +617,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         runOnUiThread {
             store.removeSubscription(id)
             pushProfiles()
+            scheduleNextRefreshCheck()
         }
     }
 
@@ -896,6 +920,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             runOnUiThread {
                 pushProfiles()
                 pushImportResult(payload)
+                // Срок следующего обновления изменился (или подписка новая).
+                scheduleNextRefreshCheck()
             }
         }
     }
@@ -936,7 +962,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         store.updateSubscription(
             source.copy(
                 name = title,
-                refreshMinutes = parsed.refreshMinutes,
+                // Ответ без директивы #refresh не должен выключать автообновление насовсем.
+                refreshMinutes = parsed.refreshMinutes.takeIf { it > 0 } ?: source.refreshMinutes,
                 supportUrl = parsed.supportUrl,
                 updatedAt = System.currentTimeMillis(),
             )
@@ -986,17 +1013,30 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         val now = System.currentTimeMillis()
         store.subscriptions.forEach { source ->
             if (source.refreshMinutes <= 0) return@forEach
-
-            val dueAt = if (source.updatedAt > 0L) {
-                source.updatedAt + maxOf(source.refreshMillis, MIN_REFRESH_INTERVAL_MS)
-            } else {
-                // Ещё ни разу не обновлялись — обновляем сразу, чтобы список был полным.
-                now
-            }
-            if (now >= dueAt && subscriptionsInFlight.add(source.id)) {
+            if (now >= store.nextRefreshAt(source) && subscriptionsInFlight.add(source.id)) {
+                store.markAutoAttempt(source.id)
                 loadSubscription(source, isNew = false)
             }
         }
+    }
+
+    /**
+     * Ставит следующую проверку ровно на ближайший срок, но не дальше чем на минуту:
+     * точность до секунды и страховка от сдвига часов (Handler считает аптайм).
+     */
+    private fun scheduleNextRefreshCheck() {
+        if (!refreshActive) return
+        refreshHandler.removeCallbacks(refreshTick)
+        val now = System.currentTimeMillis()
+        val nearest = store.subscriptions
+            .filter { it.refreshMinutes > 0 }
+            .minOfOrNull { store.nextRefreshAt(it) }
+        val delay = if (nearest == null) {
+            REFRESH_CHECK_INTERVAL_MS
+        } else {
+            (nearest - now).coerceIn(MIN_TICK_DELAY_MS, REFRESH_CHECK_INTERVAL_MS)
+        }
+        refreshHandler.postDelayed(refreshTick, delay)
     }
 
     // endregion
@@ -1159,17 +1199,18 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
         
 
-        /** Как часто проверяем, не пора ли обновить подписку. */
+        /** Верхняя граница паузы между проверками, не пора ли обновить подписку. */
         const val REFRESH_CHECK_INTERVAL_MS = 60_000L
+
+        /** Нижняя граница паузы между проверками. */
+        const val MIN_TICK_DELAY_MS = 1_000L
+
 
         /** Пауза перед отправкой накопленных записей журнала в страницу. */
         const val JOURNAL_FLUSH_MS = 150L
 
         /** Сколько записей ждут отправки, прежде чем самые старые будут отброшены. */
         const val MAX_PENDING_JOURNAL = 200
-
-        /** Ниже этого интервала не обновляем, даже если сервер просит `#refresh: 1m`. */
-        const val MIN_REFRESH_INTERVAL_MS = 15 * 60_000L
 
         /** Ссылка импорта: `nodeway://import#<адрес подписки>`. */
         const val DEEPLINK_SCHEME = "nodeway"

@@ -21,6 +21,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
+import kotlinx.coroutines.CancellationException
 import libXray.DialerController
 import java.io.File
 
@@ -148,6 +150,13 @@ class NodewayVpnService : VpnService() {
                 startForeground(NOTIFICATION_ID, buildNotification(VpnState.PINGING))
                 work?.cancel()
                 work = serviceScope.launch { runPing(links, ids) }
+            }
+
+            ACTION_CANCEL_PING -> {
+                // Отменяем корутину проверки. runPing отреагирует на отмену в withTimeoutOrNull
+                // и в finally-блоке не будет восстанавливать подключение.
+                work?.cancel()
+                // Сервис остаётся жив (foreground), но в состоянии DISCONNECTED
             }
 
             else -> {
@@ -322,13 +331,24 @@ class NodewayVpnService : VpnService() {
             shutdown()
         }
 
+        var cancelled = false
         try {
             links.forEachIndexed { index, link ->
+                // Проверка отмены перед каждым профилем
+                yield() // точка отмены: если work.cancel() вызван, бросит CancellationException
                 pingIndex = index
                 pingProfileId = ids[index]
                 publishState(VpnState.PINGING)
 
-                val result = withTimeoutOrNull(PING_PROFILE_TIMEOUT_MS) {
+                // olcrtc входит в комнату WebRTC и ждёт ICE/DTLS — это заметно дольше,
+                // чем поднять Xray, поэтому и предел у него свой.
+                val profileTimeout = if (OlcrtcProfile.isOlcrtcLink(link)) {
+                    PING_OLCRTC_TIMEOUT_MS
+                } else {
+                    PING_VLESS_TIMEOUT_MS
+                }
+                val result = withTimeoutOrNull(profileTimeout) {
+                    yield() // точка отмены внутри таймаута
                     if (OlcrtcProfile.isOlcrtcLink(link)) {
                         // olcrtc: быстрый замер через SOCKS5 БЕЗ TUN и Xray
                         connectOlcrtcForPing(link)
@@ -343,12 +363,21 @@ class NodewayVpnService : VpnService() {
 
                 // shutdown не нужен: оба метода сами чистят за собой (olcrtc.stop / XrayCore.stop)
             }
+        } catch (e: CancellationException) {
+            cancelled = true
+            // Тихая отмена — просто выходим
         } finally {
             pinging = false
             pingIndex = 0
             pingTotal = 0
             pingProfileId = ""
-            if (wasConnected && restoreLink.isNotBlank()) {
+            
+            if (cancelled) {
+                // Пользователь нажал "Остановить" — не восстанавливаем, уходим в DISCONNECTED
+                shutdown()
+                publishState(VpnState.DISCONNECTED)
+            } else if (wasConnected && restoreLink.isNotBlank()) {
+                // Нормальное завершение — восстанавливаем как было
                 activeProfileId = restoreId
                 activeLink = restoreLink
                 startForeground(NOTIFICATION_ID, buildNotification(VpnState.CONNECTING))
@@ -459,8 +488,15 @@ class NodewayVpnService : VpnService() {
 
         val socksPort = try {
             olcrtc.start(profile)
+        } catch (e: CancellationException) {
+            // Отмена пользователем или таймаут профиля: нельзя проглатывать, и
+            // процесс, который успел запуститься, надо погасить сразу, а не при
+            // следующем start().
+            olcrtc.stop()
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "olcrtc failed to start for ping: $link", e)
+            olcrtc.stop()
             return null
         }
         Log.i(TAG, "olcrtc (ping) ready on 127.0.0.1:$socksPort")
@@ -758,6 +794,7 @@ class NodewayVpnService : VpnService() {
         const val ACTION_DISCONNECT = "com.nodewayvpn.pro.action.DISCONNECT"
         const val ACTION_STATE = "com.nodewayvpn.pro.action.STATE"
         const val ACTION_PING = "com.nodewayvpn.pro.action.PING"
+        const val ACTION_CANCEL_PING = "com.nodewayvpn.pro.action.CANCEL_PING"
 
         const val EXTRA_LINK = "extra_link"
         const val EXTRA_STATE = "extra_state"
@@ -790,13 +827,19 @@ class NodewayVpnService : VpnService() {
         private const val PROBE_INTERVAL_MS = 60_000L
 
         /**
-         * Предел на один профиль при проверке.
+         * Предел на один VLESS-профиль при проверке.
          *
-         * С запасом на DNS, TLS-рукопожатие и старт ядра, но всё же ограничение:
-         * мёртвый сервер обязан отпустить очередь, иначе прогон двадцати профилей
-         * растянется на четверть часа.
+         * Покрывает старт ядра и весь замер с повторами прогрева (до трёх попыток
+         * по несколько секунд). Таймаут теперь действует сразу: отмена закрывает
+         * сокет пробы, а не ждёт окончания блокирующего чтения.
          */
-        private const val PING_PROFILE_TIMEOUT_MS = 15_000L
+        private const val PING_VLESS_TIMEOUT_MS = 30_000L
+
+        /**
+         * Предел на один olcrtc-профиль: вход в комнату WebRTC (ICE, DTLS) бывает
+         * долгим, а в обычном подключении клиенту дают до 90 с.
+         */
+        private const val PING_OLCRTC_TIMEOUT_MS = 60_000L
 
         /**
          * Последнее опубликованное состояние туннеля.
@@ -856,6 +899,18 @@ class NodewayVpnService : VpnService() {
         fun stop(context: Context) {
             val intent = Intent(context, NodewayVpnService::class.java)
                 .setAction(ACTION_DISCONNECT)
+            runCatching { context.startService(intent) }
+        }
+
+        /**
+         * Отмена проверки профилей.
+         *
+         * Отправляет ACTION_CANCEL_PING, который отменяет корутину runPing.
+         * Предыдущее VPN-подключение НЕ восстанавливается — пользователь явно нажал "Остановить".
+         */
+        fun cancelPing(context: Context) {
+            val intent = Intent(context, NodewayVpnService::class.java)
+                .setAction(ACTION_CANCEL_PING)
             runCatching { context.startService(intent) }
         }
     }
