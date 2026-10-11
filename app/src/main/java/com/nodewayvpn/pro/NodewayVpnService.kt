@@ -824,7 +824,7 @@ class NodewayVpnService : VpnService() {
         private const val TUN_PREFIX_LENGTH = 32
 
         /** Пауза между замерами отклика; минуты хватает с большим запасом. */
-        private const val PROBE_INTERVAL_MS = 60_000L
+        private const val PROBE_INTERVAL_MS = 10_000L
 
         /**
          * Предел на один VLESS-профиль при проверке.
