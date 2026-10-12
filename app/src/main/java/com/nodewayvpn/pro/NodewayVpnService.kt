@@ -526,6 +526,7 @@ class NodewayVpnService : VpnService() {
 
             state = VpnState.DISCONNECTED
             publishState(state)
+            Log.i(TAG, "Tunnel closed")
         }
         // Между профилями в очереди сервис не гасим — это часть проверки.
         if (pinging) return

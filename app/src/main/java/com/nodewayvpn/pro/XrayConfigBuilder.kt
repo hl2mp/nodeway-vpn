@@ -196,10 +196,21 @@ object XrayConfigBuilder {
         put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
     }
 
+    /**
+     * Прямой outbound.
+     *
+     * `domainStrategy` переехал из `settings` в `sockopt` (Xray >= 1.8.x):
+     * старый ключ `freedom.settings.domainStrategy` объявлен deprecated и
+     * на каждом старте ядра пишет предупреждение в лог, а в будущих версиях
+     * будет просто удалён. `sockopt` живёт внутри `streamSettings`, поэтому
+     * настройка перенесена туда.
+     */
     private fun freedomOutbound(): JSONObject = JSONObject().apply {
         put("tag", "direct")
         put("protocol", "freedom")
-        put("settings", JSONObject().put("domainStrategy", "UseIP"))
+        put("streamSettings", JSONObject().apply {
+            put("sockopt", JSONObject().put("domainStrategy", "UseIP"))
+        })
     }
 
     private fun streamSettings(profile: VlessProfile): JSONObject = JSONObject().apply {
