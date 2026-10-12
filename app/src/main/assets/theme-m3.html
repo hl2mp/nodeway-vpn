@@ -1,0 +1,2528 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Nodeway VPN</title>
+<script>
+  /*
+   * Режим оформления ставится до первой отрисовки.
+   * Приложение передаёт его адресом страницы (?theme=dark).
+   */
+  (function () {
+    document.documentElement.setAttribute(
+        'data-theme', /[?&]theme=dark/.test(location.search) ? 'dark' : 'light');
+  })();
+</script>
+<style>
+    /*
+     * Material 3 палитра. Светлый набор — умолчательный, тёмный включается
+     * атрибутом data-theme на <html> (или системной темой, если атрибут снят).
+     */
+    :root {
+        color-scheme: light;
+
+        --bg: #f7f9fc;
+        --card: #f2f4f7;              /* surface-container-low */
+        --card-strong: #ffffff;        /* surface-container-lowest */
+        --card-high: #eceef1;          /* surface-container */
+        --line: rgba(195, 198, 214, .55);
+        --line-soft: rgba(195, 198, 214, .35);
+        --text: #191c1e;
+        --muted: #424654;
+        --outline: #737785;
+
+        --blue: #0041a2;               /* primary */
+        --blue-container: #0b57d0;
+        --on-blue-container: #ced9ff;
+        --blue-soft: #dae2ff;
+
+        --green: #006b5f;              /* secondary */
+        --green-container: #9cefdf;
+        --on-green-container: #0b6f63;
+        --on-green-solid: #ffffff;     /* значок на залитой зелёной кнопке */
+
+        --red: #ba1a1a;                /* error */
+        --red-container: #ffdad6;
+        --on-red-container: #93000a;
+
+        --power-ring: #e6e8eb;
+        --pressed-row: #eceef1;
+        --pressed-btn: #e0e3e6;
+        --knob: #ffffff;
+        --track: rgba(11, 15, 20, .15);
+        --press-tint: rgba(0, 0, 0, .06);
+        --scrim: rgba(0, 0, 0, .5);
+        --sheet-bg: #eceef1;
+        --modal-bg: #f2f4f7;
+
+        --log-xray: #7f8fa6;
+        --log-olcrtc: #6f9c86;
+        --log-warn: #c9a227;
+        --log-error: #ba1a1a;
+
+        --inset-top: 0px;
+        --inset-bottom: 0px;
+    }
+
+    :root[data-theme='dark'] {
+        color-scheme: dark;
+
+        --bg: #111418;
+        --card: #1d2024;
+        --card-strong: #0c0e12;
+        --card-high: #212429;
+        --line: rgba(255, 255, 255, .10);
+        --line-soft: rgba(255, 255, 255, .06);
+        --text: #e2e2e6;
+        --muted: #c4c7cc;
+        --outline: #8e9199;
+
+        --blue: #b2c5ff;
+        --blue-container: #0041a2;
+        --on-blue-container: #dae2ff;
+        --blue-soft: #12263f;
+
+        --green: #83d5c6;
+        --green-container: #005047;
+        --on-green-container: #9ff2e2;
+        --on-green-solid: #00201c;
+
+        --red: #ffb4ab;
+        --red-container: #93000a;
+        --on-red-container: #ffdad6;
+
+        --power-ring: #212429;
+        --pressed-row: #212429;
+        --pressed-btn: #2b2e34;
+        --knob: #e2e2e6;
+        --track: rgba(255, 255, 255, .18);
+        --press-tint: rgba(255, 255, 255, .12);
+        --scrim: rgba(0, 0, 0, .6);
+        --sheet-bg: #2b2e34;
+        --modal-bg: #1d2024;
+
+        --log-xray: #8FA3BA;
+        --log-olcrtc: #7FB89E;
+        --log-warn: #E0B54A;
+        --log-error: #FF7B72;
+    }
+
+    /* Системная тёмная тема — запасной путь, если атрибут не выставлен. */
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+            color-scheme: dark;
+            --bg: #111418;
+            --card: #1d2024;
+            --card-strong: #0c0e12;
+            --card-high: #212429;
+            --line: rgba(255, 255, 255, .10);
+            --line-soft: rgba(255, 255, 255, .06);
+            --text: #e2e2e6;
+            --muted: #c4c7cc;
+            --outline: #8e9199;
+            --blue: #b2c5ff;
+            --blue-container: #0041a2;
+            --on-blue-container: #dae2ff;
+            --blue-soft: #12263f;
+            --green: #83d5c6;
+            --green-container: #005047;
+            --on-green-container: #9ff2e2;
+            --on-green-solid: #00201c;
+            --red: #ffb4ab;
+            --red-container: #93000a;
+            --on-red-container: #ffdad6;
+            --power-ring: #212429;
+            --pressed-row: #212429;
+            --pressed-btn: #2b2e34;
+            --knob: #e2e2e6;
+            --track: rgba(255, 255, 255, .18);
+            --press-tint: rgba(255, 255, 255, .12);
+            --scrim: rgba(0, 0, 0, .6);
+            --sheet-bg: #2b2e34;
+            --modal-bg: #1d2024;
+            --log-xray: #8FA3BA;
+            --log-olcrtc: #7FB89E;
+            --log-warn: #E0B54A;
+            --log-error: #FF7B72;
+        }
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        font-size: 16px;
+        line-height: 1.4;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overscroll-behavior: none;
+        height: auto;
+    }
+
+    body {
+        display: block;
+        padding-bottom: var(--inset-bottom);
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+    svg { display: block; }
+    [hidden] { display: none !important; }
+
+    /* ---------- верхняя панель ---------- */
+
+    .navbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 16px 10px;
+        padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px);
+        background: color-mix(in srgb, var(--bg) 85%, transparent);
+        -webkit-backdrop-filter: saturate(180%) blur(20px);
+        backdrop-filter: saturate(180%) blur(20px);
+        position: sticky;
+        top: 0;
+        z-index: 20;
+    }
+
+    .navbar.hidden { display: none; }
+
+    .navbar-side { display: flex; align-items: center; gap: 4px; }
+
+    .icon-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        transition: background-color .15s ease, color .15s ease, transform .1s ease;
+    }
+    .icon-btn svg { width: 24px; height: 24px; }
+    .icon-btn:active { transform: scale(.95); }
+    .icon-btn:hover { background: var(--card-high); color: var(--text); }
+
+    .settings-bar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 10px) 16px 10px;
+        background: color-mix(in srgb, var(--bg) 92%, transparent);
+        -webkit-backdrop-filter: saturate(180%) blur(20px);
+        backdrop-filter: saturate(180%) blur(20px);
+        margin-bottom: 12px;
+    }
+
+    .settings-bar h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -.01em;
+    }
+
+    .nav-link { color: var(--blue); font-size: 17px; padding: 4px 0; }
+    .nav-link.big { font-size: 28px; line-height: 1; padding: 0 4px; }
+
+    /* ---------- кнопка питания ---------- */
+
+    .power-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px 16px 28px;
+    }
+
+    .uptime {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .uptime-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .12em;
+    }
+
+    .uptime-value {
+        margin-top: 4px;
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -.02em;
+    }
+
+    .latency {
+        margin-top: 4px;
+        min-height: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--blue);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: .04em;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    .power-box {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 999px;
+    }
+
+    .power-box::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: color-mix(in srgb, var(--blue-container) 22%, transparent);
+        border-radius: 999px;
+        filter: blur(28px);
+        z-index: 0;
+        animation: aura 3.6s ease-in-out infinite;
+    }
+
+    @keyframes aura {
+        0%, 100% { opacity: .95; }
+        50%      { opacity: .55; }
+    }
+
+    .power-btn {
+        position: relative;
+        z-index: 1;
+        width: 112px;
+        height: 112px;
+        border-radius: 50%;
+        background: var(--blue-container);
+        color: var(--on-blue-container);
+        display: grid;
+        place-items: center;
+        transition: background .2s ease, transform .1s ease, box-shadow .2s ease;
+        box-shadow: 0 10px 30px color-mix(in srgb, var(--blue-container) 40%, transparent);
+    }
+
+    .power-btn svg { width: 46px; height: 46px; }
+    .power-btn:active { transform: scale(.94); }
+    .power-btn.on {
+        background: var(--green);
+        color: var(--on-green-solid);   /* было --on-green-container — тот же зелёный */
+        box-shadow: 0 10px 30px color-mix(in srgb, var(--green) 40%, transparent);
+    }
+    .power-btn.busy {
+        background: var(--card-high);
+        color: var(--muted);
+        box-shadow: none;
+    }
+
+    /* Material 3: чип статуса без шеврона, пилюля. */
+    .status-chip {
+        margin-top: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--card-high);
+        color: var(--muted);
+        border-radius: 999px;
+        padding: 8px 22px;
+        font-size: 15px;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+    }
+
+    .status-chip.on {
+        background: var(--green-container);
+        color: var(--on-green-container);
+    }
+    .status-chip.error {
+        background: var(--red-container);
+        color: var(--on-red-container);
+    }
+    .status-chip.busy {
+        background: var(--card-high);
+        color: var(--muted);
+    }
+
+    .status-hint {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        text-align: center;
+        max-width: 300px;
+    }
+
+    /* ---------- заголовки и группы ---------- */
+
+    .section-title {
+        font-size: 12px;
+        color: var(--blue);
+        margin: 20px 24px 8px;
+        text-transform: uppercase;
+        letter-spacing: .1em;
+        font-weight: 600;
+    }
+
+    .group {
+        background: var(--card);
+        border-radius: 14px;
+        margin: 0 16px 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+    }
+
+    .group-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--line-soft);
+        cursor: pointer;
+        transition: background-color .15s ease;
+    }
+
+    .group-head:hover { background: color-mix(in srgb, var(--card-high) 60%, transparent); }
+
+    .group-title {
+        flex: 1;
+        min-width: 0;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text);
+    }
+
+    .group-title.small { font-size: 17px; }
+
+    .chevron {
+        color: var(--muted);
+        transition: transform .2s ease;
+        flex: none;
+    }
+    .chevron svg,
+    svg.chevron { width: 22px; height: 22px; }
+
+    .group.collapsed .chevron { transform: rotate(-90deg); }
+
+    .group-body {
+        display: grid;
+        grid-template-rows: 1fr;
+        transition: grid-template-rows .28s ease;
+    }
+
+    .group-inner {
+        overflow: hidden;
+        min-height: 0;
+    }
+
+    .group.collapsed .group-body { grid-template-rows: 0fr; }
+    .group.collapsed .group-head { border-bottom: none; }
+
+    /* ---------- строка профиля ---------- */
+
+    .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        text-align: left;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line-soft);
+        transition: background-color .15s ease;
+    }
+
+    .row:last-child { border-bottom: none; }
+    .row:active { background: var(--pressed-row); }
+    .row:hover { background: color-mix(in srgb, var(--card-high) 60%, transparent); }
+
+    .mode-row { align-items: flex-start; }
+    .mode-row .mark { margin-top: 3px; }
+
+    .row-body { flex: 1; min-width: 0; }
+
+    .row-title {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .row-sub {
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Кружок выбора (радио) — как в M3. */
+    .mark {
+        flex: none;
+        position: relative;
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--outline);
+        border-radius: 50%;
+        transition: border-color .15s ease;
+    }
+
+    .mark.on { border-color: var(--blue); }
+
+    .mark.on::after {
+        content: "";
+        position: absolute;
+        inset: 3px;
+        border-radius: 50%;
+        background: var(--blue);
+    }
+
+    /* «i» — плашка информации. */
+    .info-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid color-mix(in srgb, var(--outline) 60%, transparent);
+        color: var(--outline);
+        display: grid;
+        place-items: center;
+        flex: none;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+        transition: color .15s ease, border-color .15s ease;
+    }
+
+    .info-btn:hover,
+    .info-btn.active { color: var(--blue); border-color: var(--blue); }
+
+    /* Кнопка проверки в шапке группы. */
+    .ping-btn {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        flex: none;
+        padding: 0;
+        border-radius: 50%;
+        background: var(--card-high);
+        color: var(--blue);
+        cursor: pointer;
+        transition: background-color .15s ease, color .15s ease;
+    }
+
+    .ping-btn svg { width: 18px; height: 18px; }
+
+    .ping-btn:disabled { opacity: .4; cursor: default; }
+    .ping-btn:not(:disabled):active { background: var(--pressed-btn); }
+    .ping-btn:not(:disabled):hover { background: color-mix(in srgb, var(--blue) 10%, var(--card-high)); }
+    .ping-btn.stop { color: var(--red); }
+    .ping-btn.stop:hover { background: color-mix(in srgb, var(--red) 12%, var(--card-high)); }
+
+    /* Плашка отклика. */
+    .ping-badge {
+        display: inline-flex;
+        align-items: center;
+        height: 24px;
+        flex: none;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: var(--card-high);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .ping-badge:empty { display: none; }
+    .ping-badge.bad { color: var(--red); }
+    .ping-badge.active { color: var(--blue); animation: pulse 1.2s ease-in-out infinite; }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: .5; }
+    }
+
+    .empty {
+        padding: 18px 16px;
+        color: var(--muted);
+        font-size: 14px;
+        text-align: center;
+    }
+
+    /* ---------- журнал ---------- */
+
+    .log {
+        background: var(--card);
+        border-radius: 14px;
+        margin: 0 16px 22px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+    }
+
+    .log .group-head { border-bottom: none; }
+    .log .group-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .1em;
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    .log .group-head > svg {
+        color: var(--blue);
+        flex: none;
+    }
+
+    #logBody {
+        padding: 6px 16px 14px;
+        font-size: 12px;
+        color: var(--muted);
+        max-height: 220px;
+        overflow-y: auto;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        border-top: 1px solid var(--line-soft);
+        line-height: 1.55;
+    }
+
+    #logBody .log-line { padding: 1px 0; }
+    #logBody .log-line.xray   { color: var(--log-xray); }
+    #logBody .log-line.olcrtc { color: var(--log-olcrtc); }
+    #logBody .log-line.warn   { color: var(--log-warn); }
+    #logBody .log-line.error  { color: var(--log-error); }
+
+    .log-filter {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 12px 10px;
+    }
+
+    .log-filter button {
+        border: none;
+        background: none;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+        cursor: pointer;
+        transition: background-color .15s ease, color .15s ease;
+    }
+
+    .log-filter button:hover { color: var(--text); }
+    .log-filter button.active {
+        background: var(--card-strong);
+        color: var(--text);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+    }
+
+    .log-filter .log-hint {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--muted);
+        opacity: .7;
+    }
+
+    /* ---------- переключатель ---------- */
+
+    .switch {
+        flex: none;
+        width: 48px;
+        height: 28px;
+        border-radius: 999px;
+        background: var(--card-high);
+        position: relative;
+        transition: background .18s ease;
+    }
+
+    .switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--knob);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+        transition: transform .18s ease;
+    }
+
+    .switch.on { background: var(--blue); }
+    .switch.on::after { transform: translateX(20px); }
+
+    /* ---------- настройки ---------- */
+
+    .settings-row {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        text-align: left;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 16px;
+        transition: background-color .15s ease;
+    }
+
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row:hover { background: color-mix(in srgb, var(--card-high) 60%, transparent); }
+    .settings-row.center { justify-content: center; color: var(--blue); font-weight: 500; gap: 8px; }
+    .settings-row.center svg { flex: none; }
+
+    .settings-row .value {
+        flex: none;
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 15px;
+    }
+
+    .settings-row small {
+        display: block;
+        flex: 1;
+        min-width: 0;
+        color: var(--muted);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+    .settings-row .value.accent { color: var(--blue); width: 84px; font-weight: 500; }
+    .settings-row .value:disabled { opacity: .6; pointer-events: none; }
+
+    /* Плашка подписки: тело в три строки, кнопки справа. */
+    .settings-row.sub-row { align-items: flex-start; }
+    .settings-row.sub-row > span { flex: 1; min-width: 0; }
+    .settings-row.sub-row > span > span {
+        display: block;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Спиннер загрузки. */
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid var(--track);
+        border-top-color: var(--blue);
+        animation: spin .7s linear infinite;
+        vertical-align: -3px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---------- раздельное туннелирование ---------- */
+
+    .mode-copy { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+    .mode-copy > span:first-child {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text);
+    }
+    .mode-copy small {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+    }
+
+    /* ---------- выбор приложений ---------- */
+
+    .picker {
+        position: fixed;
+        inset: 0;
+        z-index: 45;
+        display: none;
+        flex-direction: column;
+        background: var(--bg);
+    }
+
+    .picker.open { display: flex; }
+
+    .picker-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 10px) 8px 10px;
+        background: var(--card);
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    .picker-title {
+        flex: 1;
+        text-align: center;
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text);
+    }
+
+    .nav-link.accent { color: var(--blue); font-weight: 700; }
+
+    .picker-tools {
+        padding: 12px 16px;
+        background: var(--card);
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    .picker-input {
+        width: 100%;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 999px;
+        background: var(--card-high);
+        color: var(--text);
+        font: inherit;
+        font-size: 15px;
+    }
+
+    .picker-input:focus { outline: 2px solid color-mix(in srgb, var(--blue) 40%, transparent); outline-offset: 0; }
+
+    .picker-search { position: relative; }
+    .picker-search .picker-input { padding-right: 44px; }
+
+    .picker-search-clear {
+        position: absolute;
+        top: 50%;
+        right: 4px;
+        transform: translateY(-50%);
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        color: var(--muted);
+    }
+
+    .picker-search-clear svg { width: 18px; height: 18px; }
+    .picker-search-clear:active { background: var(--press-tint); }
+
+    .picker-switch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-top: 12px;
+        font-size: 14px;
+        color: var(--muted);
+        cursor: pointer;
+    }
+
+    .picker-switch input { width: 18px; height: 18px; accent-color: var(--blue); }
+
+    .picker-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .picker-clear {
+        flex: none;
+        color: var(--blue);
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .picker-clear:disabled { color: var(--muted); opacity: .4; }
+
+    .picker-list {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        background: var(--bg);
+    }
+
+    .picker-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 32px 16px;
+        color: var(--muted);
+        font-size: 15px;
+    }
+
+    .picker-group {
+        padding: 14px 16px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: var(--bg);
+    }
+
+    .app-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        text-align: left;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--line-soft);
+        background: var(--card);
+        transition: background-color .15s ease;
+    }
+
+    .app-row:hover { background: color-mix(in srgb, var(--card-high) 70%, var(--card)); }
+
+    .app-icon {
+        flex: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--card-high);
+        object-fit: cover;
+    }
+
+    .app-copy { flex: 1; min-width: 0; }
+
+    .app-name {
+        display: block;
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .app-pkg {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .app-box {
+        flex: none;
+        position: relative;
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--outline);
+        border-radius: 6px;
+        transition: background-color .15s ease, border-color .15s ease;
+    }
+
+    .app-row.on .app-box { border-color: var(--blue); background: var(--blue); }
+
+    .app-row.on .app-box::after {
+        content: "";
+        position: absolute;
+        left: 6px;
+        top: 2px;
+        width: 5px;
+        height: 10px;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    /* ---------- шторка действий ---------- */
+
+    .scrim {
+        position: fixed;
+        inset: 0;
+        background: var(--scrim);
+        -webkit-backdrop-filter: blur(2px);
+        backdrop-filter: blur(2px);
+        display: none;
+        z-index: 40;
+    }
+
+    .scrim.open { display: block; }
+
+    .sheet {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 12px);
+        background: var(--sheet-bg);
+        border-radius: 18px;
+        overflow: hidden;
+        z-index: 41;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, .2);
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(16px);
+        transition: opacity .22s ease, transform .22s ease, visibility .22s;
+        max-width: 460px;
+        margin: 0 auto;
+    }
+
+    .sheet.open {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    .sheet-item {
+        display: block;
+        width: 100%;
+        text-align: center;
+        font-size: 17px;
+        color: var(--blue);
+        font-weight: 500;
+        padding: 17px 12px;
+        border-bottom: 1px solid var(--line-soft);
+        transition: background-color .15s ease;
+    }
+
+    .sheet-item:hover { background: color-mix(in srgb, var(--card-high) 60%, transparent); }
+    .sheet-item:last-child { border-bottom: none; color: var(--red); }
+    .sheet-item.current::after { content: ' ✓'; }
+
+    /* ---------- модалки ---------- */
+
+    .modal {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%) scale(.92);
+        max-width: 420px;
+        margin: 0 auto;
+        background: var(--modal-bg);
+        border-radius: 20px;
+        overflow: hidden;
+        z-index: 41;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, .25);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .modal.open { opacity: 1; pointer-events: auto; transform: translateY(-50%) scale(1); }
+
+    .modal.alert { text-align: center; }
+
+    .alert-head {
+        padding: 22px 18px 6px;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+    }
+
+    .alert-text {
+        padding: 0 20px 8px;
+        font-size: 14px;
+        line-height: 1.45;
+        color: var(--muted);
+    }
+
+    .alert-actions { display: flex; border-top: 1px solid var(--line-soft); }
+
+    .alert-btn {
+        flex: 1;
+        padding: 15px 10px;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--muted);
+        border-right: 1px solid var(--line-soft);
+        transition: background-color .15s ease;
+    }
+
+    .alert-btn:hover { background: color-mix(in srgb, var(--card-high) 60%, transparent); }
+    .alert-btn.danger { color: var(--red); font-weight: 700; border-right: none; }
+
+    .modal-head {
+        padding: 20px 16px 12px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    .detail {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 18px;
+        font-size: 14px;
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    .detail:last-child { border-bottom: none; }
+    .detail .k { color: var(--muted); flex: none; font-weight: 500; }
+    .detail .v {
+        text-align: right;
+        word-break: break-all;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 13px;
+    }
+
+    @supports (-webkit-touch-callout: none) {
+        .navbar, .settings-bar { -webkit-backdrop-filter: saturate(180%) blur(20px); }
+    }
+</style>
+</head>
+<body>
+
+<header class="navbar" id="appHeader">
+    <div class="navbar-side">
+        <button class="icon-btn" id="settingsBtn" aria-label="Настройки" title="Настройки">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+        </button>
+    </div>
+    <div class="navbar-side">
+        <button class="icon-btn" id="addBtn" aria-label="Добавить профиль" title="Добавить из буфера">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+        </button>
+    </div>
+</header>
+
+<!-- ================= Главная ================= -->
+<main class="page active" id="pageHome">
+    <section class="power-area">
+        <div class="uptime">
+            <div class="uptime-label">Время подключения</div>
+            <div class="uptime-value" id="uptime">00:00:00</div>
+            <div class="latency" id="latency"></div>
+        </div>
+        <div class="power-box">
+            <button class="power-btn" id="powerBtn" aria-label="Подключение"></button>
+        </div>
+        <div class="status-chip" id="statusChip">
+            <span id="statusText">Отключено</span>
+        </div>
+        <div class="status-hint" id="statusHint">Выберите профиль и нажмите кнопку питания</div>
+    </section>
+
+    <div id="subscriptions"></div>
+
+    <div class="group" id="localGroup"></div>
+
+    <div class="log" id="logCard">
+        <button class="group-head" id="logHead">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                <path d="M7 9l3 3-3 3M13 15h4"/>
+            </svg>
+            <span class="group-title">Журнал</span>
+            <span class="chevron" id="logChev">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9.5 12 15.5 18 9.5"/>
+                </svg>
+            </span>
+        </button>
+        <div class="log-filter" id="logFilter">
+            <button data-level="all" class="active">всё</button>
+            <button data-level="problems">проблемы</button>
+            <span class="log-hint" id="logHint"></span>
+        </div>
+        <div id="logBody"></div>
+    </div>
+</main>
+
+<!-- ================= Настройки ================= -->
+<main class="page" id="pageSettings">
+    <div class="settings-bar">
+        <button class="icon-btn" id="backBtn" aria-label="Назад">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <h2>Настройки</h2>
+    </div>
+
+    <h3 class="section-title">Подписки</h3>
+    <div class="group" id="subAdmin"></div>
+
+    <h3 class="section-title">Импорт</h3>
+    <div class="group">
+        <button class="settings-row center" id="importProfiles">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="8" y="3" width="8" height="4" rx="1"/>
+                <path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/>
+            </svg>
+            <span>Добавить из буфера</span>
+        </button>
+    </div>
+
+    <h3 class="section-title">Раздельное туннелирование</h3>
+    <div class="group">
+        <button class="settings-row mode-row" id="splitAll">
+            <span class="mode-copy">
+                <span>Все приложения</span>
+                <small>Все приложения идут через туннель</small>
+            </span>
+            <span class="mark"></span>
+        </button>
+        <button class="settings-row mode-row" id="splitAllow">
+            <span class="mode-copy">
+                <span>Приложения через VPN</span>
+                <small>Только выбранные приложения идут через туннель, остальные напрямую</small>
+            </span>
+            <span class="mark"></span>
+        </button>
+        <button class="settings-row mode-row" id="splitExclude">
+            <span class="mode-copy">
+                <span>Приложения в обход VPN</span>
+                <small>Выбранные приложения идут напрямую, остальные через туннель</small>
+            </span>
+            <span class="mark"></span>
+        </button>
+        <button class="settings-row center" id="splitPick" hidden>Выбрать приложения</button>
+    </div>
+
+    <h3 class="section-title">Диагностика</h3>
+    <div class="group">
+        <button class="settings-row" id="journalRow">
+            <span>Логи<small>Вывод ядер olcrtc и Xray и события подключения</small></span>
+            <span class="switch" id="journalSwitch"></span>
+        </button>
+    </div>
+
+    <h3 class="section-title">Оформление</h3>
+    <div class="group">
+        <button class="settings-row" id="themeRow">
+            <span>Тема<small>Светлая, тёмная или как в системе</small></span>
+            <span class="value" id="themeValue">Как в системе</span>
+        </button>
+    </div>
+
+    <h3 class="section-title">О приложении</h3>
+    <div class="group">
+        <div class="settings-row">
+            <span>Ядро</span><span class="value" id="coreVersion">—</span>
+        </div>
+        <div class="settings-row">
+            <span>Версия приложения</span><span class="value" id="appVersion">—</span>
+        </div>
+    </div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="sheet" id="sheet">
+    <button class="sheet-item" data-action="import">Добавить из буфера</button>
+    <button class="sheet-item" data-action="cancel">Отмена</button>
+</div>
+
+<!-- Выбор темы -->
+<div class="sheet" id="themeSheet">
+    <button class="sheet-item" data-theme-mode="system">Как в системе</button>
+    <button class="sheet-item" data-theme-mode="light">Светлая</button>
+    <button class="sheet-item" data-theme-mode="dark">Тёмная</button>
+    <button class="sheet-item" data-action="cancel">Отмена</button>
+</div>
+
+<div class="modal" id="modal">
+    <div class="modal-head" id="modalTitle">Профиль</div>
+    <div id="modalBody"></div>
+    <button class="sheet-item" data-action="modal-connect" id="modalConnect">Подключиться</button>
+    <button class="sheet-item danger" data-action="modal-remove">Удалить</button>
+    <button class="sheet-item" data-action="modal-close" style="color:var(--muted)">Закрыть</button>
+</div>
+
+<div class="modal alert" id="alert" role="alertdialog">
+    <div class="alert-head" id="alertTitle"></div>
+    <div class="alert-text" id="alertText"></div>
+    <div class="alert-actions">
+        <button class="alert-btn" id="alertCancel">Отмена</button>
+        <button class="alert-btn danger" id="alertOk">Удалить</button>
+    </div>
+</div>
+
+<!-- Выбор приложений -->
+<div class="picker" id="appPicker">
+    <div class="picker-bar">
+        <button class="nav-link" id="pickerClose">Отмена</button>
+        <span class="picker-title" id="pickerTitle">Приложения</span>
+        <button class="nav-link accent" id="pickerDone">Готово</button>
+    </div>
+    <div class="picker-tools">
+        <div class="picker-search">
+            <input class="picker-input" id="pickerQuery" type="text" placeholder="Поиск приложения"
+                   aria-label="Поиск приложения" autocomplete="off">
+            <button class="picker-search-clear" id="pickerSearchClear" type="button" hidden
+                    aria-label="Очистить поиск">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <path d="M6 6 L18 18 M18 6 L6 18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="picker-row">
+            <label class="picker-switch"><input type="checkbox" id="pickerSystem"><span>Показывать системные</span></label>
+            <button class="picker-clear" id="pickerClear" type="button">Очистить</button>
+        </div>
+    </div>
+    <div class="picker-loading" id="pickerLoading" hidden><span class="spinner"></span><span>Загрузка приложений…</span></div>
+    <div class="picker-list" id="pickerList"></div>
+</div>
+
+<!-- Мок моста для отладки в браузере: работает только при ?demo=1, в приложении безвреден. -->
+<script src="dev-mock.js"></script>
+
+<script>
+(function () {
+    'use strict';
+
+    var bridge = window.NodewayVpn;
+
+    var state = 'disconnected';
+    var model = {
+        profiles: [],
+        subscriptions: [],
+        selectedProfileId: '',
+        activeProfileId: '',
+        connectedAt: 0
+    };
+    var ping = { running: false, index: 0, total: 0, profileId: '', results: {} };
+    var pingStopping = false;
+    var pingStartKey = '';
+    var coreVersion = '';
+    var modalProfileId = '';
+    var logCollapsed = false;
+    var themeMode = 'system';
+    var THEME_NAMES = { system: 'Как в системе', light: 'Светлая', dark: 'Тёмная' };
+    var journalEntries = [];
+    var logFilter = 'all';
+    var journalEnabled = false;
+    var renderedUpTo = 0;
+    var renderFull = true;
+
+    var COLLAPSED_KEY = 'nodeway.collapsed';
+    var collapsed = loadCollapsed();
+
+    function loadCollapsed() {
+      var fallback = { subscriptions: {}, local: false, log: false };
+      try {
+        var raw = localStorage.getItem(COLLAPSED_KEY);
+        if (!raw) return fallback;
+        var saved = JSON.parse(raw);
+        return {
+          subscriptions: saved && saved.subscriptions ? saved.subscriptions : {},
+          local: !!(saved && saved.local),
+          log: !!(saved && saved.log)
+        };
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function saveCollapsed() {
+      try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsed));
+      } catch (e) { }
+    }
+
+    var el = {
+        appHeader: document.getElementById('appHeader'),
+        powerBtn: document.getElementById('powerBtn'),
+        uptime: document.getElementById('uptime'),
+        latency: document.getElementById('latency'),
+        statusText: document.getElementById('statusText'),
+        statusHint: document.getElementById('statusHint'),
+        statusChip: document.getElementById('statusChip'),
+        subscriptions: document.getElementById('subscriptions'),
+        localGroup: document.getElementById('localGroup'),
+        subAdmin: document.getElementById('subAdmin'),
+        logBody: document.getElementById('logBody'),
+        logChev: document.getElementById('logChev'),
+        logCard: document.getElementById('logCard'),
+        logFilter: document.getElementById('logFilter'),
+        logHint: document.getElementById('logHint'),
+        journalRow: document.getElementById('journalRow'),
+        journalSwitch: document.getElementById('journalSwitch'),
+        scrim: document.getElementById('scrim'),
+        sheet: document.getElementById('sheet'),
+        themeSheet: document.getElementById('themeSheet'),
+        themeRow: document.getElementById('themeRow'),
+        themeValue: document.getElementById('themeValue'),
+        modal: document.getElementById('modal'),
+        modalTitle: document.getElementById('modalTitle'),
+        modalBody: document.getElementById('modalBody'),
+        modalConnect: document.getElementById('modalConnect'),
+        coreVersion: document.getElementById('coreVersion'),
+        alert: document.getElementById('alert'),
+        alertTitle: document.getElementById('alertTitle'),
+        alertText: document.getElementById('alertText'),
+        alertOk: document.getElementById('alertOk'),
+        alertCancel: document.getElementById('alertCancel')
+    };
+
+    /* Иконки — SVG, рисуются currentColor и масштабируются вместе с текстом. */
+    var ICON_POWER_ON =
+        '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="3.4" stroke-linecap="round" aria-hidden="true">' +
+        '<path d="M9.1 6.9v10.2"/><path d="M14.9 6.9v10.2"/></svg>';
+
+    var ICON_POWER_OFF =
+        '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2.6" stroke-linecap="round" aria-hidden="true">' +
+        '<path d="M12 4.5v7.5"/>' +
+        '<path d="M7.6 7a6.8 6.8 0 1 0 8.8 0"/></svg>';
+
+    var ICON_PING =
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M3 12h3l2-6 3 12 2.5-8 1.5 4H21"/></svg>';
+
+    var ICON_STOP =
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+        '<rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
+
+    var ICON_CHEV =
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M6 9.5 12 15.5 18 9.5"/></svg>';
+
+    function clear(node) {
+        while (node.firstChild) node.removeChild(node.firstChild);
+    }
+
+    function svg(markup) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = markup;
+        return wrap.firstChild;
+    }
+
+    function chevron() {
+        var node = svg(ICON_CHEV);
+        node.classList.add('chevron');
+        return node;
+    }
+
+    function spinner() {
+        var node = document.createElement('span');
+        node.className = 'spinner';
+        return node;
+    }
+
+    function parse(json) {
+        try { return JSON.parse(json); } catch (e) { return null; }
+    }
+
+    var MAX_LOG_LINES = 200;
+    var MAX_JOURNAL_ENTRIES = 400;
+
+    function pad(value) { return ('0' + value).slice(-2); }
+
+    function clockOf(millis) {
+        var d = new Date(millis);
+        return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+
+    function appendJournal(entries, reset) {
+        if (!journalEnabled) {
+            journalEntries = [];
+            renderFull = true;
+            return;
+        }
+        journalEntries = reset ? (entries || []).slice() : journalEntries.concat(entries || []);
+        if (journalEntries.length > MAX_JOURNAL_ENTRIES) {
+            journalEntries = journalEntries.slice(-MAX_JOURNAL_ENTRIES);
+        }
+        renderJournal();
+    }
+
+    function renderJournal() {
+        var shown = 0;
+        journalEntries.forEach(function (entry) {
+            if (visibleIn(entry)) shown++;
+        });
+        el.logHint.textContent = shown === journalEntries.length
+            ? ''
+            : shown + ' из ' + journalEntries.length;
+
+        if (!journalEnabled || logCollapsed) return;
+
+        if (renderFull || renderedUpTo > journalEntries.length) {
+            el.logBody.textContent = '';
+            renderedUpTo = 0;
+            renderFull = false;
+        }
+
+        for (var i = renderedUpTo; i < journalEntries.length; i++) {
+            if (!visibleIn(journalEntries[i])) continue;
+            el.logBody.appendChild(journalLine(journalEntries[i]));
+        }
+        renderedUpTo = journalEntries.length;
+
+        while (el.logBody.childElementCount > MAX_LOG_LINES) {
+            el.logBody.removeChild(el.logBody.firstChild);
+        }
+        el.logBody.scrollTop = el.logBody.scrollHeight;
+    }
+
+    function journalLine(entry) {
+        var source = entry.s || 'app';
+        var line = document.createElement('div');
+        line.className = 'log-line ' + source + ' ' + (entry.l || 'info');
+        line.textContent = clockOf(entry.t) + '  ' +
+            (source === 'app' ? '' : source + ' · ') + entry.m;
+        return line;
+    }
+
+    function visibleIn(entry) {
+        if (logFilter === 'all') return true;
+        return entry.l === 'warn' || entry.l === 'error';
+    }
+
+    function log(message) {
+        if (!message || !journalEnabled) return;
+        appendJournal([{ t: Date.now(), s: 'app', l: 'info', m: message }], false);
+    }
+
+    function applyJournalEnabled(value) {
+        journalEnabled = !!value;
+        el.journalSwitch.classList.toggle('on', journalEnabled);
+        el.logCard.hidden = !journalEnabled;
+        renderFull = true;
+        journalEntries = [];
+        el.logBody.textContent = '';
+    }
+
+    window.onJournalEnabled = function (value) {
+        applyJournalEnabled(value);
+    };
+
+    window.onJournalReset = function (payload) {
+        renderFull = true;
+        journalEntries = [];
+        appendJournal(parse(payload), true);
+    };
+
+    window.onJournalEntries = function (payload) {
+        appendJournal(parse(payload), false);
+    };
+
+    function profileById(id) {
+        return model.profiles.filter(function (p) { return p.id === id; })[0] || null;
+    }
+
+    function formatUptime(millis) {
+        var total = Math.max(0, Math.floor(millis / 1000));
+        var hours = Math.floor(total / 3600);
+        var minutes = Math.floor(total % 3600 / 60);
+        var seconds = total % 60;
+        return pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+    }
+
+    function renderUptime() {
+        if (ping.running) {
+            el.uptime.textContent = '00:00:00';
+            return;
+        }
+        var running = state === 'connected' && model.connectedAt > 0;
+        el.uptime.textContent = running ? formatUptime(Date.now() - model.connectedAt) : '00:00:00';
+    }
+
+    function renderLatency() {
+      var ms = Number(model.latency) || 0;
+      if (state !== 'connected' || ms <= 0) {
+        el.latency.textContent = '';
+        return;
+      }
+      el.latency.textContent = 'Отклик через туннель: ' + ms + ' мс';
+    }
+
+    function normalizePing(raw) {
+        var results = {};
+        if (raw && raw.results) {
+            Object.keys(raw.results).forEach(function (key) {
+                results[key] = Number(raw.results[key]);
+            });
+        }
+        return {
+            running: !!(raw && raw.running),
+            index: Number((raw && raw.index) || 0),
+            total: Number((raw && raw.total) || 0),
+            profileId: (raw && raw.profileId) || '',
+            results: results
+        };
+    }
+
+    function updatePingBadges() {
+        var rows = document.querySelectorAll('.row[data-profile-id]');
+        for (var i = 0; i < rows.length; i++) {
+            var badge = rows[i].querySelector('.ping-badge');
+            if (!badge) continue;
+            var id = rows[i].getAttribute('data-profile-id');
+            var ms = ping.results[id];
+            var current = ping.running && ping.profileId === id;
+            badge.className = 'ping-badge'
+                + (current ? ' active' : '')
+                + (typeof ms === 'number' && ms < 0 ? ' bad' : '');
+            badge.textContent = current ? '…'
+                : (typeof ms === 'number' ? (ms < 0 ? '—' : ms + ' мс') : '');
+        }
+    }
+
+    function updatePingButtons() {
+        if (!ping.running) {
+            pingStopping = false;
+            pingStartKey = '';
+        }
+        var buttons = Array.prototype.slice.call(document.querySelectorAll('.ping-btn'));
+        var owners = buttons.filter(function (btn) {
+            if (!ping.running) return false;
+            var ids = btn._pingIds || [];
+            if (ping.profileId) return ids.indexOf(ping.profileId) >= 0;
+            return !!pingStartKey && ids.join(',') === pingStartKey;
+        });
+        if (ping.running && !owners.length && ping.profileId) owners = buttons;
+
+        buttons.forEach(function (btn) {
+            var isOwner = owners.indexOf(btn) >= 0;
+            var stop = ping.running && isOwner;
+            btn.classList.toggle('stop', stop);
+            btn.disabled = ping.running && (!isOwner || pingStopping);
+            if (btn._stop !== stop) {
+                btn._stop = stop;
+                btn.innerHTML = stop ? ICON_STOP : ICON_PING;
+                btn.setAttribute('aria-label', stop ? 'Остановить проверку' : btn._idleLabel);
+            }
+        });
+    }
+
+    function startPing(ids) {
+        if (!ids.length || ping.running) return;
+        pingStartKey = ids.join(',');
+        bridge.pingProfiles(JSON.stringify(ids));
+    }
+
+    function stopPing() {
+        if (!ping.running || pingStopping) return;
+        pingStopping = true;
+        bridge.cancelPing();
+        renderPower();
+        updatePingButtons();
+    }
+
+    function selectedProfile() {
+        return profileById(model.selectedProfileId);
+    }
+
+    var rowsSignature = null;
+    var subsSignature = null;
+
+    function render() {
+        renderPower();
+        renderUptime();
+        renderLatency();
+
+        var rows = JSON.stringify([model.profiles, model.selectedProfileId]);
+        if (rows !== rowsSignature) {
+            rowsSignature = rows;
+            renderSubscriptions();
+            renderLocals();
+        }
+        syncActiveRows();
+
+        var subs = JSON.stringify(model.subscriptions);
+        if (subs !== subsSignature) {
+            subsSignature = subs;
+            renderSubAdmin();
+        }
+
+        updatePingBadges();
+        updatePingButtons();
+    }
+
+    function syncActiveRows() {
+        var rows = document.querySelectorAll('.row[data-profile-id]');
+        for (var i = 0; i < rows.length; i++) {
+            var info = rows[i].querySelector('.info-btn');
+            if (!info) continue;
+            var active = rows[i].getAttribute('data-profile-id') === model.activeProfileId;
+            info.className = 'info-btn' + (active ? ' active' : '');
+        }
+    }
+
+    function renderPower() {
+        var on = state === 'connected';
+        var busy = state === 'connecting' || state === 'disconnecting';
+        var checking = ping.running;
+
+        el.powerBtn.className = 'power-btn' + (on ? ' on' : '') + (busy || checking ? ' busy' : '');
+        el.powerBtn.innerHTML = on ? ICON_POWER_ON : ICON_POWER_OFF;
+        el.powerBtn.disabled = busy || checking;
+
+        var active = profileById(model.activeProfileId);
+        el.statusChip.className = 'status-chip' + (checking ? ' busy'
+            : on ? ' on' : busy ? ' busy' : state === 'error' ? ' error' : '');
+        el.statusText.textContent = checking
+            ? (pingStopping ? 'Остановка…' : 'Проверка: ' + (ping.index + 1) + ' из ' + ping.total)
+            : {
+                disconnected: 'Отключено',
+                connecting: 'Подключение',
+                connected: 'Подключено',
+                disconnecting: 'Отключение',
+                error: 'Ошибка'
+            }[state] || 'Отключено';
+
+        var hint;
+        if (checking) {
+            var current = profileById(ping.profileId);
+            hint = current ? 'Проверяем: ' + current.name : 'Проверяем профиль…';
+        } else {
+            if (state === 'error') {
+                hint = lastMessage || 'Не удалось подключиться';
+            } else if (on && active) {
+                hint = active.name;
+            } else {
+                var selected = selectedProfile();
+                hint = selected ? 'Выбрано: ' + selected.name : 'Выберите профиль и нажмите кнопку питания';
+            }
+        }
+        el.statusHint.textContent = hint;
+    }
+
+    function profileGroup(options, group) {
+        group = group || document.createElement('div');
+        group.className = 'group' + (options.collapsed ? ' collapsed' : '');
+
+        var head = document.createElement('div');
+        head.className = 'group-head';
+        head.setAttribute('role', 'button');
+        head.setAttribute('tabindex', '0');
+
+        var title = document.createElement('span');
+        title.className = options.titleClass || 'group-title';
+        title.textContent = options.title;
+        head.appendChild(title);
+
+        if (options.pingable) {
+            var pingBtn = document.createElement('button');
+            pingBtn.type = 'button';
+            pingBtn.className = 'ping-btn';
+            var pingIds = options.rows.map(function (p) { return p.id; });
+            pingBtn._pingIds = pingIds;
+            pingBtn._idleLabel = 'Проверить профили группы «' + options.title + '»';
+            pingBtn._stop = false;
+            pingBtn.setAttribute('aria-label', pingBtn._idleLabel);
+            pingBtn.innerHTML = ICON_PING;
+            pingBtn.onclick = function (event) {
+                event.stopPropagation();
+                if (ping.running) {
+                    stopPing();
+                } else {
+                    startPing(pingIds);
+                }
+            };
+            head.appendChild(pingBtn);
+        }
+
+        if (options.count != null) {
+            var badge = document.createElement('span');
+            badge.className = 'row-sub';
+            badge.textContent = options.count ? String(options.count) : '';
+            head.appendChild(badge);
+        }
+
+        head.appendChild(chevron());
+        head.onclick = function () {
+            group.classList.toggle('collapsed');
+            options.remember(group.classList.contains('collapsed'));
+            saveCollapsed();
+        };
+        head.onkeydown = function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                head.click();
+            }
+        };
+
+        var inner = document.createElement('div');
+        inner.className = 'group-inner';
+        if (options.rows.length) {
+            options.rows.forEach(function (profile) { inner.appendChild(profileRow(profile)); });
+        } else {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = options.emptyText;
+            inner.appendChild(empty);
+        }
+
+        var body = document.createElement('div');
+        body.className = 'group-body';
+        body.appendChild(inner);
+
+        group.appendChild(head);
+        group.appendChild(body);
+        return group;
+    }
+
+    function renderSubscriptions() {
+        clear(el.subscriptions);
+        if (!model.subscriptions.length) {
+            var hint = document.createElement('div');
+            hint.className = 'empty';
+            hint.textContent = 'Подписок нет — добавьте ссылку подписки из буфера обмена';
+            el.subscriptions.appendChild(hint);
+            return;
+        }
+
+        model.subscriptions.forEach(function (sub) {
+            var subName = sub.name || 'Подписка';
+            var title = subName.indexOf('☁') === -1 ? '☁️ ' + subName : subName;
+            el.subscriptions.appendChild(profileGroup({
+                title: title,
+                pingable: true,
+                collapsed: collapsed.subscriptions[sub.id],
+                remember: function (value) { collapsed.subscriptions[sub.id] = value; },
+                rows: model.profiles.filter(function (p) { return p.subscriptionId === sub.id; }),
+                emptyText: 'Пока нет профилей'
+            }));
+        });
+    }
+
+    function renderLocals() {
+        clear(el.localGroup);
+        var locals = model.profiles.filter(function (p) { return !p.fromSubscription; });
+        profileGroup({
+            title: 'Локальные профили',
+            titleClass: 'group-title small',
+            pingable: true,
+            count: locals.length,
+            collapsed: collapsed.local,
+            remember: function (value) { collapsed.local = value; },
+            rows: locals,
+            emptyText: 'Профилей нет — скопируйте vless- или olcrtc-ссылку и импортируйте из буфера'
+        }, el.localGroup);
+    }
+
+    function renderSubAdmin() {
+        clear(el.subAdmin);
+        if (!model.subscriptions.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = 'Подписок нет';
+            el.subAdmin.appendChild(empty);
+            return;
+        }
+        model.subscriptions.forEach(function (sub) {
+            var row = document.createElement('div');
+            row.className = 'settings-row sub-row';
+
+            var body = document.createElement('span');
+            var name = document.createElement('span');
+            name.textContent = sub.name || 'Подписка';
+            body.appendChild(name);
+
+            body.appendChild(document.createElement('br'));
+
+            var countLine = document.createElement('small');
+            countLine.textContent = 'Профилей: ' + (sub.count || 0);
+            body.appendChild(countLine);
+
+            if (sub.refreshMinutes > 0) {
+                var leftLine = document.createElement('small');
+                leftLine.textContent = 'Обновление через: ' + countdownText(sub);
+                leftLine.dataset.refreshMinutes = sub.refreshMinutes;
+                leftLine.dataset.updatedAt = sub.updatedAt || 0;
+                leftLine.dataset.addedAt = sub.addedAt || 0;
+                if (typeof sub.nextRefreshAt === 'number') {
+                    leftLine.dataset.nextRefreshAt = sub.nextRefreshAt;
+                }
+                body.appendChild(leftLine);
+            }
+
+            row.appendChild(body);
+
+            var refresh = document.createElement('button');
+            refresh.className = 'value accent';
+            if (sub.loading) {
+              refresh.disabled = true;
+              refresh.appendChild(spinner());
+            } else {
+              refresh.textContent = 'Обновить';
+              refresh.onclick = function () {
+                log('обновляем «' + (sub.name || 'подписку') + '»');
+                bridge.refreshSubscription(sub.id);
+              };
+            }
+            row.appendChild(refresh);
+
+            var remove = document.createElement('button');
+            remove.className = 'value';
+            remove.style.color = 'var(--red)';
+            remove.textContent = 'Удалить';
+            remove.onclick = function () {
+                var name = sub.name || 'Подписка';
+                var count = sub.count || 0;
+                confirm('Удалить подписку?', function () {
+                    bridge.removeSubscription(sub.id);
+                    log('подписка удалена');
+                }, 'Подписка «' + name + '» и её профили' +
+                    (count ? ' (' + count + ')' : '') + ' будут удалены без возможности восстановления.');
+            };
+            row.appendChild(remove);
+
+            el.subAdmin.appendChild(row);
+        });
+        syncCountdownTimer();
+    }
+
+    function countdownText(sub) {
+        var minutes = sub.refreshMinutes || 0;
+        if (minutes <= 0) return '';
+        var due;
+        if (typeof sub.nextRefreshAt === 'number') {
+            due = sub.nextRefreshAt;
+        } else {
+            var since = (sub.updatedAt || 0) > 0 ? sub.updatedAt : (sub.addedAt || 0);
+            if (!since) return '—';
+            due = since + minutes * 60000;
+        }
+        var left = Math.floor((due - Date.now()) / 1000);
+        if (left <= 0) return 'сейчас';
+        if (left < 60) return left + ' сек';
+        if (left < 3600) return Math.floor(left / 60) + ' мин';
+        return Math.ceil(left / 3600) + ' ч';
+    }
+
+    function countdownNodes() {
+        return el.subAdmin.querySelectorAll('small[data-refresh-minutes]');
+    }
+
+    function syncCountdownTimer() {
+        if (countdownTimer && !countdownNodes().length) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            return;
+        }
+        if (countdownTimer || !countdownNodes().length) return;
+
+        countdownTimer = setInterval(function () {
+            countdownNodes().forEach(function (node) {
+                node.textContent = 'Обновление через: ' + countdownText({
+                    refreshMinutes: +node.dataset.refreshMinutes,
+                    updatedAt: +node.dataset.updatedAt,
+                    addedAt: +node.dataset.addedAt,
+                    nextRefreshAt: node.dataset.nextRefreshAt === undefined
+                        ? undefined
+                        : +node.dataset.nextRefreshAt
+                });
+            });
+        }, 1000);
+    }
+
+    var countdownTimer = null;
+
+    function profileRow(profile) {
+        var row = document.createElement('button');
+        row.className = 'row';
+        row.setAttribute('data-profile-id', profile.id);
+
+        var mark = document.createElement('span');
+        mark.className = 'mark' + (profile.id === model.selectedProfileId ? ' on' : '');
+        row.appendChild(mark);
+
+        var body = document.createElement('span');
+        body.className = 'row-body';
+
+        var name = document.createElement('span');
+        name.className = 'row-title';
+        name.textContent = profile.name;
+
+        var sub = document.createElement('span');
+        sub.className = 'row-sub';
+        sub.textContent = profile.type === 'olcrtc'
+            ? 'OLCRTC / ' + (profile.provider || '—').toUpperCase() + ' / '
+                + (profile.transport || '—')
+            : 'VLESS / ' + (profile.network || 'TCP').toUpperCase() + ' / '
+                + (profile.security || 'none').toUpperCase();
+
+        body.appendChild(name);
+        body.appendChild(document.createElement('br'));
+        body.appendChild(sub);
+        row.appendChild(body);
+
+        var badge = document.createElement('span');
+        badge.className = 'ping-badge';
+        row.appendChild(badge);
+
+        var info = document.createElement('span');
+        info.className = 'info-btn' + (profile.id === model.activeProfileId ? ' active' : '');
+        info.textContent = 'i';
+        info.onclick = function (event) {
+            event.stopPropagation();
+            openModal(profile.id);
+        };
+        row.appendChild(info);
+
+        row.onclick = function () {
+            if (profile.id === model.selectedProfileId) return;
+            bridge.selectProfile(profile.id);
+        };
+
+        return row;
+    }
+
+    function openModal(profileId) {
+        var profile = profileById(profileId);
+        if (!profile) return;
+        modalProfileId = profileId;
+        el.modalTitle.textContent = profile.name;
+        clear(el.modalBody);
+
+        var source = [['Источник', profile.fromSubscription
+            ? (profile.subscriptionName || 'подписка') : 'буфер обмена']];
+
+        var details = profile.type === 'olcrtc' ? [
+            ['Тип', 'OLCRTC'],
+            ['Провайдер', (profile.provider || '—').toUpperCase()],
+            ['Транспорт', profile.transport || '—'],
+            ['Комната', profile.room || '—']
+        ].concat(source) : [
+            ['Адрес', profile.address + (profile.port ? ':' + profile.port : '')],
+            ['Сеть', (profile.network || 'tcp').toUpperCase()],
+            ['Защита', (profile.security || 'none').toUpperCase()],
+            ['SNI', profile.sni || '—']
+        ].concat(source);
+
+        details.concat([['Ссылка', profile.link]]).forEach(function (pair) {
+            var row = document.createElement('div');
+            row.className = 'detail';
+            var key = document.createElement('span');
+            key.className = 'k';
+            key.textContent = pair[0];
+            var value = document.createElement('span');
+            value.className = 'v';
+            value.textContent = pair[1] || '—';
+            row.appendChild(key);
+            row.appendChild(value);
+            el.modalBody.appendChild(row);
+        });
+
+        el.modalConnect.textContent = profile.id === model.activeProfileId ? 'Отключиться' : 'Подключиться';
+        el.modal.classList.add('open');
+        el.scrim.classList.add('open');
+    }
+
+    function closeOverlays() {
+        el.sheet.classList.remove('open');
+        el.themeSheet.classList.remove('open');
+        el.modal.classList.remove('open');
+        el.alert.classList.remove('open');
+        el.scrim.classList.remove('open');
+    }
+
+    function renderTheme() {
+        el.themeValue.textContent = THEME_NAMES[themeMode] || THEME_NAMES.system;
+        var items = el.themeSheet.querySelectorAll('[data-theme-mode]');
+        Array.prototype.forEach.call(items, function (item) {
+            var on = item.getAttribute('data-theme-mode') === themeMode;
+            item.classList.toggle('current', on);
+        });
+    }
+
+    window.onThemeMode = function (mode) {
+        themeMode = mode || 'system';
+        renderTheme();
+    };
+
+    function confirm(text, onYes, detail) {
+        closeOverlays();
+        el.alertTitle.textContent = text;
+        el.alertText.textContent = detail || '';
+        el.alertText.style.display = detail ? '' : 'none';
+        el.alertOk.textContent = 'Удалить';
+        el.alert.classList.add('open');
+        el.scrim.classList.add('open');
+
+        el.alertOk.onclick = function () {
+            closeOverlays();
+            onYes();
+        };
+        el.alertCancel.onclick = closeOverlays;
+    }
+
+    var splitMode = 'all';
+    var splitPackages = {};
+
+    var elSplit = {
+        all: document.getElementById('splitAll'),
+        allow: document.getElementById('splitAllow'),
+        exclude: document.getElementById('splitExclude'),
+        pick: document.getElementById('splitPick'),
+        picker: document.getElementById('appPicker'),
+        list: document.getElementById('pickerList'),
+        loading: document.getElementById('pickerLoading'),
+        query: document.getElementById('pickerQuery'),
+        searchClear: document.getElementById('pickerSearchClear'),
+        system: document.getElementById('pickerSystem'),
+        clear: document.getElementById('pickerClear'),
+        title: document.getElementById('pickerTitle')
+    };
+
+    function loadSplit() {
+        var data = parse(bridge.getSplitTunnelSettings());
+        if (!data) return;
+        splitMode = data.mode || 'all';
+        splitPackages = {};
+        (data.packages || []).forEach(function (pkg) { splitPackages[pkg] = true; });
+        renderSplit();
+        // Восстанавливаем состояние галочки "Показывать системные"
+        try {
+            var saved = localStorage.getItem('splitSystemCheckbox');
+            if (saved !== null) {
+                elSplit.system.checked = saved === 'true';
+            }
+        } catch (e) { /* приватный режим — игнорируем */ }
+    }
+
+    function setModeMark(row, on) {
+        row.querySelector('.mark').classList.toggle('on', on);
+    }
+
+    function renderSplit() {
+        setModeMark(elSplit.all, splitMode === 'all');
+        setModeMark(elSplit.allow, splitMode === 'allow');
+        setModeMark(elSplit.exclude, splitMode === 'exclude');
+        var count = Object.keys(splitPackages).length;
+        elSplit.pick.hidden = splitMode === 'all';
+        elSplit.pick.textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
+        elSplit.clear.disabled = count === 0;
+    }
+
+    function setSplitMode(mode) {
+        if (mode === splitMode) return;
+        var reply = parse(bridge.setSplitTunnelMode(mode)) || {};
+        if (reply.ok === false) {
+            log(reply.error || 'не удалось сменить режим');
+            return;
+        }
+        splitMode = mode;
+        renderSplit();
+    }
+
+    var loadingTimer = null;
+
+    function showPickerLoading() {
+        clearTimeout(loadingTimer);
+        loadingTimer = setTimeout(function () { elSplit.loading.hidden = false; }, 150);
+    }
+
+    function hidePickerLoading() {
+        clearTimeout(loadingTimer);
+        elSplit.loading.hidden = true;
+    }
+
+    function openPicker() {
+        elSplit.title.textContent = splitMode === 'allow'
+            ? 'Приложения через VPN'
+            : 'Приложения в обход';
+        elSplit.query.value = '';
+        syncSearchClear();
+        elSplit.picker.classList.add('open');
+        requestApps();
+    }
+
+    function closePicker() {
+        elSplit.picker.classList.remove('open');
+    }
+
+    var pickerRequest = 0;
+
+    function requestApps() {
+        var token = ++pickerRequest;
+        showPickerLoading();
+        clear(elSplit.list);
+        var includeSystem = elSplit.system.checked;
+        var query = elSplit.query.value.trim();
+        if (bridge.listInstalledAppsAsync) {
+            bridge.listInstalledAppsAsync(String(token), includeSystem, query);
+            return;
+        }
+        setTimeout(function () {
+            if (token !== pickerRequest) return;
+            var reply = bridge.listInstalledApps(includeSystem, query);
+            if (reply && typeof reply.then === 'function') {
+                reply.then(function (data) { applyApps(token, data); });
+                return;
+            }
+            applyApps(token, reply);
+        }, 0);
+    }
+
+    function applyApps(token, payload) {
+        if (Number(token) !== pickerRequest) return;
+        hidePickerLoading();
+        renderApps(parse(payload) || []);
+    }
+
+    window.onSplitApps = applyApps;
+
+    function renderApps(apps) {
+        clear(elSplit.list);
+        var chosen = apps.filter(function (app) { return splitPackages[app.pkg]; });
+        var rest = apps.filter(function (app) { return !splitPackages[app.pkg]; });
+
+        if (chosen.length) {
+            elSplit.list.appendChild(pickerGroup('Выбранные'));
+            chosen.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
+        }
+        if (rest.length) {
+            if (chosen.length) elSplit.list.appendChild(pickerGroup('Остальные'));
+            rest.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
+        }
+        if (!apps.length) {
+            var empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = elSplit.query.value.trim()
+                ? 'Ничего не найдено'
+                : 'Нет приложений для выбора';
+            elSplit.list.appendChild(empty);
+        }
+        watchIcons();
+    }
+
+    function pickerGroup(title) {
+        var node = document.createElement('div');
+        node.className = 'picker-group';
+        node.textContent = title;
+        return node;
+    }
+
+    function appRow(app) {
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'app-row' + (splitPackages[app.pkg] ? ' on' : '');
+
+        var icon = document.createElement('img');
+        icon.className = 'app-icon';
+        icon.alt = '';
+        icon.setAttribute('data-pkg', app.pkg);
+        row.appendChild(icon);
+
+        var copy = document.createElement('span');
+        copy.className = 'app-copy';
+        var name = document.createElement('span');
+        name.className = 'app-name';
+        name.textContent = app.label || app.pkg;
+        var pkg = document.createElement('span');
+        pkg.className = 'app-pkg';
+        pkg.textContent = app.pkg;
+        copy.appendChild(name);
+        copy.appendChild(pkg);
+        row.appendChild(copy);
+
+        row.appendChild(document.createElement('span')).className = 'app-box';
+
+        row.onclick = function () {
+            if (splitPackages[app.pkg]) delete splitPackages[app.pkg];
+            else splitPackages[app.pkg] = true;
+            requestApps();
+            renderSplit();
+        };
+
+        return row;
+    }
+
+    function enforceSplitFallback() {
+        if (splitMode === 'all') return;
+        if (Object.keys(splitPackages).length) return;
+        splitMode = 'all';
+        bridge.setSplitTunnelMode('all');
+        renderSplit();
+        log('режим сброшен: не выбрано ни одного приложения');
+    }
+
+    var ICON_BASE_URL = 'https://nodeway.internal/icon/';
+
+    function iconUrlFor(pkg) {
+        if (window.__nodewayIconUrl) return window.__nodewayIconUrl(pkg);
+        return ICON_BASE_URL + encodeURIComponent(pkg);
+    }
+
+    var iconObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            iconObserver.unobserve(entry.target);
+            var img = entry.target.querySelector('img[data-pkg]');
+            if (img) img.src = iconUrlFor(img.getAttribute('data-pkg'));
+        });
+    }, { root: elSplit.list, rootMargin: '240px 0px' });
+
+    function watchIcons() {
+        iconObserver.disconnect();
+        var images = elSplit.list.querySelectorAll('img[data-pkg]');
+        Array.prototype.forEach.call(images, function (img) {
+            if (img.getAttribute('src')) return;
+            iconObserver.observe(img.parentNode);
+        });
+    }
+
+    elSplit.all.onclick = function () { setSplitMode('all'); };
+    elSplit.allow.onclick = function () { setSplitMode('allow'); };
+    elSplit.exclude.onclick = function () { setSplitMode('exclude'); };
+    elSplit.pick.onclick = openPicker;
+    document.getElementById('pickerClose').onclick = closePicker;
+    elSplit.system.onchange = function () {
+        localStorage.setItem('splitSystemCheckbox', this.checked);
+        requestApps();
+    };
+    elSplit.clear.onclick = function () {
+        if (!Object.keys(splitPackages).length) return;
+        splitPackages = {};
+        requestApps();
+        renderSplit();
+    };
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) enforceSplitFallback();
+    });
+
+    var searchTimer = null;
+    elSplit.query.oninput = function () {
+        clearTimeout(searchTimer);
+        syncSearchClear();
+        searchTimer = setTimeout(requestApps, 250);
+    };
+
+    function syncSearchClear() {
+        elSplit.searchClear.hidden = !elSplit.query.value.length;
+    }
+
+    elSplit.searchClear.onclick = function () {
+        clearTimeout(searchTimer);
+        elSplit.query.value = '';
+        syncSearchClear();
+        requestApps();
+        elSplit.query.focus();
+    };
+
+    document.getElementById('pickerDone').onclick = function () {
+        var packages = Object.keys(splitPackages);
+        var reply = parse(bridge.setSelectedPackages(JSON.stringify(packages))) || {};
+        if (reply.ok === false) {
+            log(reply.error || 'не удалось сохранить список');
+            return;
+        }
+        closePicker();
+        log('в списке приложений: ' + packages.length);
+    };
+
+    var lastMessage = '';
+
+    el.powerBtn.onclick = function () {
+        if (state === 'connected') {
+            bridge.requestDisconnect();
+            return;
+        }
+        var profile = selectedProfile() || model.profiles[0];
+        if (!profile) {
+            log('сначала добавьте профиль');
+            showPage('pageSettings');
+            return;
+        }
+        if (profile.id !== model.selectedProfileId) bridge.selectProfile(profile.id);
+        bridge.requestConnect(profile.id);
+    };
+
+    document.getElementById('addBtn').onclick = function () {
+        el.sheet.classList.add('open');
+        el.scrim.classList.add('open');
+    };
+
+    document.getElementById('logHead').onclick = function () {
+        logCollapsed = !logCollapsed;
+        el.logBody.style.display = logCollapsed ? 'none' : 'block';
+        el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
+        collapsed.log = logCollapsed;
+        saveCollapsed();
+        if (!logCollapsed) {
+            renderFull = true;
+            renderJournal();
+        }
+    };
+
+    el.logFilter.onclick = function (event) {
+        var button = event.target.closest('button');
+        if (!button) return;
+        logFilter = button.dataset.level;
+        el.logFilter.querySelectorAll('button').forEach(function (item) {
+            item.classList.toggle('active', item === button);
+        });
+        renderFull = true;
+        renderJournal();
+    };
+
+    el.journalRow.onclick = function () {
+        var wasEnabled = journalEnabled;
+        var reply = parse(bridge.setJournalEnabled(!journalEnabled));
+        if (!reply) return;
+        applyJournalEnabled(reply.enabled);
+        if (!wasEnabled && state === 'connected') {
+            log('вывод Xray появится со следующего подключения');
+        }
+    };
+
+    document.getElementById('importProfiles').onclick = function () {
+        var reply = parse(bridge.importFromClipboard());
+        if (reply) log(reply.message);
+    };
+
+    el.scrim.onclick = closeOverlays;
+
+    document.getElementById('settingsBtn').onclick = function () { showPage('pageSettings'); };
+    document.getElementById('backBtn').onclick = function () { showPage('pageHome'); };
+
+    function showPage(id) {
+        if (id !== 'pageSettings') enforceSplitFallback();
+        document.querySelectorAll('.page').forEach(function (page) {
+            page.classList.toggle('active', page.id === id);
+        });
+        el.appHeader.classList.toggle('hidden', id !== 'pageHome');
+        window.scrollTo(0, 0);
+    }
+
+    el.themeRow.onclick = function () {
+        renderTheme();
+        el.themeSheet.classList.add('open');
+        el.scrim.classList.add('open');
+    };
+
+    el.themeSheet.addEventListener('click', function (event) {
+        var mode = event.target.getAttribute('data-theme-mode');
+        closeOverlays();
+        if (!mode) return;
+        bridge.setThemeMode(mode);
+    });
+
+    el.sheet.addEventListener('click', function (event) {
+        var action = event.target.getAttribute('data-action');
+        if (!action) return;
+        closeOverlays();
+        if (action === 'import') {
+            var reply = parse(bridge.importFromClipboard());
+            if (reply) log(reply.message);
+        }
+    });
+
+    el.modal.addEventListener('click', function (event) {
+        var action = event.target.getAttribute('data-action');
+        if (!action) return;
+        if (action === 'modal-close') closeOverlays();
+        if (action === 'modal-connect') {
+            var profile = profileById(modalProfileId);
+            closeOverlays();
+            if (!profile) return;
+            if (profile.id === model.activeProfileId) bridge.requestDisconnect();
+            else {
+                if (profile.id !== model.selectedProfileId) bridge.selectProfile(profile.id);
+                bridge.requestConnect(profile.id);
+            }
+        }
+        if (action === 'modal-remove') {
+            var target = profileById(modalProfileId);
+            if (!target) return;
+            confirm('Удалить профиль?', function () {
+                bridge.removeProfile(target.id);
+                log('профиль «' + target.name + '» удалён');
+            }, 'Профиль «' + target.name + '» будет удалён без возможности восстановления.');
+        }
+    });
+
+    window.setInsets = function (top, bottom) {
+        document.documentElement.style.setProperty('--inset-top', (top || 0) + 'px');
+        document.documentElement.style.setProperty('--inset-bottom', (bottom || 0) + 'px');
+    };
+
+    window.setUiMode = function (mode) {
+        document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+    };
+
+    window.onVpnState = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        state = data.state;
+        lastMessage = data.message || '';
+        model.latency = Number(data.latency) || 0;
+        if (data.ping) {
+            var next = normalizePing(data.ping);
+            if (next.total > 0) {
+                ping = next;
+            } else {
+                ping.running = next.running;
+                ping.index = next.index;
+                ping.total = next.total;
+                ping.profileId = next.profileId;
+                Object.keys(next.results).forEach(function (key) {
+                    ping.results[key] = next.results[key];
+                });
+            }
+        }
+        renderPower();
+        renderUptime();
+        renderLatency();
+        updatePingBadges();
+        updatePingButtons();
+    };
+
+    window.onProfilesChanged = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        model = data;
+        render();
+    };
+
+    window.onImportResult = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        log(data.message);
+        render();
+    };
+
+    if (bridge) {
+        var initial = parse(bridge.getInitialState());
+        if (initial) {
+            model = initial.state;
+            state = model.vpnState || 'disconnected';
+            ping = normalizePing(model.ping);
+            coreVersion = initial.coreVersion || '';
+            applyJournalEnabled(!!initial.journalEnabled);
+            if (initial.appVersion) {
+                document.getElementById('appVersion').textContent = initial.appVersion;
+            }
+        }
+        el.coreVersion.textContent = coreVersion || '—';
+        logCollapsed = collapsed.log;
+        el.logBody.style.display = logCollapsed ? 'none' : 'block';
+        el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
+        loadSplit();
+        log('интерфейс готов');
+    } else {
+        log('Android-мост недоступен');
+    }
+
+    render();
+    setInterval(renderUptime, 1000);
+})();
+</script>
+</body>
+</html>

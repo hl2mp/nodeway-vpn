@@ -2073,6 +2073,13 @@
         splitPackages = {};
         (data.packages || []).forEach(function (pkg) { splitPackages[pkg] = true; });
         renderSplit();
+        // Восстанавливаем состояние галочки "Показывать системные"
+        try {
+            var saved = localStorage.getItem('splitSystemCheckbox');
+            if (saved !== null) {
+                elSplit.system.checked = saved === 'true';
+            }
+        } catch (e) { /* приватный режим — игнорируем */ }
     }
 
     /**
