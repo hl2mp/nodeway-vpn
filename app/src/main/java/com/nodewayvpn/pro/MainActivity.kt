@@ -628,6 +628,39 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
     }
 
+    override fun onSaveProfileRequested(id: String?, link: String, name: String): String {
+        val trimmedLink = link.trim()
+        val trimmedName = name.trim()
+        if (trimmedLink.isBlank()) {
+            return result(ok = false, message = "Ссылка не может быть пустой")
+        }
+
+        val parseResult = runCatching {
+            when {
+                VlessProfile.isVlessLink(trimmedLink) -> VlessProfile.parse(trimmedLink)
+                OlcrtcProfile.isOlcrtcLink(trimmedLink) -> OlcrtcProfile.parse(trimmedLink)
+                else -> throw IllegalArgumentException("Поддерживаются только ссылки vless:// и olcrtc://")
+            }
+        }
+        val error = parseResult.exceptionOrNull()
+        if (error != null) {
+            return result(ok = false, message = error.message ?: "Ссылка не распознана")
+        }
+
+        val savedProfile = store.saveProfile(id?.ifBlank { null }, trimmedLink, trimmedName)
+
+        runOnUiThread {
+            pushProfiles()
+            if (savedProfile.id == store.selectedProfileId && (vpnState == VpnState.CONNECTED.code || vpnState == VpnState.CONNECTING.code)) {
+                NodewayVpnService.switchTo(this, savedProfile.link, savedProfile.id)
+            }
+        }
+
+        return result(ok = true, message = "Профиль сохранён")
+    }
+
+    override fun onReadClipboardText(): String = readClipboard().orEmpty()
+
     override fun coreVersion(): String = runCatching { XrayCore.version() }.getOrDefault("")
 
     override fun journalEnabled(): Boolean = Journal.enabled

@@ -29,6 +29,27 @@ data class OlcrtcProfile(
 
     fun describe(): String = "olcrtc · ${provider.uppercase(Locale.ROOT)} / $transport"
 
+    /** Reconstructs the `olcrtc://` share link from this profile. */
+    fun toLink(): String = buildString {
+        append("olcrtc://")
+        append(provider)
+        append('?')
+        append(transport)
+        if (payload.isNotEmpty()) {
+            append('<')
+            append(payload.entries.joinToString("&") { (k, v) -> "$k=$v" })
+            append('>')
+        }
+        append('@')
+        append(room)
+        append('#')
+        append(key)
+        if (remark.isNotBlank()) {
+            append('$')
+            append(remark)
+        }
+    }
+
     /**
      * Собирает YAML для клиента `mode: cnc`.
      *

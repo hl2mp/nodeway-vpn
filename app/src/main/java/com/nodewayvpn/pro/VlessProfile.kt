@@ -1,6 +1,5 @@
 package com.nodewayvpn.pro
 
-import android.net.Uri
 import java.net.URLDecoder
 import java.util.Locale
 
@@ -44,6 +43,82 @@ data class VlessProfile(
         append(network)
     }
 
+    /** Reconstructs the `vless://` share link from this profile. */
+    fun toLink(): String = buildString {
+        append("vless://")
+        append(id)
+        append('@')
+        if (address.contains(":") && !address.startsWith("[")) {
+            append('[').append(address).append(']')
+        } else {
+            append(address)
+        }
+        append(':')
+        append(port)
+
+        val params = mutableListOf<Pair<String, String>>()
+        if (network.isNotBlank() && !network.equals("tcp", ignoreCase = true)) {
+            params += "type" to network
+        }
+        if (security.isNotBlank() && !security.equals("none", ignoreCase = true)) {
+            params += "security" to security
+        }
+        if (flow.isNotBlank()) {
+            params += "flow" to flow
+        }
+        if (hostHeader.isNotBlank()) {
+            params += "host" to hostHeader
+        }
+        if (sni.isNotBlank() && sni != address && sni != hostHeader) {
+            params += "sni" to sni
+        }
+        if (path.isNotBlank() && path != "/") {
+            params += "path" to path
+        }
+        if (headerType.isNotBlank() && !headerType.equals("none", ignoreCase = true)) {
+            params += "headerType" to headerType
+        }
+        if (serviceName.isNotBlank() && serviceName != path.trimStart('/')) {
+            params += "serviceName" to serviceName
+        }
+        if (mode.isNotBlank()) {
+            params += "mode" to mode
+        }
+        if (alpn.isNotEmpty()) {
+            params += "alpn" to alpn.joinToString(",")
+        }
+        if (fingerprint.isNotBlank()) {
+            params += "fp" to fingerprint
+        }
+        if (publicKey.isNotBlank()) {
+            params += "pbk" to publicKey
+        }
+        if (shortId.isNotBlank()) {
+            params += "sid" to shortId
+        }
+        if (spiderX.isNotBlank() && spiderX != "/") {
+            params += "spx" to spiderX
+        }
+        if (allowInsecure) {
+            params += "allowInsecure" to "1"
+        }
+
+        if (params.isNotEmpty()) {
+            append('?')
+            append(params.joinToString("&") { (k, v) ->
+                "$k=${encodeParam(v)}"
+            })
+        }
+
+        if (remark.isNotBlank()) {
+            append('#')
+            append(encodeParam(remark))
+        }
+    }
+
+    private fun encodeParam(value: String): String =
+        java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+
     companion object {
 
         private val UUID_REGEX =
@@ -72,7 +147,12 @@ data class VlessProfile(
 
             val params = parseQuery(query)
 
-            val network = params["type"]?.lowercase(Locale.ROOT)?.takeIf { it.isNotBlank() } ?: "tcp"
+            // Имена транспортов приводим к тем, что ждёт ядро: `splithttp` — прежнее
+            // имя XHTTP, `h2` в конфиге называется `http`. Без этого блок настроек
+            // транспорта не попал бы в конфиг и профиль молча не поднялся бы.
+            val network = params["type"]?.lowercase(Locale.ROOT)?.takeIf { it.isNotBlank() }
+                ?.let { when (it) { "splithttp" -> "xhttp"; "h2" -> "http"; else -> it } }
+                ?: "tcp"
             // `xtls` — старое имя шифрования, ядро его больше не принимает, а ссылки с
             // ним ещё встречаются. Без нормализации в конфиг ушёл бы `security: "xtls"`
             // вовсе без блока настроек: ни TLS, ни REALITY, и профиль не поднялся бы.
@@ -128,11 +208,18 @@ data class VlessProfile(
 
         private fun parseQuery(query: String): Map<String, String> {
             if (query.isBlank()) return emptyMap()
-            // Uri сам разбирает query и раскодирует percent-encoding.
-            val uri = Uri.parse("http://localhost/?$query")
             val result = mutableMapOf<String, String>()
-            uri.queryParameterNames.forEach { key ->
-                uri.getQueryParameter(key)?.let { result[key] = it }
+            query.split('&').forEach { pair ->
+                if (pair.isNotBlank()) {
+                    val key = pair.substringBefore('=').trim()
+                    val rawVal = pair.substringAfter('=', "").trim()
+                    if (key.isNotEmpty()) {
+                        val decodedVal = runCatching {
+                            URLDecoder.decode(rawVal, "UTF-8")
+                        }.getOrDefault(rawVal)
+                        result[key] = decodedVal
+                    }
+                }
             }
             return result
         }

@@ -1,6 +1,7 @@
 package com.nodewayvpn.pro
 
 import android.content.Context
+import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
@@ -14,9 +15,15 @@ import java.util.concurrent.ConcurrentHashMap
  * Все методы синхронизированы: к хранилищу обращаются и JS-мост (фоновый поток
  * WebView), и поток загрузки подписки.
  */
-class ProfileStore(context: Context) {
+class ProfileStore(
+    context: Context? = null,
+    sharedPreferences: SharedPreferences? = null,
+) {
 
-    private val sp = context.applicationContext.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+    private val sp: SharedPreferences = sharedPreferences
+        ?: requireNotNull(context) { "ProfileStore requires either Context or SharedPreferences" }
+            .applicationContext
+            .getSharedPreferences(NAME, Context.MODE_PRIVATE)
 
     private val lock = Any()
 
@@ -85,6 +92,38 @@ class ProfileStore(context: Context) {
             profiles = profiles.filterNot { it.id == id }
             if (selectedProfileId == id) selectedProfileId = ""
         }
+    }
+
+    /**
+     * Создаёт новый ручной профиль (`id == null`) или обновляет существующий.
+     * При обновлении `subscriptionId` и `source` сохраняются.
+     */
+    fun saveProfile(id: String?, link: String, name: String): ServerProfile = synchronized(lock) {
+        val current = profiles
+        val targetId = id?.takeIf { it.isNotBlank() }
+        val existing = if (targetId != null) current.firstOrNull { it.id == targetId } else null
+
+        val updated = if (existing != null) {
+            existing.copy(
+                link = link,
+                name = name,
+            )
+        } else {
+            ServerProfile.create(
+                link = link,
+                name = name,
+                source = ServerProfile.Source.MANUAL,
+                subscriptionId = null,
+            )
+        }
+
+        profiles = if (existing != null) {
+            current.map { if (it.id == existing.id) updated else it }
+        } else {
+            current + updated
+        }
+
+        updated
     }
 
     

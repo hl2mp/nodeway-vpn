@@ -51,6 +51,16 @@ class VpnWebBridge(private val host: Host) {
 
         fun onRemoveProfileRequested(id: String)
 
+        /**
+         * Сохраняет новый или обновляет существующий профиль.
+         *
+         * @return JSON с результатом сохранения.
+         */
+        fun onSaveProfileRequested(id: String?, link: String, name: String): String
+
+        /** Читает сырой текст из буфера обмена для подстановки в форму. */
+        fun onReadClipboardText(): String
+
         fun onSelectProfileRequested(id: String)
 
         fun coreVersion(): String
@@ -128,6 +138,13 @@ class VpnWebBridge(private val host: Host) {
 
     @JavascriptInterface
     fun removeProfile(id: String) = host.onRemoveProfileRequested(id)
+
+    @JavascriptInterface
+    fun saveProfile(id: String?, link: String, name: String): String =
+        host.onSaveProfileRequested(id?.ifBlank { null }, link, name)
+
+    @JavascriptInterface
+    fun readClipboardText(): String = host.onReadClipboardText()
 
     @JavascriptInterface
     fun selectProfile(id: String) = host.onSelectProfileRequested(id)

@@ -742,6 +742,43 @@ setThemeMode: function (mode) {
       emitProfiles();
     },
 
+    saveProfile: function (id, link, name) {
+      var isVless = link.indexOf('vless://') === 0;
+      var isOlcrtc = link.indexOf('olcrtc://') === 0;
+      if (!isVless && !isOlcrtc) {
+        return JSON.stringify({ ok: false, message: 'Поддерживаются только ссылки vless:// и olcrtc://' });
+      }
+      var existing = id ? state.model.profiles.find(function (p) { return p.id === id; }) : null;
+      if (existing) {
+        existing.link = link;
+        existing.name = name;
+      } else {
+        var newId = 'manual-' + Math.random().toString(36).substr(2, 9);
+        state.model.profiles.push({
+          id: newId,
+          name: name || (isOlcrtc ? 'OLCRTC Сервер' : 'VLESS Сервер'),
+          link: link,
+          source: 'manual',
+          fromSubscription: false,
+          subscriptionId: null,
+          subscriptionName: '',
+          type: isOlcrtc ? 'olcrtc' : 'vless',
+          detail: isOlcrtc ? 'olcrtc · JITSI / datachannel' : '1.2.3.4:443 · REALITY/tcp',
+          address: isOlcrtc ? 'room-01' : '1.2.3.4',
+          port: isOlcrtc ? 0 : 443,
+          network: isOlcrtc ? '' : 'tcp',
+          security: isOlcrtc ? '' : 'reality',
+          sni: 'example.com'
+        });
+      }
+      emitProfiles();
+      return JSON.stringify({ ok: true, message: 'Профиль сохранён' });
+    },
+
+    readClipboardText: function () {
+      return 'vless://00000000-0000-0000-0000-000000000000@1.2.3.4:443?security=reality&type=tcp#TestServer';
+    },
+
     importFromClipboard: function () {
       var hasSubscription = state.model.subscriptions.length > 0;
       if (hasSubscription) {

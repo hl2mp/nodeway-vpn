@@ -25,7 +25,8 @@ data class ServerProfile(
 
     enum class Source(val code: String) {
         CLIPBOARD("clipboard"),
-        SUBSCRIPTION("subscription");
+        SUBSCRIPTION("subscription"),
+        MANUAL("manual");
 
         companion object {
             fun from(code: String?): Source =

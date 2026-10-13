@@ -99,4 +99,19 @@ class OlcrtcProfileTest {
             OlcrtcProfile.parse("olcrtc://jitsi?datachannel@room-01")
         }
     }
+
+    @Test
+    fun `round-trip parse(toLink(parse(link))) == parse(link) для olcrtc`() {
+        val links = listOf(
+            "olcrtc://jitsi?datachannel@https://meet.egovm.ru/hl2mpru#$key\$UK",
+            "olcrtc://telemost?vp8channel@07339722921845#$key",
+            "olcrtc://wbstream?vp8channel<vp8-fps=60&vp8-batch=64>@room-01#$key\$Comment",
+        )
+        for (link in links) {
+            val p1 = OlcrtcProfile.parse(link)
+            val generatedLink = p1.toLink()
+            val p2 = OlcrtcProfile.parse(generatedLink)
+            assertEquals("Round-trip failed for $link", p1, p2)
+        }
+    }
 }

@@ -1018,6 +1018,106 @@
 
     .modal.open { opacity: 1; pointer-events: auto; transform: translateY(-50%) scale(1); }
 
+    .notice-banner {
+        background: #FFF9E6;
+        color: #8A6D3B;
+        border: 1px solid #FAEBCC;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        margin: 8px 16px 0;
+        line-height: 1.4;
+        text-align: left;
+    }
+    [data-theme="dark"] .notice-banner {
+        background: #3A321C;
+        color: #F1C40F;
+        border-color: #584A22;
+    }
+
+    .edit-modal {
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    .form-body {
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        text-align: left;
+    }
+
+    .form-row, .form-row-2 {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .form-row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .form-row label, .form-row-2 label {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 500;
+    }
+
+    .form-input, .form-select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 14px;
+        box-sizing: border-box;
+        font-family: inherit;
+    }
+
+    .scheme-switch {
+        display: flex;
+        background: var(--bg);
+        border-radius: 8px;
+        padding: 2px;
+        border: 1px solid var(--line);
+    }
+    .scheme-btn {
+        flex: 1;
+        padding: 6px;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .scheme-btn.active {
+        background: var(--card);
+        color: var(--text);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .checkbox-row {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+    }
+    .checkbox-row label {
+        font-size: 13px;
+    }
+
+    .form-error {
+        color: var(--red);
+        font-size: 13px;
+        background: var(--chip-error-bg);
+        padding: 8px 12px;
+        border-radius: 8px;
+    }
+
     .modal.alert { text-align: center; }
 
     .alert-head {
@@ -1055,7 +1155,6 @@
         font-size: 18px;
         font-weight: 700;
         color: var(--text);
-        border-bottom: 1px solid var(--line-soft);
     }
 
     .detail {
@@ -1225,6 +1324,7 @@
 <div class="scrim" id="scrim"></div>
 
 <div class="sheet" id="sheet">
+    <button class="sheet-item" data-action="manual">Создать вручную</button>
     <button class="sheet-item" data-action="import">Добавить из буфера</button>
     <button class="sheet-item" data-action="cancel">Отмена</button>
 </div>
@@ -1241,8 +1341,176 @@
     <div class="modal-head" id="modalTitle">Профиль</div>
     <div id="modalBody"></div>
     <button class="sheet-item" data-action="modal-connect" id="modalConnect">Подключиться</button>
+    <button class="sheet-item" data-action="modal-edit" id="modalEdit">Редактировать</button>
     <button class="sheet-item danger" data-action="modal-remove">Удалить</button>
     <button class="sheet-item" data-action="modal-close" style="color:var(--muted)">Закрыть</button>
+</div>
+
+<div class="modal edit-modal" id="editModal">
+    <div class="modal-head" id="editModalTitle">Профиль</div>
+    <div id="subWarning" class="notice-banner" hidden>
+        Профиль из подписки. При её обновлении изменения будут перезаписаны.
+    </div>
+    <div class="form-body">
+        <div class="form-row">
+            <label for="editName">Название</label>
+            <input type="text" id="editName" placeholder="Сервер 1" class="form-input">
+        </div>
+
+        <div class="form-row">
+            <label>Тип протокола</label>
+            <div class="scheme-switch">
+                <button type="button" class="scheme-btn active" id="schemeVlessBtn">VLESS</button>
+                <button type="button" class="scheme-btn" id="schemeOlcrtcBtn">OLCRTC</button>
+            </div>
+        </div>
+
+        <!-- VLESS specific fields -->
+        <div id="vlessFields">
+            <div class="form-row-2">
+                <div>
+                    <label for="vlessAddress">Сервер</label>
+                    <input type="text" id="vlessAddress" placeholder="example.com" class="form-input">
+                </div>
+                <div>
+                    <label for="vlessPort">Порт</label>
+                    <input type="number" id="vlessPort" placeholder="443" class="form-input">
+                </div>
+            </div>
+            <div class="form-row">
+                <label for="vlessId">UUID</label>
+                <input type="text" id="vlessId" placeholder="00000000-0000-0000-0000-000000000000" class="form-input">
+            </div>
+            <div class="form-row-2">
+                <div>
+                    <label for="vlessSecurity">Защита</label>
+                    <select id="vlessSecurity" class="form-select">
+                        <option value="none">none</option>
+                        <option value="tls">tls</option>
+                        <option value="reality">reality</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="vlessNetwork">Сеть</label>
+                    <select id="vlessNetwork" class="form-select">
+                        <option value="tcp">tcp</option>
+                        <option value="ws">ws</option>
+                        <option value="grpc">grpc</option>
+                        <option value="h2">h2</option>
+                        <option value="httpupgrade">httpupgrade</option>
+                        <option value="xhttp">xhttp</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <label for="vlessSni">SNI</label>
+                <input type="text" id="vlessSni" placeholder="example.com" class="form-input">
+            </div>
+            <div class="form-row">
+                <label for="vlessPath">Path</label>
+                <input type="text" id="vlessPath" placeholder="/" class="form-input">
+            </div>
+            <div class="form-row">
+                <label for="vlessMode">Режим (mode)</label>
+                <select id="vlessMode" class="form-select">
+                    <option value="">— не задано</option>
+                    <option value="auto">auto</option>
+                    <option value="packet-up">packet-up</option>
+                    <option value="stream-up">stream-up</option>
+                    <option value="stream-one">stream-one</option>
+                    <option value="multi">multi</option>
+                    <option value="gun">gun</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="vlessFlow">Поток (flow)</label>
+                <select id="vlessFlow" class="form-select">
+                    <option value="">— не задано</option>
+                    <option value="xtls-rprx-vision">xtls-rprx-vision</option>
+                    <option value="xtls-rprx-vision-udp443">xtls-rprx-vision-udp443</option>
+                </select>
+            </div>
+            <div id="realityFields" hidden>
+                <div class="form-row">
+                    <label for="vlessPbk">Public Key (pbk)</label>
+                    <input type="text" id="vlessPbk" placeholder="reality public key" class="form-input">
+                </div>
+                <div class="form-row-2">
+                    <div>
+                        <label for="vlessSid">Short ID (sid)</label>
+                        <input type="text" id="vlessSid" placeholder="short id" class="form-input">
+                    </div>
+                    <div>
+                        <label for="vlessSpx">SpiderX (spx)</label>
+                        <input type="text" id="vlessSpx" placeholder="/" class="form-input">
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <label for="vlessFp">Fingerprint (fp)</label>
+                <select id="vlessFp" class="form-select">
+                    <option value="">— не задано</option>
+                    <option value="chrome">chrome</option>
+                    <option value="firefox">firefox</option>
+                    <option value="safari">safari</option>
+                    <option value="ios">ios</option>
+                    <option value="android">android</option>
+                    <option value="edge">edge</option>
+                    <option value="360">360</option>
+                    <option value="qq">qq</option>
+                    <option value="random">random</option>
+                    <option value="randomized">randomized</option>
+                </select>
+            </div>
+            <div class="form-row checkbox-row">
+                <input type="checkbox" id="vlessInsecure">
+                <label for="vlessInsecure">Разрешить незащищённое соединение (allowInsecure)</label>
+            </div>
+        </div>
+
+        <!-- OLCRTC specific fields -->
+        <div id="olcrtcFields" hidden>
+            <div class="form-row-2">
+                <div>
+                    <label for="olcrtcProvider">Провайдер</label>
+                    <select id="olcrtcProvider" class="form-select">
+                        <option value="jitsi">jitsi</option>
+                        <option value="telemost">telemost</option>
+                        <option value="wbstream">wbstream</option>
+                        <option value="vkcalls">vkcalls</option>
+                        <option value="none">none</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="olcrtcTransport">Транспорт</label>
+                    <select id="olcrtcTransport" class="form-select">
+                        <option value="datachannel">datachannel</option>
+                        <option value="vp8channel">vp8channel</option>
+                        <option value="seichannel">seichannel</option>
+                        <option value="videochannel">videochannel</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <label for="olcrtcRoom">Комната (ID / URL)</label>
+                <input type="text" id="olcrtcRoom" placeholder="room-01" class="form-input">
+            </div>
+            <div class="form-row">
+                <label for="olcrtcKey">Ключ шифрования (64 hex)</label>
+                <input type="text" id="olcrtcKey" placeholder="64 hex symbols" class="form-input">
+            </div>
+            <div class="form-row">
+                <label for="olcrtcPayload">Параметры транспорта (payload)</label>
+                <input type="text" id="olcrtcPayload" placeholder="vp8-fps=60&vp8-batch=64" class="form-input">
+            </div>
+        </div>
+
+        <div id="editError" class="form-error" hidden></div>
+    </div>
+    <div class="modal-actions">
+        <button class="sheet-item primary" id="saveProfileBtn">Сохранить</button>
+        <button class="sheet-item" id="cancelEditBtn" style="color:var(--muted)">Отмена</button>
+    </div>
 </div>
 
 <div class="modal alert" id="alert" role="alertdialog">
@@ -1364,6 +1632,7 @@
         modalTitle: document.getElementById('modalTitle'),
         modalBody: document.getElementById('modalBody'),
         modalConnect: document.getElementById('modalConnect'),
+        editModal: document.getElementById('editModal'),
         coreVersion: document.getElementById('coreVersion'),
         alert: document.getElementById('alert'),
         alertTitle: document.getElementById('alertTitle'),
@@ -1735,6 +2004,7 @@
             head.appendChild(pingBtn);
         }
 
+        // Сколько профилей в группе — одинаково и у подписки, и у локальных.
         if (options.count != null) {
             var badge = document.createElement('span');
             badge.className = 'row-sub';
@@ -1788,12 +2058,14 @@
         model.subscriptions.forEach(function (sub) {
             var subName = sub.name || 'Подписка';
             var title = subName.indexOf('☁') === -1 ? '☁️ ' + subName : subName;
+            var rows = model.profiles.filter(function (p) { return p.subscriptionId === sub.id; });
             el.subscriptions.appendChild(profileGroup({
                 title: title,
                 pingable: true,
+                count: rows.length,
                 collapsed: collapsed.subscriptions[sub.id],
                 remember: function (value) { collapsed.subscriptions[sub.id] = value; },
-                rows: model.profiles.filter(function (p) { return p.subscriptionId === sub.id; }),
+                rows: rows,
                 emptyText: 'Пока нет профилей'
             }));
         });
@@ -1989,8 +2261,10 @@
         el.modalTitle.textContent = profile.name;
         clear(el.modalBody);
 
-        var source = [['Источник', profile.fromSubscription
-            ? (profile.subscriptionName || 'подписка') : 'буфер обмена']];
+        var sourceValue = profile.fromSubscription
+            ? (profile.subscriptionName || 'подписка')
+            : (profile.source === 'manual' ? 'вручную' : 'буфер обмена');
+        var source = [['Источник', sourceValue]];
 
         var details = profile.type === 'olcrtc' ? [
             ['Тип', 'OLCRTC'],
@@ -2027,8 +2301,265 @@
         el.sheet.classList.remove('open');
         el.themeSheet.classList.remove('open');
         el.modal.classList.remove('open');
+        if (el.editModal) el.editModal.classList.remove('open');
         el.alert.classList.remove('open');
         el.scrim.classList.remove('open');
+    }
+
+    var editingProfileId = null;
+    var currentScheme = 'vless';
+
+    /**
+     * Параметры ссылки, которых нет в форме (flow, alpn, host, serviceName и др.).
+     *
+     * Ссылка при сохранении собирается из полей, поэтому всё, что форма не умеет,
+     * иначе терялось бы при любой правке — а `flow` для VLESS+REALITY обязателен.
+     */
+    var vlessExtraParams = {};
+
+    function openEditModal(profileId) {
+        closeOverlays();
+        editingProfileId = profileId;
+        var profile = profileById(profileId);
+
+        var titleEl = document.getElementById('editModalTitle');
+        var subWarnEl = document.getElementById('subWarning');
+        var errEl = document.getElementById('editError');
+        errEl.hidden = true;
+        errEl.textContent = '';
+
+        if (profile) {
+            titleEl.textContent = 'Редактирование профиля';
+            subWarnEl.hidden = !profile.fromSubscription;
+            document.getElementById('editName').value = profile.name || '';
+            setScheme(profile.type === 'olcrtc' ? 'olcrtc' : 'vless');
+            parseLinkToFields(profile.link);
+        } else {
+            titleEl.textContent = 'Новый профиль';
+            subWarnEl.hidden = true;
+            document.getElementById('editName').value = '';
+            setScheme('vless');
+            clearEditFields();
+        }
+
+        if (el.editModal) el.editModal.classList.add('open');
+        el.scrim.classList.add('open');
+    }
+
+    function setScheme(scheme) {
+        currentScheme = scheme;
+        var isVless = scheme === 'vless';
+        document.getElementById('schemeVlessBtn').classList.toggle('active', isVless);
+        document.getElementById('schemeOlcrtcBtn').classList.toggle('active', !isVless);
+        document.getElementById('vlessFields').hidden = !isVless;
+        document.getElementById('olcrtcFields').hidden = isVless;
+    }
+
+    /**
+     * Ставит значение в выпадающий список, добавляя вариант на лету.
+     *
+     * Панели пишут свои значения (`fp=randomized`, `mode=stream-one`), которых
+     * в списке может не быть. Без этого правка профиля молча подменила бы
+     * рабочий параметр на пустой.
+     */
+    function setSelectValue(id, value) {
+        var node = document.getElementById(id);
+        var wanted = value || '';
+        // Варианты, добавленные прошлым разбором, убираем: иначе они копились бы.
+        Array.prototype.slice.call(node.querySelectorAll('option[data-custom]')).forEach(function (option) {
+            node.removeChild(option);
+        });
+        var known = Array.prototype.some.call(node.options, function (option) {
+            return option.value === wanted;
+        });
+        if (!known) {
+            var custom = document.createElement('option');
+            custom.value = wanted;
+            custom.textContent = wanted || '— не задано';
+            custom.setAttribute('data-custom', '');
+            node.appendChild(custom);
+        }
+        node.value = wanted;
+    }
+
+    function clearEditFields() {
+        document.getElementById('vlessAddress').value = '';
+        document.getElementById('vlessPort').value = '443';
+        document.getElementById('vlessId').value = '';
+        document.getElementById('vlessSecurity').value = 'none';
+        document.getElementById('vlessNetwork').value = 'tcp';
+        document.getElementById('vlessSni').value = '';
+        document.getElementById('vlessPath').value = '';
+        setSelectValue('vlessMode', '');
+        setSelectValue('vlessFlow', '');
+        document.getElementById('vlessPbk').value = '';
+        document.getElementById('vlessSid').value = '';
+        document.getElementById('vlessSpx').value = '/';
+        setSelectValue('vlessFp', '');
+        document.getElementById('vlessInsecure').checked = false;
+        document.getElementById('realityFields').hidden = true;
+
+        document.getElementById('olcrtcProvider').value = 'jitsi';
+        document.getElementById('olcrtcTransport').value = 'datachannel';
+        document.getElementById('olcrtcRoom').value = '';
+        document.getElementById('olcrtcKey').value = '';
+        document.getElementById('olcrtcPayload').value = '';
+
+        vlessExtraParams = {};
+    }
+
+    function parseLinkToFields(link) {
+        if (!link) return;
+        var raw = link.trim();
+        if (raw.indexOf('vless://') === 0) {
+            setScheme('vless');
+            try {
+                var body = raw.substring(8);
+                var withoutHash = body.indexOf('#') >= 0 ? body.substring(0, body.indexOf('#')) : body;
+                var queryPart = withoutHash.indexOf('?') >= 0 ? withoutHash.substring(withoutHash.indexOf('?') + 1) : '';
+                var authority = withoutHash.indexOf('?') >= 0 ? withoutHash.substring(0, withoutHash.indexOf('?')) : withoutHash;
+
+                var id = authority.substring(0, authority.indexOf('@'));
+                var hostPort = authority.substring(authority.indexOf('@') + 1);
+
+                var host = hostPort;
+                var port = '443';
+                if (hostPort.lastIndexOf(':') > 0) {
+                    host = hostPort.substring(0, hostPort.lastIndexOf(':')).replace(/^\[|\]$/g, '');
+                    port = hostPort.substring(hostPort.lastIndexOf(':') + 1);
+                }
+
+                var params = {};
+                if (queryPart) {
+                    queryPart.split('&').forEach(function (pair) {
+                        var k = pair.substring(0, pair.indexOf('='));
+                        var v = pair.substring(pair.indexOf('=') + 1);
+                        if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || '');
+                    });
+                }
+
+                // Что форма не показывает — запоминаем и вернём в ссылку при сохранении.
+                var managed = ['security', 'type', 'sni', 'path', 'mode', 'flow', 'encryption', 'pbk', 'sid', 'spx', 'fp', 'allowInsecure'];
+                vlessExtraParams = {};
+                Object.keys(params).forEach(function (key) {
+                    if (managed.indexOf(key) === -1) vlessExtraParams[key] = params[key];
+                });
+
+                document.getElementById('vlessId').value = id || '';
+                document.getElementById('vlessAddress').value = host || '';
+                document.getElementById('vlessPort').value = port || '443';
+                var sec = params.security || 'none';
+                document.getElementById('vlessSecurity').value = sec;
+                // `splithttp` — прежнее имя XHTTP, а `http` в форме зовётся `h2`:
+                // и то, и другое ядро приводится к одному транспорту.
+                var net = (params.type || 'tcp').toLowerCase();
+                if (net === 'splithttp') net = 'xhttp';
+                if (net === 'http') net = 'h2';
+                document.getElementById('vlessNetwork').value = net;
+                document.getElementById('vlessSni').value = params.sni || '';
+                document.getElementById('vlessPath').value = params.path || '';
+                setSelectValue('vlessMode', params.mode);
+                setSelectValue('vlessFlow', params.flow);
+                document.getElementById('vlessPbk').value = params.pbk || '';
+                document.getElementById('vlessSid').value = params.sid || '';
+                document.getElementById('vlessSpx').value = params.spx || '/';
+                setSelectValue('vlessFp', params.fp);
+                document.getElementById('vlessInsecure').checked = params.allowInsecure === '1' || params.allowInsecure === 'true';
+
+                document.getElementById('realityFields').hidden = sec !== 'reality';
+            } catch (e) {}
+        } else if (raw.indexOf('olcrtc://') === 0) {
+            setScheme('olcrtc');
+            try {
+                var body = raw.substring(9);
+                var hashIndex = body.indexOf('#');
+                if (hashIndex > 0) {
+                    var fragment = body.substring(hashIndex + 1);
+                    var head = body.substring(0, hashIndex);
+                    var key = fragment.split('$')[0];
+                    var room = head.substring(head.indexOf('@') + 1);
+                    var authority = head.substring(0, head.indexOf('@'));
+                    var provider = authority.substring(0, authority.indexOf('?'));
+                    var transportPart = authority.substring(authority.indexOf('?') + 1);
+                    var transport = transportPart.substring(0, transportPart.indexOf('<') >= 0 ? transportPart.indexOf('<') : transportPart.length);
+                    var payload = '';
+                    if (transportPart.indexOf('<') >= 0 && transportPart.indexOf('>') > 0) {
+                        payload = transportPart.substring(transportPart.indexOf('<') + 1, transportPart.indexOf('>'));
+                    }
+
+                    document.getElementById('olcrtcProvider').value = provider || 'jitsi';
+                    document.getElementById('olcrtcTransport').value = transport || 'datachannel';
+                    document.getElementById('olcrtcRoom').value = room || '';
+                    document.getElementById('olcrtcKey').value = key || '';
+                    document.getElementById('olcrtcPayload').value = payload || '';
+                }
+            } catch (e) {}
+        }
+    }
+
+    function buildLinkFromFields() {
+        if (currentScheme === 'vless') {
+            var id = document.getElementById('vlessId').value.trim();
+            var addr = document.getElementById('vlessAddress').value.trim();
+            var port = document.getElementById('vlessPort').value.trim() || '443';
+            var name = document.getElementById('editName').value.trim();
+
+            if (addr.indexOf(':') >= 0 && addr.indexOf('[') !== 0) {
+                addr = '[' + addr + ']';
+            }
+
+            var link = 'vless://' + id + '@' + addr + ':' + port;
+            // У VLESS внутреннее шифрование всегда `none` — параметр неизменен, но
+            // его пишут все клиенты, и без него ссылка выглядит неполной.
+            var params = ['encryption=none'];
+            var net = document.getElementById('vlessNetwork').value;
+            if (net && net !== 'tcp') params.push('type=' + encodeURIComponent(net));
+            var sec = document.getElementById('vlessSecurity').value;
+            if (sec && sec !== 'none') params.push('security=' + encodeURIComponent(sec));
+            var sni = document.getElementById('vlessSni').value.trim();
+            if (sni) params.push('sni=' + encodeURIComponent(sni));
+            var path = document.getElementById('vlessPath').value.trim();
+            if (path && path !== '/') params.push('path=' + encodeURIComponent(path));
+            var mode = document.getElementById('vlessMode').value.trim();
+            if (mode) params.push('mode=' + encodeURIComponent(mode));
+            var flow = document.getElementById('vlessFlow').value.trim();
+            if (flow) params.push('flow=' + encodeURIComponent(flow));
+
+            if (sec === 'reality') {
+                var pbk = document.getElementById('vlessPbk').value.trim();
+                if (pbk) params.push('pbk=' + encodeURIComponent(pbk));
+                var sid = document.getElementById('vlessSid').value.trim();
+                if (sid) params.push('sid=' + encodeURIComponent(sid));
+                var spx = document.getElementById('vlessSpx').value.trim();
+                if (spx && spx !== '/') params.push('spx=' + encodeURIComponent(spx));
+            }
+
+            var fp = document.getElementById('vlessFp').value.trim();
+            if (fp) params.push('fp=' + encodeURIComponent(fp));
+            if (document.getElementById('vlessInsecure').checked) params.push('allowInsecure=1');
+
+            // Возвращаем параметры, которых нет в форме: без них часть конфигов не поднимется.
+            Object.keys(vlessExtraParams).forEach(function (key) {
+                params.push(key + '=' + encodeURIComponent(vlessExtraParams[key]));
+            });
+
+            if (params.length > 0) link += '?' + params.join('&');
+            if (name) link += '#' + encodeURIComponent(name);
+            return link;
+        } else {
+            var provider = document.getElementById('olcrtcProvider').value;
+            var transport = document.getElementById('olcrtcTransport').value;
+            var payload = document.getElementById('olcrtcPayload').value.trim();
+            var room = document.getElementById('olcrtcRoom').value.trim();
+            var key = document.getElementById('olcrtcKey').value.trim();
+            var name = document.getElementById('editName').value.trim();
+
+            var link = 'olcrtc://' + provider + '?' + transport;
+            if (payload) link += '<' + payload + '>';
+            link += '@' + room + '#' + key;
+            if (name) link += '$' + name;
+            return link;
+        }
     }
 
     function renderTheme() {
@@ -2418,7 +2949,9 @@
         var action = event.target.getAttribute('data-action');
         if (!action) return;
         closeOverlays();
-        if (action === 'import') {
+        if (action === 'manual') {
+            openEditModal(null);
+        } else if (action === 'import') {
             var reply = parse(bridge.importFromClipboard());
             if (reply) log(reply.message);
         }
@@ -2428,6 +2961,9 @@
         var action = event.target.getAttribute('data-action');
         if (!action) return;
         if (action === 'modal-close') closeOverlays();
+        if (action === 'modal-edit') {
+            openEditModal(modalProfileId);
+        }
         if (action === 'modal-connect') {
             var profile = profileById(modalProfileId);
             closeOverlays();
@@ -2447,6 +2983,28 @@
             }, 'Профиль «' + target.name + '» будет удалён без возможности восстановления.');
         }
     });
+
+    document.getElementById('schemeVlessBtn').onclick = function () { setScheme('vless'); };
+    document.getElementById('schemeOlcrtcBtn').onclick = function () { setScheme('olcrtc'); };
+    document.getElementById('vlessSecurity').onchange = function () {
+        document.getElementById('realityFields').hidden = this.value !== 'reality';
+    };
+
+    document.getElementById('saveProfileBtn').onclick = function () {
+        var link = (buildLinkFromFields() || '').trim();
+        var name = document.getElementById('editName').value.trim();
+        var reply = parse(bridge.saveProfile(editingProfileId, link, name));
+        if (reply && reply.ok) {
+            closeOverlays();
+            log(reply.message || 'Профиль сохранён');
+        } else {
+            var errEl = document.getElementById('editError');
+            errEl.textContent = (reply && reply.message) ? reply.message : 'Ошибка сохранения профиля';
+            errEl.hidden = false;
+        }
+    };
+
+    document.getElementById('cancelEditBtn').onclick = closeOverlays;
 
     window.setInsets = function (top, bottom) {
         document.documentElement.style.setProperty('--inset-top', (top || 0) + 'px');
