@@ -1129,6 +1129,10 @@
         <span>Тема<small>Светлая, тёмная или как в системе</small></span>
         <span class="value" id="themeValue">Как в системе</span>
       </button>
+      <button class="settings-row" id="themeStyleRow">
+        <span>Стиль темы<small>Classic (iOS-like) или Material 3</small></span>
+        <span class="value" id="themeStyleValue">Classic</span>
+      </button>
     </div>
 
     <h3 class="section-title">О приложении</h3>
@@ -1155,6 +1159,13 @@
     <button class="sheet-item" data-theme-mode="system">Как в системе</button>
     <button class="sheet-item" data-theme-mode="light">Светлая</button>
     <button class="sheet-item" data-theme-mode="dark">Тёмная</button>
+    <button class="sheet-item" data-action="cancel">Отмена</button>
+</div>
+
+<!-- Выбор стиля темы: Classic или Material 3. -->
+<div class="sheet" id="themeStyleSheet">
+    <button class="sheet-item" data-theme-style="classic">Classic</button>
+    <button class="sheet-item" data-theme-style="m3">Material 3</button>
     <button class="sheet-item" data-action="cancel">Отмена</button>
 </div>
 
@@ -1410,8 +1421,12 @@
     /** Выбранная тема: 'system', 'light' или 'dark'. */
     var themeMode = 'system';
 
+    /** Выбранный стиль темы: 'classic' или 'm3'. */
+    var themeStyle = 'classic';
+
     /** Как темы выглядят в строке настроек. */
     var THEME_NAMES = { system: 'Как в системе', light: 'Светлая', dark: 'Тёмная' };
+    var THEME_STYLE_NAMES = { classic: 'Classic', m3: 'Material 3' };
 
     /** Записи журнала целиком: перерисовка под фильтр идёт из этого массива. */
     var journalEntries = [];
@@ -1478,8 +1493,11 @@
         scrim: document.getElementById('scrim'),
         sheet: document.getElementById('sheet'),
         themeSheet: document.getElementById('themeSheet'),
+        themeStyleSheet: document.getElementById('themeStyleSheet'),
         themeRow: document.getElementById('themeRow'),
+        themeStyleRow: document.getElementById('themeStyleRow'),
         themeValue: document.getElementById('themeValue'),
+        themeStyleValue: document.getElementById('themeStyleValue'),
         modal: document.getElementById('modal'),
         modalTitle: document.getElementById('modalTitle'),
         modalBody: document.getElementById('modalBody'),
@@ -2277,6 +2295,7 @@
     function closeOverlays() {
         el.sheet.classList.remove('open');
         el.themeSheet.classList.remove('open');
+        el.themeStyleSheet.classList.remove('open');
         el.modal.classList.remove('open');
         if (el.editModal) el.editModal.classList.remove('open');
         el.alert.classList.remove('open');
@@ -2549,10 +2568,26 @@
         });
     }
 
+    /** Подпись в строке настроек и галочка в листе выбора стиля темы. */
+    function renderThemeStyle() {
+        el.themeStyleValue.textContent = THEME_STYLE_NAMES[themeStyle] || THEME_STYLE_NAMES.classic;
+        var items = el.themeStyleSheet.querySelectorAll('[data-theme-style]');
+        Array.prototype.forEach.call(items, function (item) {
+            var on = item.getAttribute('data-theme-style') === themeStyle;
+            item.classList.toggle('current', on);
+        });
+    }
+
     /** Выбор темы приходит из приложения: там он и хранится, переживая перезапуск. */
     window.onThemeMode = function (mode) {
         themeMode = mode || 'system';
         renderTheme();
+    };
+
+    /** Выбор стиля темы приходит из приложения. */
+    window.onThemeStyle = function (style) {
+        themeStyle = style || 'classic';
+        renderThemeStyle();
     };
 
     /**
@@ -2998,6 +3033,19 @@
     closeOverlays();
     if (!mode) return;
     bridge.setThemeMode(mode);
+  });
+
+  el.themeStyleRow.onclick = function () {
+    renderThemeStyle();
+    el.themeStyleSheet.classList.add('open');
+    el.scrim.classList.add('open');
+  };
+
+  el.themeStyleSheet.addEventListener('click', function (event) {
+    var style = event.target.getAttribute('data-theme-style');
+    closeOverlays();
+    if (!style) return;
+    bridge.setThemeStyle(style);
   });
 
   el.sheet.addEventListener('click', function (event) {

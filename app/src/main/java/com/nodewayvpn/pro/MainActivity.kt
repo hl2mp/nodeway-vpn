@@ -264,6 +264,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
                     // Режим оформления уже задан адресом страницы, а сделанный
                     // выбор подписан в строке настроек — его страница узнаёт отсюда.
                     pushTheme(pageTheme(), prefs.themeMode)
+                    // Стиль темы (Classic / Material 3) тоже надо подписать на новой странице.
+                    pushThemeStyle(prefs.themeStyle)
                     // Страница перерисована — отдаём ей журнал целиком, без дублей.
                     startJournal()
                 }
@@ -319,7 +321,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         handleImportLink(intent)
         intent.data = null
 
-        webView.loadUrl("file:///android_asset/index.html?theme=${pageTheme()}")
+        webView.loadUrl("file:///android_asset/${themeHtmlFile()}?theme=${pageTheme()}")
         // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
         warmInstalledAppsCache()
         requestNotificationPermissionIfNeeded()
@@ -341,6 +343,17 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
         val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         return if (night == Configuration.UI_MODE_NIGHT_YES) "dark" else "light"
+    }
+
+    /**
+     * Имя HTML-файла текущего стиля темы.
+     * Зависит от настройки themeStyle: "classic" -> index.html, "m3" -> theme-m3.html
+     */
+    private fun themeHtmlFile(): String {
+        return when (prefs.themeStyle) {
+            "m3" -> "theme-m3.html"
+            else -> "index.html"
+        }
     }
 
     /**
@@ -422,6 +435,19 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         pushTheme(applied, prefs.themeMode)
     }
 
+    /**
+     * Применяет выбор стиля темы: "classic" или "m3".
+     *
+     * Перезагружает WebView с соответствующим HTML-файлом.
+     */
+    override fun onSetThemeStyleRequested(style: String) {
+        runOnUiThread {
+            prefs.themeStyle = style
+            // Перезагружаем WebView с новым HTML файлом
+            webView.loadUrl("file:///android_asset/${themeHtmlFile()}?theme=${pageTheme()}")
+        }
+    }
+
     /** Сообщает странице и режим оформления, и сделанный выбор. */
     private fun pushTheme(applied: String, chosen: String) {
         val script = "window.setUiMode && window.setUiMode('$applied');" +
@@ -430,6 +456,14 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         // evaluateJavascript оттуда не работает, и без переноса вызов просто теряется.
         runOnUiThread {
             applySystemBars(applied == "dark")
+            runCatching { webView.evaluateJavascript(script, null) }
+        }
+    }
+
+    /** Сообщает странице выбранный стиль темы (Classic / Material 3). */
+    private fun pushThemeStyle(style: String) {
+        val script = "window.onThemeStyle && window.onThemeStyle('$style');"
+        runOnUiThread {
             runCatching { webView.evaluateJavascript(script, null) }
         }
     }

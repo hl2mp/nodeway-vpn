@@ -122,6 +122,13 @@ class VpnWebBridge(private val host: Host) {
          * тем же вызовом: настройка видна в том же экране, где её выбрали.
          */
         fun onSetThemeModeRequested(mode: String)
+
+        /**
+         * Выбор стиля темы: "classic" или "m3".
+         *
+         * Применяется с перезагрузкой WebView, так как это разные HTML-файлы.
+         */
+        fun onSetThemeStyleRequested(style: String)
     }
 
     @JavascriptInterface
@@ -210,6 +217,10 @@ class VpnWebBridge(private val host: Host) {
     /** Тема оформления. Режим сразу применяется, ответ приходит в onThemeMode. */
     @JavascriptInterface
     fun setThemeMode(mode: String) = host.onSetThemeModeRequested(mode)
+
+    /** Стиль темы: "classic" или "m3". Перезагружает WebView с новым HTML. */
+    @JavascriptInterface
+    fun setThemeStyle(style: String) = host.onSetThemeStyleRequested(style)
 
     private fun uiState(): String = JSONObject().apply {
         put("state", JSONObject(host.uiState()))
