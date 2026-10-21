@@ -65,6 +65,9 @@ class VpnWebBridge(private val host: Host) {
 
         fun coreVersion(): String
 
+        /** Версия ядра olcrtc: пустая строка, если версию узнать не удалось. */
+        fun olcrtcVersion(): String
+
         fun appVersion(): String
 
         /** Полный снимок профилей, подписок и активного подключения. */
@@ -225,6 +228,7 @@ class VpnWebBridge(private val host: Host) {
     private fun uiState(): String = JSONObject().apply {
         put("state", JSONObject(host.uiState()))
         put("coreVersion", host.coreVersion())
+        put("olcrtcVersion", host.olcrtcVersion())
         put("appVersion", host.appVersion())
         put("journalEnabled", host.journalEnabled())
     }.toString()

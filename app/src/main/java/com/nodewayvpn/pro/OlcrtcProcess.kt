@@ -91,12 +91,6 @@ class OlcrtcProcess(private val context: Context) {
         }
     }
 
-    /**
-     * `Process.isAlive` и `waitFor(timeout)` появились только в API 26,
-     * а минимальная версия приложения ниже, поэтому состояние читаем через `exitValue`.
-     */
-    private fun hasExited(running: Process): Boolean = runCatching { running.exitValue() }.isSuccess
-
     /** Читает логи процесса, пока он жив, попутно запоминая хвост для сообщения об ошибке. */
     private fun drainLogs(running: Process) {
         Thread({
@@ -180,5 +174,81 @@ class OlcrtcProcess(private val context: Context) {
         private const val PROBE_TIMEOUT_MS = 1_000
         private const val POLL_INTERVAL_MS = 100L
         private const val LOG_TAIL_LINES = 4
+
+        /** Сколько ждём ответа на `--version` от бинарника. */
+        private const val VERSION_TIMEOUT_MS = 5_000L
+
+        /**
+         * Ответ `--version` кэшируется: бинарник в сборке один и не меняется,
+         * а запускать процесс на каждый запрос страницы незачем.
+         */
+        @Volatile
+        private var cachedVersion: String? = null
+
+        /**
+         * Версия ядра olcrtc для показа в настройках.
+         *
+         * Пустая строка означает, что версию узнать не удалось: бинарник не
+         * собран либо собран из версии, где флага `--version` ещё не было.
+         */
+        fun version(context: Context): String {
+            cachedVersion?.let { return it }
+            val version = readVersion(context)
+            cachedVersion = version
+            return version
+        }
+
+        /**
+         * Спрашивает версию у бинарника: `olcrtc --version` печатает одну строку.
+         *
+         * Вывод читается отдельным потоком: процесс может успеть заполнить буфер
+         * канала и зависнуть на записи, пока мы ждём его выхода.
+         */
+        private fun readVersion(context: Context): String = runCatching {
+            val binary = File(context.applicationInfo.nativeLibraryDir, BINARY_NAME)
+            if (!binary.exists()) return@runCatching ""
+            val started = ProcessBuilder(binary.absolutePath, "--version")
+                .redirectErrorStream(true)
+                .start()
+            val output = StringBuilder()
+            val reader = Thread({
+                runCatching {
+                    started.inputStream.bufferedReader().forEachLine { output.appendLine(it) }
+                }
+            }, "olcrtc-version")
+            reader.isDaemon = true
+            reader.start()
+            if (!waitForExit(started, System.currentTimeMillis() + VERSION_TIMEOUT_MS)) {
+                started.destroy()
+                return@runCatching ""
+            }
+            reader.join(VERSION_TIMEOUT_MS)
+            // Ненулевой код возврата: бинарник не понял флаг и написал в stderr
+            // что-то вроде «config file not found: --version».
+            if (started.exitValue() != 0) return@runCatching ""
+            parseVersion(output.toString())
+        }.getOrDefault("")
+
+        /** Достаёт версию из строки `olcrtc <версия>`. */
+        internal fun parseVersion(output: String): String {
+            val line = output.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }
+                ?: return ""
+            return line.removePrefix("olcrtc ").trim()
+        }
+
+        /**
+         * `Process.isAlive` и `waitFor(timeout)` появились только в API 26,
+         * а минимальная версия приложения ниже, поэтому состояние читаем через `exitValue`.
+         */
+        private fun hasExited(running: Process): Boolean = runCatching { running.exitValue() }.isSuccess
+
+        /** Ждёт выхода процесса до дедлайна. */
+        private fun waitForExit(running: Process, deadline: Long): Boolean {
+            while (System.currentTimeMillis() < deadline) {
+                if (hasExited(running)) return true
+                runCatching { Thread.sleep(POLL_INTERVAL_MS) }
+            }
+            return false
+        }
     }
 }

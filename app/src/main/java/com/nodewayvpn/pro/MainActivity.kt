@@ -67,6 +67,14 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     @Volatile
     private var installedAppsCache: List<InstalledApp>? = null
 
+    /**
+     * Версия ядра olcrtc, узнаётся один раз за жизнь процесса.
+     *
+     * Пусто, пока бинарник не ответил: спрашивать его из потока страницы нельзя.
+     */
+    @Volatile
+    private var olcrtcVersionText: String = ""
+
     /** Высота статус-бара и нижней панели навигации в CSS-пикселях. */
     private var insetTop = 0
     private var insetBottom = 0
@@ -266,6 +274,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
                     pushTheme(pageTheme(), prefs.themeMode)
                     // Стиль темы (Classic / Material 3) тоже надо подписать на новой странице.
                     pushThemeStyle(prefs.themeStyle)
+                    // Версия ядра olcrtc могла прийти до загрузки страницы — подписываем заново.
+                    pushOlcrtcVersion()
                     // Страница перерисована — отдаём ей журнал целиком, без дублей.
                     startJournal()
                 }
@@ -324,6 +334,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         webView.loadUrl("file:///android_asset/${themeHtmlFile()}?theme=${pageTheme()}")
         // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
         warmInstalledAppsCache()
+        // Версию ядра olcrtc тоже узнаём сразу: она нужна в настройках.
+        loadOlcrtcVersion()
         requestNotificationPermissionIfNeeded()
     }
 
@@ -463,6 +475,34 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     /** Сообщает странице выбранный стиль темы (Classic / Material 3). */
     private fun pushThemeStyle(style: String) {
         val script = "window.onThemeStyle && window.onThemeStyle('$style');"
+        runOnUiThread {
+            runCatching { webView.evaluateJavascript(script, null) }
+        }
+    }
+
+    /**
+     * Узнаёт версию ядра olcrtc и отдаёт её странице.
+     *
+     * Отдельным потоком: бинарник запускается процессом, а спрашивать его из
+     * потока WebView нельзя — там нельзя ждать. Своего потока, а не сетевого:
+     * загрузка подписки умеет занять поток надолго, а версия нужна сразу.
+     */
+    private fun loadOlcrtcVersion() {
+        Thread({
+            val version = OlcrtcProcess.version(this@MainActivity)
+            runOnUiThread {
+                olcrtcVersionText = version
+                pushOlcrtcVersion()
+            }
+        }, "olcrtc-version").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    /** Сообщает странице версию ядра olcrtc. */
+    private fun pushOlcrtcVersion() {
+        val script = "window.onOlcrtcVersion && window.onOlcrtcVersion('${escape(olcrtcVersionText)}');"
         runOnUiThread {
             runCatching { webView.evaluateJavascript(script, null) }
         }
@@ -696,6 +736,8 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     override fun onReadClipboardText(): String = readClipboard().orEmpty()
 
     override fun coreVersion(): String = runCatching { XrayCore.version() }.getOrDefault("")
+
+    override fun olcrtcVersion(): String = olcrtcVersionText
 
     override fun journalEnabled(): Boolean = Journal.enabled
 

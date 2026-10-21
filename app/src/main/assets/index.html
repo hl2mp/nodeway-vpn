@@ -1138,7 +1138,10 @@
     <h3 class="section-title">О приложении</h3>
     <div class="group">
         <div class="settings-row">
-            <span>Ядро</span><span class="value" id="coreVersion">—</span>
+            <span>Ядро Xray</span><span class="value" id="coreVersion">—</span>
+        </div>
+        <div class="settings-row">
+            <span>Ядро olcrtc</span><span class="value" id="olcrtcVersion">—</span>
         </div>
         <div class="settings-row">
             <span>Версия приложения</span><span class="value" id="appVersion">—</span>
@@ -1415,6 +1418,7 @@
     /** Какую группу запустили: до первого события сервиса profileId ещё пуст. */
     var pingStartKey = '';
     var coreVersion = '';
+  var olcrtcVersion = '';
     var modalProfileId = '';
     var logCollapsed = false;
 
@@ -1504,6 +1508,7 @@
         modalConnect: document.getElementById('modalConnect'),
         editModal: document.getElementById('editModal'),
         coreVersion: document.getElementById('coreVersion'),
+  olcrtcVersion: document.getElementById('olcrtcVersion'),
     alert: document.getElementById('alert'),
     alertTitle: document.getElementById('alertTitle'),
     alertText: document.getElementById('alertText'),
@@ -3130,6 +3135,11 @@
     document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
   };
 
+    window.onOlcrtcVersion = function (version) {
+        olcrtcVersion = version || '';
+        el.olcrtcVersion.textContent = olcrtcVersion || '—';
+    };
+
     window.onVpnState = function (payload) {
         var data = parse(payload);
         if (!data) return;
@@ -3187,12 +3197,14 @@
             state = model.vpnState || 'disconnected';
             ping = normalizePing(model.ping);
             coreVersion = initial.coreVersion || '';
+            olcrtcVersion = initial.olcrtcVersion || '';
             applyJournalEnabled(!!initial.journalEnabled);
             if (initial.appVersion) {
                 document.getElementById('appVersion').textContent = initial.appVersion;
             }
         }
         el.coreVersion.textContent = coreVersion || '—';
+        el.olcrtcVersion.textContent = olcrtcVersion || '—';
         el.logChev.innerHTML = ICON_CHEV;
         logCollapsed = collapsed.log;
         el.logBody.style.display = logCollapsed ? 'none' : 'block';

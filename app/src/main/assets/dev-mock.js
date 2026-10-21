@@ -259,6 +259,20 @@
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(mark)));
   }
 
+  /**
+   * Стиль оформления помнится между файлами страницы: демо переключает тему
+   * оформления переходом на другой HTML, и выбор должен пережить переход.
+   */
+  var STYLE_KEY = 'nodeway.demoStyle';
+
+  function readThemeStyle() {
+    try {
+      return localStorage.getItem(STYLE_KEY) === 'm3' ? 'm3' : 'classic';
+    } catch (e) {
+      return 'classic';
+    }
+  }
+
   var state = {
     model: scenarios.default(),
     vpnState: 'disconnected',
@@ -277,7 +291,13 @@
      * Выбор темы. Значение по умолчанию важно: без него первая отрисовка в демо
      * уехала бы в светлую схему на тёмной системе.
      */
-    themeMode: 'system'
+    themeMode: 'system',
+
+    /**
+     * Стиль оформления: в приложении он выбирается в настройках и переживает
+     * перезапуск, здесь — переход между двумя файлами страницы.
+     */
+    themeStyle: readThemeStyle()
   };
 
   // ------------------------------------------------------------------ журнал
@@ -596,6 +616,7 @@ window.NodewayVpn = {
       return JSON.stringify({
         state: snapshot,
         coreVersion: '26.9.30 (mock)',
+        olcrtcVersion: 'v0.12.0 (mock)',
         appVersion: '1.0',
         journalEnabled: state.journalEnabled
       });
@@ -617,6 +638,18 @@ window.NodewayVpn = {
 setThemeMode: function (mode) {
       state.themeMode = mode === 'light' || mode === 'dark' ? mode : 'system';
       applyTheme();
+    },
+
+    /*
+     * В приложении смена стиля перезагружает страницу другим файлом, поэтому
+     * демо делает то же самое: выбор сохраняется и переносится на другой файл.
+     */
+    setThemeStyle: function (style) {
+      state.themeStyle = style === 'm3' ? 'm3' : 'classic';
+      try { localStorage.setItem(STYLE_KEY, state.themeStyle); } catch (e) { /* без localStorage просто не запоминаем */ }
+      if (window.onThemeStyle) window.onThemeStyle(state.themeStyle);
+      var file = state.themeStyle === 'm3' ? 'theme-m3.html' : 'index.html';
+      location.replace(file + location.search);
     },
 
     /* ---------- раздельное туннелирование ---------- */
@@ -797,6 +830,7 @@ setThemeMode: function (mode) {
     },
 
     coreVersion: function () { return '26.9.30 (mock)'; },
+    olcrtcVersion: function () { return 'v0.12.0 (mock)'; },
     appVersion: function () { return '1.0'; }
   };
 
@@ -928,6 +962,22 @@ setThemeMode: function (mode) {
   }
 
   /*
+   * Выбранный стиль оформления сообщается странице, как это делает приложение
+   * при загрузке: иначе строка настройки показывала бы Classic в Material 3.
+   */
+  function applyThemeStyle() {
+    if (window.onThemeStyle) window.onThemeStyle(state.themeStyle);
+  }
+
+  /*
+   * Версия ядра olcrtc приезжает отдельным вызовом, как и в приложении:
+   * бинарник спрашивается в фоне, и страница узнаёт о нём позже снимка.
+   */
+  function pushOlcrtcVersion() {
+    if (window.onOlcrtcVersion) window.onOlcrtcVersion('v0.12.0 (mock)');
+  }
+
+  /*
    * Стартовые строки отдаём по событию load, а не по setTimeout.
    *
    * Мок подключается отдельным <script> перед разметкой страницы и выполняется
@@ -940,6 +990,8 @@ setThemeMode: function (mode) {
     emitJournalReset();
     applyJournalButton();
     applyTheme();
+    applyThemeStyle();
+    pushOlcrtcVersion();
   });
 
   applyPanelState();

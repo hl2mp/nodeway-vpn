@@ -23,10 +23,10 @@
     :root {
         color-scheme: light;
 
-        --bg: #f7f9fc;
-        --card: #f2f4f7;              /* surface-container-low */
+        --bg: #ededf6;
+        --card: #faf8fe;              /* surface-container-low */
         --card-strong: #ffffff;        /* surface-container-lowest */
-        --card-high: #eceef1;          /* surface-container */
+        --card-high: #ffffff;          /* surface-container */
         --line: rgba(195, 198, 214, .55);
         --line-soft: rgba(195, 198, 214, .35);
         --text: #191c1e;
@@ -69,8 +69,8 @@
     :root[data-theme='dark'] {
         color-scheme: dark;
 
-        --bg: #111418;
-        --card: #1d2024;
+        --bg: #17191f;
+        --card: #292c34;
         --card-strong: #0c0e12;
         --card-high: #212429;
         --line: rgba(255, 255, 255, .10);
@@ -101,7 +101,7 @@
         --press-tint: rgba(255, 255, 255, .12);
         --scrim: rgba(0, 0, 0, .6);
         --sheet-bg: #2b2e34;
-        --modal-bg: #1d2024;
+        --modal-bg: #292c34;
 
         --log-xray: #8FA3BA;
         --log-olcrtc: #7FB89E;
@@ -113,8 +113,8 @@
     @media (prefers-color-scheme: dark) {
         :root:not([data-theme='light']) {
             color-scheme: dark;
-            --bg: #111418;
-            --card: #1d2024;
+            --bg: #17191f;
+            --card: #292c34;
             --card-strong: #0c0e12;
             --card-high: #212429;
             --line: rgba(255, 255, 255, .10);
@@ -141,7 +141,7 @@
             --press-tint: rgba(255, 255, 255, .12);
             --scrim: rgba(0, 0, 0, .6);
             --sheet-bg: #2b2e34;
-            --modal-bg: #1d2024;
+            --modal-bg: #292c34;
             --log-xray: #8FA3BA;
             --log-olcrtc: #7FB89E;
             --log-warn: #E0B54A;
@@ -1184,17 +1184,17 @@
 
 <header class="navbar" id="appHeader">
     <div class="navbar-side">
-        <button class="icon-btn" id="settingsBtn" aria-label="Настройки" title="Настройки">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                <circle cx="12" cy="12" r="3"/>
+        <button class="icon-btn" id="addBtn" aria-label="Добавить профиль" title="Добавить из буфера">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
             </svg>
         </button>
     </div>
     <div class="navbar-side">
-        <button class="icon-btn" id="addBtn" aria-label="Добавить профиль" title="Добавить из буфера">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14"/>
+        <button class="icon-btn" id="settingsBtn" aria-label="Настройки" title="Настройки">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
             </svg>
         </button>
     </div>
@@ -1317,7 +1317,10 @@
     <h3 class="section-title">О приложении</h3>
     <div class="group">
         <div class="settings-row">
-            <span>Ядро</span><span class="value" id="coreVersion">—</span>
+            <span>Ядро Xray</span><span class="value" id="coreVersion">—</span>
+        </div>
+        <div class="settings-row">
+            <span>Ядро olcrtc</span><span class="value" id="olcrtcVersion">—</span>
         </div>
         <div class="settings-row">
             <span>Версия приложения</span><span class="value" id="appVersion">—</span>
@@ -1581,6 +1584,7 @@
     var pingStopping = false;
     var pingStartKey = '';
     var coreVersion = '';
+  var olcrtcVersion = '';
     var modalProfileId = '';
     var logCollapsed = false;
     var themeMode = 'system';
@@ -1650,6 +1654,7 @@
         modalConnect: document.getElementById('modalConnect'),
         editModal: document.getElementById('editModal'),
         coreVersion: document.getElementById('coreVersion'),
+  olcrtcVersion: document.getElementById('olcrtcVersion'),
         alert: document.getElementById('alert'),
         alertTitle: document.getElementById('alertTitle'),
         alertText: document.getElementById('alertText'),
@@ -3057,7 +3062,12 @@
         document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
     };
 
-    window.onVpnState = function (payload) {
+    window.onOlcrtcVersion = function (version) {
+  olcrtcVersion = version || '';
+  el.olcrtcVersion.textContent = olcrtcVersion || '—';
+  };
+
+  window.onVpnState = function (payload) {
         var data = parse(payload);
         if (!data) return;
         state = data.state;
@@ -3105,12 +3115,14 @@
             state = model.vpnState || 'disconnected';
             ping = normalizePing(model.ping);
             coreVersion = initial.coreVersion || '';
+            olcrtcVersion = initial.olcrtcVersion || '';
             applyJournalEnabled(!!initial.journalEnabled);
             if (initial.appVersion) {
                 document.getElementById('appVersion').textContent = initial.appVersion;
             }
         }
         el.coreVersion.textContent = coreVersion || '—';
+        el.olcrtcVersion.textContent = olcrtcVersion || '—';
         logCollapsed = collapsed.log;
         el.logBody.style.display = logCollapsed ? 'none' : 'block';
         el.logChev.style.transform = logCollapsed ? 'rotate(-90deg)' : '';
