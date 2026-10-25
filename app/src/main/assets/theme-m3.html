@@ -1225,6 +1225,7 @@
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
+		margin-top: 6px;
     }
 
     .update-banner button {
@@ -2723,6 +2724,7 @@
         el.alertText.textContent = detail || '';
         el.alertText.style.display = detail ? '' : 'none';
         el.alertOk.textContent = 'Удалить';
+        el.alertCancel.style.display = '';
         el.alert.classList.add('open');
         el.scrim.classList.add('open');
 
@@ -2730,6 +2732,24 @@
             closeOverlays();
             onYes();
         };
+        el.alertCancel.onclick = closeOverlays;
+    }
+
+    /**
+     * Показывает информационное диалоговое окно своим модалом, а не системным alert().
+     * `title` — заголовок, `message` — тело сообщения.
+     */
+    function alertDlg(title, message) {
+        closeOverlays();
+        el.alertTitle.textContent = title;
+        el.alertText.textContent = message;
+        el.alertText.style.display = message ? '' : 'none';
+        el.alertOk.textContent = 'ОК';
+        el.alertCancel.style.display = 'none';
+        el.alert.classList.add('open');
+        el.scrim.classList.add('open');
+
+        el.alertOk.onclick = closeOverlays;
         el.alertCancel.onclick = closeOverlays;
     }
 
@@ -3169,6 +3189,31 @@
         bridge.checkUpdate();
     };
 
+    el.updateBtn.onclick = function () {
+        if (updateDownloading) {
+            // Сразу меняем UI, не дожидаясь ответа из приложения.
+            updateDownloading = false;
+            el.updateBtn.textContent = 'Обновить';
+            el.updateBtn.disabled = false;
+            el.updateProgress.style.display = 'none';
+            el.updateProgressBar.style.width = '0%';
+            bridge.cancelUpdate();
+        } else {
+            bridge.startUpdate();
+        }
+    };
+
+    el.updateCloseBtn.onclick = function () {
+        // Скрываем баннер и отменяем скачивание (удаляем временный файл).
+        el.updateBanner.classList.remove('visible');
+        updateDownloading = false;
+        el.updateBtn.textContent = 'Обновить';
+        el.updateBtn.disabled = false;
+        el.updateProgress.style.display = 'none';
+        el.updateProgressBar.style.width = '0%';
+        bridge.cancelUpdate();
+    };
+
     window.setInsets = function (top, bottom) {
         document.documentElement.style.setProperty('--inset-top', (top || 0) + 'px');
         document.documentElement.style.setProperty('--inset-bottom', (bottom || 0) + 'px');
@@ -3257,12 +3302,13 @@
     window.onUpdateDownloading = function (downloading) {
         updateDownloading = !!downloading;
         if (el.updateBtn) {
-            el.updateBtn.disabled = downloading;
             if (downloading) {
                 el.updateBtn.textContent = 'Отмена';
                 if (el.updateProgress) el.updateProgress.style.display = 'block';
             } else {
                 el.updateBtn.textContent = 'Обновить';
+                if (el.updateProgress) el.updateProgress.style.display = 'none';
+                if (el.updateProgressBar) el.updateProgressBar.style.width = '0%';
             }
         }
     };
@@ -3286,7 +3332,7 @@
 
     /** Приложение сообщает, что обновлений нет (при ручной проверке). */
     window.onUpdateNotAvailable = function () {
-        alert('Обновлений нет', 'Вы используете последнюю версию приложения.');
+        alertDlg('Обновлений нет', 'Вы используете последнюю версию приложения.');
     };
 
     if (bridge) {
