@@ -132,6 +132,18 @@ class VpnWebBridge(private val host: Host) {
          * Применяется с перезагрузкой WebView, так как это разные HTML-файлы.
          */
         fun onSetThemeStyleRequested(style: String)
+
+        /** Проверить наличие обновлений вручную. */
+        fun onCheckUpdateRequested()
+
+        /** Начать скачивание обновления. */
+        fun onStartUpdate()
+
+        /** Отменить скачивание обновления. */
+        fun onCancelUpdate()
+
+        /** Установить скачанное обновление. */
+        fun onInstallUpdate()
     }
 
     @JavascriptInterface
@@ -224,6 +236,22 @@ class VpnWebBridge(private val host: Host) {
     /** Стиль темы: "classic" или "m3". Перезагружает WebView с новым HTML. */
     @JavascriptInterface
     fun setThemeStyle(style: String) = host.onSetThemeStyleRequested(style)
+
+    /** Проверить обновления вручную (из настроек). */
+    @JavascriptInterface
+    fun checkUpdate() = host.onCheckUpdateRequested()
+
+    /** Начать скачивание обновления. */
+    @JavascriptInterface
+    fun startUpdate() = host.onStartUpdate()
+
+    /** Отменить скачивание обновления. */
+    @JavascriptInterface
+    fun cancelUpdate() = host.onCancelUpdate()
+
+    /** Установить скачанное обновление. */
+    @JavascriptInterface
+    fun installUpdate() = host.onInstallUpdate()
 
     private fun uiState(): String = JSONObject().apply {
         put("state", JSONObject(host.uiState()))

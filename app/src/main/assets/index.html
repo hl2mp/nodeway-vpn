@@ -64,6 +64,19 @@
         /* Отступы под системные панели: приложение передаёт их из Kotlin (setInsets). */
         --inset-top: 0px;
         --inset-bottom: 0px;
+
+        /* Баннер обновления. */
+        --update-bg: #007AFF;
+        --update-text: #FFFFFF;
+        --update-btn-bg: rgba(255, 255, 255, .2);
+        --update-btn-text: #FFFFFF;
+    }
+
+    /* Тёмная тема баннера. */
+    :root[data-theme='dark'] {
+        --update-bg: #0A84FF;
+        --update-btn-bg: rgba(255, 255, 255, .15);
+        --update-btn-text: #FFFFFF;
     }
 
     /*
@@ -206,6 +219,77 @@
         z-index: 20;
         padding: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px) 18px 8px;
         background: var(--bg);
+    }
+
+    /* ---------- баннер обновления ---------- */
+    .update-banner {
+        display: none;
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        padding: 10px 18px;
+        background: var(--update-bg);
+        color: var(--update-text);
+        font-size: 14px;
+        line-height: 1.4;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
+        animation: slideDown .25s ease-out;
+		padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px);
+    }
+
+    .update-banner.visible { display: block; }
+
+    .update-banner h4 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .update-banner p {
+        margin: 0 0 10px;
+        font-size: 13px;
+        opacity: .95;
+    }
+
+    .update-banner .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .update-banner button {
+        background: var(--update-btn-bg);
+        color: var(--update-btn-text);
+        border: none;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .update-banner button:active { opacity: .8; }
+    .update-banner button.cancel { background: transparent; }
+    .update-banner button.install { background: var(--green); }
+
+    .update-banner .progress {
+        margin-top: 8px;
+        height: 4px;
+        background: rgba(255, 255, 255, .25);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .update-banner .progress-bar {
+        height: 100%;
+        background: var(--update-text);
+        width: 0%;
+        transition: width .2s ease;
+    }
+
+    @keyframes slideDown {
+        from { transform: translateY(-100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
     }
 
     .nav-link { color: var(--blue); font-size: 17px; padding: 4px 0; }
@@ -1031,6 +1115,19 @@
 </head>
 <body>
 
+<!-- Баннер обновления (скрыт по умолчанию). -->
+<div class="update-banner" id="updateBanner">
+    <h4>Доступно обновление</h4>
+    <p id="updateText">Версия <span id="updateVersion"></span><span id="updateSize"></span></p>
+    <div id="updateProgress" class="progress" style="display: none;">
+        <div class="progress-bar"></div>
+    </div>
+    <div class="actions" id="updateActions">
+        <button class="cancel" id="updateCloseBtn">Закрыть</button>
+        <button id="updateBtn">Обновить</button>
+    </div>
+</div>
+
 <header class="navbar">
     <button class="nav-link big" id="addBtn" aria-label="Добавить">&#65291;</button>
     <button class="nav-link" id="settingsBtn" aria-label="Настройки">
@@ -1146,6 +1243,7 @@
         <div class="settings-row">
             <span>Версия приложения</span><span class="value" id="appVersion">—</span>
         </div>
+        <button class="settings-row center" id="checkUpdateBtn">Проверить обновления</button>
     </div>
 </main>
 
@@ -1419,7 +1517,11 @@
     /** Какую группу запустили: до первого события сервиса profileId ещё пуст. */
     var pingStartKey = '';
     var coreVersion = '';
-  var olcrtcVersion = '';
+    var olcrtcVersion = '';
+    var updateVersion = '';
+    var updateFileName = '';
+    var updateFileSize = '';
+    var updateDownloading = false;
     var modalProfileId = '';
     var logCollapsed = false;
 
@@ -1509,12 +1611,21 @@
         modalConnect: document.getElementById('modalConnect'),
         editModal: document.getElementById('editModal'),
         coreVersion: document.getElementById('coreVersion'),
-  olcrtcVersion: document.getElementById('olcrtcVersion'),
-    alert: document.getElementById('alert'),
-    alertTitle: document.getElementById('alertTitle'),
-    alertText: document.getElementById('alertText'),
-    alertOk: document.getElementById('alertOk'),
-    alertCancel: document.getElementById('alertCancel')
+        olcrtcVersion: document.getElementById('olcrtcVersion'),
+        updateBanner: document.getElementById('updateBanner'),
+        updateText: document.getElementById('updateText'),
+        updateVersion: document.getElementById('updateVersion'),
+        updateSize: document.getElementById('updateSize'),
+        updateProgress: document.getElementById('updateProgress'),
+        updateProgressBar: document.querySelector('#updateProgress .progress-bar'),
+        updateActions: document.getElementById('updateActions'),
+        updateBtn: document.getElementById('updateBtn'),
+        updateCloseBtn: document.getElementById('updateCloseBtn'),
+        alert: document.getElementById('alert'),
+        alertTitle: document.getElementById('alertTitle'),
+        alertText: document.getElementById('alertText'),
+        alertOk: document.getElementById('alertOk'),
+        alertCancel: document.getElementById('alertCancel')
     };
 
     // Подключено: две одинаковые полоски по центру круга, как в iOS.
@@ -3007,6 +3118,10 @@
         }
     };
 
+    document.getElementById('checkUpdateBtn').onclick = function () {
+        bridge.checkUpdate();
+    };
+
     document.getElementById('importProfiles').onclick = function () {
         var reply = parse(bridge.importFromClipboard());
         if (reply) log(reply.message);
@@ -3139,6 +3254,63 @@
     window.onOlcrtcVersion = function (version) {
         olcrtcVersion = version || '';
         el.olcrtcVersion.textContent = olcrtcVersion || '—';
+    };
+
+    /** Приложение сообщает о доступном обновлении. */
+    window.onUpdateAvailable = function (version, fileName, sizeText) {
+        updateVersion = version;
+        updateFileName = fileName;
+        updateFileSize = sizeText;
+        el.updateVersion.textContent = version;
+        el.updateSize.textContent = sizeText;
+        el.updateProgress.style.display = 'none';
+        el.updateProgressBar.style.width = '0%';
+        el.updateBtn.textContent = 'Обновить';
+        el.updateBtn.disabled = false;
+        el.updateBtn.onclick = function () {
+            if (updateDownloading) {
+                bridge.cancelUpdate();
+            } else {
+                bridge.startUpdate();
+            }
+        };
+        el.updateCloseBtn.onclick = function () {
+            el.updateBanner.classList.remove('visible');
+            bridge.cancelUpdate();
+        };
+        el.updateBanner.classList.add('visible');
+    };
+
+    /** Приложение сообщает о начале/конце скачивания. */
+    window.onUpdateDownloading = function (downloading) {
+        updateDownloading = !!downloading;
+        el.updateBtn.disabled = downloading;
+        if (downloading) {
+            el.updateBtn.textContent = 'Отмена';
+            el.updateProgress.style.display = 'block';
+        } else {
+            el.updateBtn.textContent = 'Обновить';
+        }
+    };
+
+    /** Прогресс скачивания в процентах. */
+    window.onUpdateProgress = function (percent) {
+        el.updateProgressBar.style.width = percent + '%';
+    };
+
+    /** Скачивание завершено — показываем кнопку «Установить». */
+    window.onUpdateDownloaded = function () {
+        el.updateProgress.style.display = 'none';
+        el.updateBtn.textContent = 'Установить';
+        el.updateBtn.disabled = false;
+        el.updateBtn.onclick = function () {
+            bridge.installUpdate();
+        };
+    };
+
+    /** Приложение сообщает, что обновлений нет (при ручной проверке). */
+    window.onUpdateNotAvailable = function () {
+        alert('Обновлений нет', 'Вы используете последнюю версию приложения.');
     };
 
     window.onVpnState = function (payload) {

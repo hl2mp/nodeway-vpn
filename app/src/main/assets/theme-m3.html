@@ -64,12 +64,24 @@
 
         --inset-top: 0px;
         --inset-bottom: 0px;
+
+        /* Баннер обновления. */
+        --update-bg: #0041a2;
+        --update-text: #ffffff;
+        --update-btn-bg: rgba(255, 255, 255, .2);
+        --update-btn-text: #ffffff;
     }
 
     :root[data-theme='dark'] {
         color-scheme: dark;
 
         --bg: #17191f;
+
+        --update-bg: #b2c5ff;
+        --update-text: #00201c;
+        --update-btn-bg: rgba(0, 0, 0, .2);
+        --update-btn-text: #00201c;
+    }
         --card: #292c34;
         --card-strong: #0c0e12;
         --card-high: #212429;
@@ -1178,9 +1190,92 @@
     @supports (-webkit-touch-callout: none) {
         .navbar, .settings-bar { -webkit-backdrop-filter: saturate(180%) blur(20px); }
     }
+
+    /* ---------- баннер обновления ---------- */
+    .update-banner {
+        display: none;
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        padding: 10px 16px;
+        background: var(--update-bg);
+        color: var(--update-text);
+        font-size: 14px;
+        line-height: 1.4;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
+        animation: slideDown .25s ease-out;
+    }
+
+    .update-banner.visible { display: block; }
+
+    .update-banner h4 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .update-banner p {
+        margin: 0 0 10px;
+        font-size: 13px;
+        opacity: .95;
+    }
+
+    .update-banner .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .update-banner button {
+        background: var(--update-btn-bg);
+        color: var(--update-btn-text);
+        border: none;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .update-banner button:active { opacity: .8; }
+    .update-banner button.cancel { background: transparent; }
+    .update-banner button.install { background: var(--green); }
+
+    .update-banner .progress {
+        margin-top: 8px;
+        height: 4px;
+        background: rgba(255, 255, 255, .25);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .update-banner .progress-bar {
+        height: 100%;
+        background: var(--update-text);
+        width: 0%;
+        transition: width .2s ease;
+    }
+
+    @keyframes slideDown {
+        from { transform: translateY(-100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
 </style>
 </head>
 <body>
+
+<!-- Баннер обновления (скрыт по умолчанию). -->
+<div class="update-banner" id="updateBanner">
+    <h4>Доступно обновление</h4>
+    <p id="updateText">Версия <span id="updateVersion"></span><span id="updateSize"></span></p>
+    <div id="updateProgress" class="progress" style="display: none;">
+        <div class="progress-bar"></div>
+    </div>
+    <div class="actions" id="updateActions">
+        <button class="cancel" id="updateCloseBtn">Закрыть</button>
+        <button id="updateBtn">Обновить</button>
+    </div>
+</div>
 
 <header class="navbar" id="appHeader">
     <div class="navbar-side">
@@ -1325,6 +1420,7 @@
         <div class="settings-row">
             <span>Версия приложения</span><span class="value" id="appVersion">—</span>
         </div>
+        <button class="settings-row center" id="checkUpdateBtn">Проверить обновления</button>
     </div>
 </main>
 
@@ -1655,7 +1751,16 @@
         modalConnect: document.getElementById('modalConnect'),
         editModal: document.getElementById('editModal'),
         coreVersion: document.getElementById('coreVersion'),
-  olcrtcVersion: document.getElementById('olcrtcVersion'),
+        olcrtcVersion: document.getElementById('olcrtcVersion'),
+        updateBanner: document.getElementById('updateBanner'),
+        updateText: document.getElementById('updateText'),
+        updateVersion: document.getElementById('updateVersion'),
+        updateSize: document.getElementById('updateSize'),
+        updateProgress: document.getElementById('updateProgress'),
+        updateProgressBar: document.querySelector('#updateProgress .progress-bar'),
+        updateActions: document.getElementById('updateActions'),
+        updateBtn: document.getElementById('updateBtn'),
+        updateCloseBtn: document.getElementById('updateCloseBtn'),
         alert: document.getElementById('alert'),
         alertTitle: document.getElementById('alertTitle'),
         alertText: document.getElementById('alertText'),

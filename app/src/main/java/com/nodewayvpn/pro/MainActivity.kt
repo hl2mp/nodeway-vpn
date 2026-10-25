@@ -9,7 +9,11 @@ import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.net.VpnService
+import android.os.Environment
+import androidx.core.content.FileProvider
+import java.io.File
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -130,6 +134,20 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     private var activeProfileId: String = ""
     private var pendingProfileId: String = ""
 
+    // --- Обновления ---
+
+    /** Скачиватель APK. */
+    private lateinit var apkDownloader: ApkDownloader
+
+    /** Ссылка на скачивание. */
+    private var updateDownloadUrl = ""
+    /** Имя файла APK. */
+    private var updateFileName = ""
+    /** Путь к скачанному файлу. */
+    private var updateLocalFile = ""
+    /** Идёт ли загрузка сейчас. */
+    private var updateDownloading = false
+
     private val vpnPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             val profileId = pendingProfileId
@@ -239,6 +257,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
         store = ProfileStore(this)
         prefs = Prefs(this)
+        apkDownloader = ApkDownloader(this)
         // Вид панелей — сразу по теме приложения: enableEdgeToEdge() смотрел на
         // системную, а при выбранной теме они расходятся.
         applySystemBars(pageTheme() == "dark")
@@ -336,6 +355,22 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         warmInstalledAppsCache()
         // Версию ядра olcrtc тоже узнаём сразу: она нужна в настройках.
         loadOlcrtcVersion()
+        // Проверка обновлений приложения (в фоне, не блокирует UI).
+        Thread({
+            val hasUpdate = UpdateChecker.checkForUpdates(this@MainActivity)
+            if (hasUpdate) {
+                runOnUiThread {
+                    pushUpdateAvailable(
+                        prefs.updateVersion,
+                        prefs.updateFileName,
+                        prefs.updateFileSize,
+                    )
+                }
+            }
+        }, "update-checker").apply {
+            isDaemon = true
+            start()
+        }
         requestNotificationPermissionIfNeeded()
     }
 
@@ -460,6 +495,40 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
     }
 
+    override fun onCheckUpdateRequested() {
+        Thread({
+            val hasUpdate = UpdateChecker.checkForUpdates(this@MainActivity)
+            if (hasUpdate) {
+                runOnUiThread {
+                    pushUpdateAvailable(
+                        prefs.updateVersion,
+                        prefs.updateFileName,
+                        prefs.updateFileSize,
+                    )
+                }
+            } else {
+                runOnUiThread {
+                    runCatching { webView.evaluateJavascript("window.onUpdateNotAvailable && window.onUpdateNotAvailable();", null) }
+                }
+            }
+        }, "update-check-manual").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    override fun onStartUpdate() {
+        startUpdate()
+    }
+
+    override fun onCancelUpdate() {
+        cancelUpdate()
+    }
+
+    override fun onInstallUpdate() {
+        installUpdate()
+    }
+
     /** Сообщает странице и режим оформления, и сделанный выбор. */
     private fun pushTheme(applied: String, chosen: String) {
         val script = "window.setUiMode && window.setUiMode('$applied');" +
@@ -506,6 +575,85 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             if (v.isNotEmpty()) v.split("-").first() else "—"
         }
         val script = "window.onOlcrtcVersion && window.onOlcrtcVersion('${escape(displayVersion)}');"
+        runOnUiThread {
+            runCatching { webView.evaluateJavascript(script, null) }
+        }
+    }
+
+    /** Сообщает странице о доступном обновлении. */
+    private fun pushUpdateAvailable(version: String, fileName: String, fileSize: Long) {
+        val sizeText = if (fileSize > 0) " (${fileSize / 1024 / 1024} МБ)" else ""
+        val script = "window.onUpdateAvailable && window.onUpdateAvailable('${escape(version)}', '${escape(fileName)}', '${escape(sizeText)}');"
+        runOnUiThread {
+            runCatching { webView.evaluateJavascript(script, null) }
+        }
+    }
+
+    /** Начать скачивание обновления. */
+    fun startUpdate() {
+        if (updateDownloading || prefs.updateDownloadUrl.isBlank()) return
+        updateDownloading = true
+        runOnUiThread {
+            pushUpdateDownloading(true)
+        }
+        apkDownloader.download(
+            prefs.updateDownloadUrl,
+            prefs.updateFileName,
+            onProgress = { percent ->
+                runOnUiThread { pushUpdateProgress(percent) }
+            },
+            onFinish = { file ->
+                runOnUiThread {
+                    updateDownloading = false
+                    if (file != null) {
+                        updateLocalFile = file.absolutePath
+                        pushUpdateDownloaded()
+                    } else {
+                        pushUpdateDownloading(false)
+                    }
+                }
+            }
+        )
+    }
+
+    /** Отменить скачивание. */
+    fun cancelUpdate() {
+        apkDownloader.cancel()
+        updateDownloading = false
+        runOnUiThread { pushUpdateDownloading(false) }
+    }
+
+    /** Установить скачанный APK. */
+    fun installUpdate() {
+        val file = File(updateLocalFile)
+        if (!file.exists()) return
+        val uri = FileProvider.getUriForFile(this, "com.nodetun.vpn.fileprovider", file)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package.archive")
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        startActivity(intent)
+    }
+
+    /** Сообщает странице состояние скачивания. */
+    private fun pushUpdateDownloading(downloading: Boolean) {
+        val script = "window.onUpdateDownloading && window.onUpdateDownloading($downloading);"
+        runOnUiThread {
+            runCatching { webView.evaluateJavascript(script, null) }
+        }
+    }
+
+    /** Сообщает странице прогресс скачивания. */
+    private fun pushUpdateProgress(percent: Int) {
+        val script = "window.onUpdateProgress && window.onUpdateProgress($percent);"
+        runOnUiThread {
+            runCatching { webView.evaluateJavascript(script, null) }
+        }
+    }
+
+    /** Сообщает странице, что скачивание завершено. */
+    private fun pushUpdateDownloaded() {
+        val script = "window.onUpdateDownloaded && window.onUpdateDownloaded();"
         runOnUiThread {
             runCatching { webView.evaluateJavascript(script, null) }
         }
