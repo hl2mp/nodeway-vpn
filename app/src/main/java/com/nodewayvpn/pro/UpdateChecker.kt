@@ -23,10 +23,12 @@ object UpdateChecker {
      *
      * Вызывается из фона (не из UI-потока). Возвращает true, если найдена новая версия.
      * Если проверка не нужна (кеш 24 часа) или произошла ошибка — false.
+     *
+     * @param force если true — игнорировать кеш 24 часа (ручная проверка из настроек).
      */
-    fun checkForUpdates(context: Context): Boolean {
+    fun checkForUpdates(context: Context, force: Boolean = false): Boolean {
         val prefs = Prefs(context)
-        if (!prefs.shouldCheckUpdates()) return false
+        if (!force && !prefs.shouldCheckUpdates()) return false
 
         return try {
             val json = fetchJson(GITHUB_API)
@@ -58,7 +60,9 @@ object UpdateChecker {
                     }
                 }
 
-                prefs.updateLastCheck = System.currentTimeMillis()
+                // Не обновляем updateLastCheck при найденном обновлении:
+                // чтобы автоматическая проверка через 24 ч могла сработать снова,
+                // а пользователь мог повторить ручную проверку в настройках.
                 prefs.updateAvailable = true
                 prefs.updateVersion = version
                 prefs.updateDownloadUrl = downloadUrl

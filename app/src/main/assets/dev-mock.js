@@ -288,6 +288,18 @@
     journalEnabled: true,
 
     /**
+     * Состояние обновления в демо: имитирует наличие новой версии.
+     * Для теста в браузере доступно обновление 1.0.5.
+     */
+    updateAvailable: true,
+    updateVersion: '1.0.5',
+    updateFileName: 'nodetun-v1.0.5-universal.apk',
+    updateFileSize: 42,
+    updateDownloading: false,
+    updateProgress: 0,
+    updateTimer: null,
+
+    /**
      * Выбор темы. Значение по умолчанию важно: без него первая отрисовка в демо
      * уехала бы в светлую схему на тёмной системе.
      */
@@ -831,7 +843,81 @@ setThemeMode: function (mode) {
 
     coreVersion: function () { return '26.9.30 (mock)'; },
     olcrtcVersion: function () { return 'v0.12.0 (mock)'; },
-    appVersion: function () { return '1.0'; }
+    appVersion: function () { return '1.0.4'; },
+
+    /* ---------- обновления ---------- */
+
+    checkUpdate: function () {
+      // Имитируем сетевую задержку проверки.
+      setTimeout(function () {
+        if (state.updateAvailable && window.onUpdateAvailable) {
+          window.onUpdateAvailable(
+            state.updateVersion,
+            state.updateFileName,
+            ' (' + state.updateFileSize + ' МБ)'
+          );
+        } else if (window.onUpdateNotAvailable) {
+          window.onUpdateNotAvailable();
+        }
+        applyUpdateButtons();
+      }, 1200);
+      return JSON.stringify({ ok: true });
+    },
+
+    startUpdate: function () {
+      if (state.updateDownloading) return;
+      state.updateDownloading = true;
+      state.updateProgress = 0;
+      if (window.onUpdateDownloading) window.onUpdateDownloading(true);
+      applyUpdateButtons();
+
+      // Имитируем скачивание с прогрессом.
+      state.updateTimer = setInterval(function () {
+        state.updateProgress += 7;
+        if (state.updateProgress >= 100) {
+          state.updateProgress = 100;
+          clearInterval(state.updateTimer);
+          state.updateTimer = null;
+          state.updateDownloading = false;
+          if (window.onUpdateDownloading) window.onUpdateDownloading(false);
+          if (window.onUpdateProgress) window.onUpdateProgress(100);
+          setTimeout(function () {
+            if (window.onUpdateDownloaded) window.onUpdateDownloaded();
+          }, 300);
+        } else {
+          if (window.onUpdateProgress) window.onUpdateProgress(state.updateProgress);
+        }
+      }, 400);
+      applyUpdateButtons();
+      return JSON.stringify({ ok: true });
+    },
+
+    cancelUpdate: function () {
+      state.updateDownloading = false;
+      state.updateProgress = 0;
+      if (state.updateTimer) {
+        clearInterval(state.updateTimer);
+        state.updateTimer = null;
+      }
+      if (window.onUpdateDownloading) window.onUpdateDownloading(false);
+      if (window.onUpdateProgress) window.onUpdateProgress(0);
+      applyUpdateButtons();
+      return JSON.stringify({ ok: true });
+    },
+
+    installUpdate: function () {
+      if (!state.updateDownloading && state.updateProgress < 100) return;
+      state.updateAvailable = false;
+      state.updateDownloading = false;
+      state.updateProgress = 0;
+      if (window.onUpdateDownloading) window.onUpdateDownloading(false);
+      if (window.onUpdateProgress) window.onUpdateProgress(0);
+      var banner = document.getElementById('updateBanner');
+      if (banner) banner.classList.remove('visible');
+      emitJournal([journalNow('app', 'info', 'Обновление до ' + state.updateVersion + ' установлено')]);
+      applyUpdateButtons();
+      return JSON.stringify({ ok: true });
+    }
   };
 
   // ------------------------------------------------------------------ панель
@@ -948,6 +1034,30 @@ setThemeMode: function (mode) {
     journalButton.textContent = state.journalEnabled ? 'логи: вкл' : 'логи: выкл';
   }
 
+  // Кнопки обновления для проверки баннера и скачивания.
+  var updateCheckButton = addButton('проверка обновления', function () {
+    window.NodewayVpn.checkUpdate();
+  });
+
+  var updateDownloadButton = addButton('скачать обновление', function () {
+    window.NodewayVpn.startUpdate();
+  });
+
+  var updateCancelButton = addButton('отмена обновления', function () {
+    window.NodewayVpn.cancelUpdate();
+  });
+
+  var updateInstallButton = addButton('установить обновление', function () {
+    window.NodewayVpn.installUpdate();
+  });
+
+  function applyUpdateButtons() {
+    updateDownloadButton.disabled = state.updateDownloading;
+    updateDownloadButton.textContent = state.updateDownloading ? 'скачивание...' : 'скачать обновление';
+    updateCancelButton.disabled = !state.updateDownloading;
+    updateInstallButton.disabled = state.updateProgress < 100;
+  }
+
   /*
    * Тему в демо применяем сами: в приложении этим занимается Kotlin.
    *
@@ -992,6 +1102,10 @@ setThemeMode: function (mode) {
     applyTheme();
     applyThemeStyle();
     pushOlcrtcVersion();
+    // Автоматическая проверка обновлений при загрузке демо.
+    setTimeout(function () {
+      window.NodewayVpn.checkUpdate();
+    }, 1500);
   });
 
   applyPanelState();

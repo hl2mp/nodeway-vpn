@@ -357,14 +357,26 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         loadOlcrtcVersion()
         // Проверка обновлений приложения (в фоне, не блокирует UI).
         Thread({
-            val hasUpdate = UpdateChecker.checkForUpdates(this@MainActivity)
-            if (hasUpdate) {
+            // Если обновление уже найдено ранее и сохранено — показываем баннер
+            // без сетевой проверки ( пользователь мог закрыть баннер, не обновляясь).
+            if (prefs.updateAvailable && prefs.updateVersion.isNotBlank()) {
                 runOnUiThread {
                     pushUpdateAvailable(
                         prefs.updateVersion,
                         prefs.updateFileName,
                         prefs.updateFileSize,
                     )
+                }
+            } else {
+                val hasUpdate = UpdateChecker.checkForUpdates(this@MainActivity)
+                if (hasUpdate) {
+                    runOnUiThread {
+                        pushUpdateAvailable(
+                            prefs.updateVersion,
+                            prefs.updateFileName,
+                            prefs.updateFileSize,
+                        )
+                    }
                 }
             }
         }, "update-checker").apply {
@@ -497,17 +509,17 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     override fun onCheckUpdateRequested() {
         Thread({
-            val hasUpdate = UpdateChecker.checkForUpdates(this@MainActivity)
-            if (hasUpdate) {
-                runOnUiThread {
+            // Ручная проверка игнорирует кеш 24 часа.
+            val hasUpdate = UpdateChecker.checkForUpdates(this@MainActivity, force = true)
+            runOnUiThread {
+                if (hasUpdate || prefs.updateAvailable) {
+                    // Обновление найдено только что или уже было сохранено ранее.
                     pushUpdateAvailable(
                         prefs.updateVersion,
                         prefs.updateFileName,
                         prefs.updateFileSize,
                     )
-                }
-            } else {
-                runOnUiThread {
+                } else {
                     runCatching { webView.evaluateJavascript("window.onUpdateNotAvailable && window.onUpdateNotAvailable();", null) }
                 }
             }

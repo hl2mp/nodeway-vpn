@@ -1204,6 +1204,7 @@
         line-height: 1.4;
         box-shadow: 0 2px 6px rgba(0, 0, 0, .15);
         animation: slideDown .25s ease-out;
+        padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)) + 8px);
     }
 
     .update-banner.visible { display: block; }
@@ -2735,6 +2736,11 @@
     var splitMode = 'all';
     var splitPackages = {};
 
+    var updateVersion = '';
+    var updateFileName = '';
+    var updateFileSize = '';
+    var updateDownloading = false;
+
     var elSplit = {
         all: document.getElementById('splitAll'),
         allow: document.getElementById('splitAllow'),
@@ -3159,6 +3165,10 @@
 
     document.getElementById('cancelEditBtn').onclick = closeOverlays;
 
+    document.getElementById('checkUpdateBtn').onclick = function () {
+        bridge.checkUpdate();
+    };
+
     window.setInsets = function (top, bottom) {
         document.documentElement.style.setProperty('--inset-top', (top || 0) + 'px');
         document.documentElement.style.setProperty('--inset-bottom', (bottom || 0) + 'px');
@@ -3212,6 +3222,71 @@
         if (!data) return;
         log(data.message);
         render();
+    };
+
+    /** Приложение сообщает о доступном обновлении. */
+    window.onUpdateAvailable = function (version, fileName, sizeText) {
+        updateVersion = version;
+        updateFileName = fileName;
+        updateFileSize = sizeText;
+        if (el.updateVersion) el.updateVersion.textContent = version;
+        if (el.updateSize) el.updateSize.textContent = sizeText;
+        if (el.updateProgress) el.updateProgress.style.display = 'none';
+        if (el.updateProgressBar) el.updateProgressBar.style.width = '0%';
+        if (el.updateBtn) {
+            el.updateBtn.textContent = 'Обновить';
+            el.updateBtn.disabled = false;
+            el.updateBtn.onclick = function () {
+                if (updateDownloading) {
+                    bridge.cancelUpdate();
+                } else {
+                    bridge.startUpdate();
+                }
+            };
+        }
+        if (el.updateCloseBtn) {
+            el.updateCloseBtn.onclick = function () {
+                el.updateBanner.classList.remove('visible');
+                bridge.cancelUpdate();
+            };
+        }
+        if (el.updateBanner) el.updateBanner.classList.add('visible');
+    };
+
+    /** Приложение сообщает о начале/конце скачивания. */
+    window.onUpdateDownloading = function (downloading) {
+        updateDownloading = !!downloading;
+        if (el.updateBtn) {
+            el.updateBtn.disabled = downloading;
+            if (downloading) {
+                el.updateBtn.textContent = 'Отмена';
+                if (el.updateProgress) el.updateProgress.style.display = 'block';
+            } else {
+                el.updateBtn.textContent = 'Обновить';
+            }
+        }
+    };
+
+    /** Прогресс скачивания в процентах. */
+    window.onUpdateProgress = function (percent) {
+        if (el.updateProgressBar) el.updateProgressBar.style.width = percent + '%';
+    };
+
+    /** Скачивание завершено — показываем кнопку «Установить». */
+    window.onUpdateDownloaded = function () {
+        if (el.updateProgress) el.updateProgress.style.display = 'none';
+        if (el.updateBtn) {
+            el.updateBtn.textContent = 'Установить';
+            el.updateBtn.disabled = false;
+            el.updateBtn.onclick = function () {
+                bridge.installUpdate();
+            };
+        }
+    };
+
+    /** Приложение сообщает, что обновлений нет (при ручной проверке). */
+    window.onUpdateNotAvailable = function () {
+        alert('Обновлений нет', 'Вы используете последнюю версию приложения.');
     };
 
     if (bridge) {
