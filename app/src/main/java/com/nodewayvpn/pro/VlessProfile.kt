@@ -1,4 +1,4 @@
-package com.nodewayvpn.pro
+package com.nodetun.vpn
 
 import java.net.URLDecoder
 import java.util.Locale

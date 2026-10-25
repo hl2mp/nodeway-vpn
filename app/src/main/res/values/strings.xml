@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Nodeway VPN</string>
+    <string name="app_name">NodeTun</string>
 
     <string name="notification_connecting">Подключение…</string>
-    <string name="notification_connected">Nodeway VPN подключён</string>
+    <string name="notification_connected">NodeTun подключён</string>
     <string name="notification_disconnecting">Отключение…</string>
   <string name="notification_ping">Проверка профилей…</string>
     <!-- Подпись уведомления: имя ядра, через которое на самом деле идёт трафик. -->

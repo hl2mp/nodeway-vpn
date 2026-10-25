@@ -1,4 +1,4 @@
-package com.nodewayvpn.pro
+package com.nodetun.vpn
 
 import java.util.concurrent.CopyOnWriteArrayList
 

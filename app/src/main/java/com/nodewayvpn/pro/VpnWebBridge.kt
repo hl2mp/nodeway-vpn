@@ -1,4 +1,4 @@
-package com.nodewayvpn.pro
+package com.nodetun.vpn
 
 import android.webkit.JavascriptInterface
 import android.util.Log

@@ -1,4 +1,4 @@
-package com.nodewayvpn.pro
+package com.nodetun.vpn
 
 /** Состояние туннеля в терминах, которые понимает UI. */
 enum class VpnState(val code: String) {

@@ -25,13 +25,13 @@ fun signingValue(key: String, env: String): String? =
 val releaseStoreFile = signingValue("storeFile", "NODEWAY_STORE_FILE")
 
 android {
-    namespace = "com.nodewayvpn.pro"
+    namespace = "com.nodetun.vpn"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.nodewayvpn.pro"
+        applicationId = "com.nodetun.vpn"
         minSdk = 24
         targetSdk = 37
         versionCode = 2

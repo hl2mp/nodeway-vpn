@@ -27,5 +27,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Nodeway VPN"
+rootProject.name = "NodeTun"
 include(":app")

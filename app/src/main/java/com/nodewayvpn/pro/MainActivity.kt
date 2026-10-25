@@ -1,4 +1,4 @@
-package com.nodewayvpn.pro
+package com.nodetun.vpn
 
 import android.Manifest
 import android.content.BroadcastReceiver
@@ -502,7 +502,10 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     /** Сообщает странице версию ядра olcrtc. */
     private fun pushOlcrtcVersion() {
-        val script = "window.onOlcrtcVersion && window.onOlcrtcVersion('${escape(olcrtcVersionText)}');"
+        val displayVersion = olcrtcVersionText.let { v ->
+            if (v.isNotEmpty()) v.split("-").first() else "—"
+        }
+        val script = "window.onOlcrtcVersion && window.onOlcrtcVersion('${escape(displayVersion)}');"
         runOnUiThread {
             runCatching { webView.evaluateJavascript(script, null) }
         }
@@ -541,6 +544,10 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     override fun onResume() {
         super.onResume()
         webView.onResume()
+        // После возврата на экран страница может пропустить новые записи:
+        // onPageFinished не срабатывает повторно, а старые логи уже ушли.
+        // Обновляем подписку и отдаём накопленное, чтобы журнал не замолкал.
+        startJournal()
     }
 
     override fun onPause() {

@@ -1,4 +1,4 @@
-package com.nodewayvpn.pro
+package com.nodetun.vpn
 
 import java.io.BufferedReader
 import java.net.HttpURLConnection

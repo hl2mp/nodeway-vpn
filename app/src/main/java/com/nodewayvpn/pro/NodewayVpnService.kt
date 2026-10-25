@@ -1,4 +1,4 @@
-package com.nodewayvpn.pro
+package com.nodetun.vpn
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -790,12 +790,12 @@ class NodewayVpnService : VpnService() {
     /** Файл, куда ядро пишет логи для журнала в приложении. */
     private const val XRAY_LOG_NAME = "xray.log"
 
-        const val ACTION_CONNECT = "com.nodewayvpn.pro.action.CONNECT"
-        const val ACTION_SWITCH = "com.nodewayvpn.pro.action.SWITCH"
-        const val ACTION_DISCONNECT = "com.nodewayvpn.pro.action.DISCONNECT"
-        const val ACTION_STATE = "com.nodewayvpn.pro.action.STATE"
-        const val ACTION_PING = "com.nodewayvpn.pro.action.PING"
-        const val ACTION_CANCEL_PING = "com.nodewayvpn.pro.action.CANCEL_PING"
+        const val ACTION_CONNECT = "com.nodetun.vpn.action.CONNECT"
+        const val ACTION_SWITCH = "com.nodetun.vpn.action.SWITCH"
+        const val ACTION_DISCONNECT = "com.nodetun.vpn.action.DISCONNECT"
+        const val ACTION_STATE = "com.nodetun.vpn.action.STATE"
+        const val ACTION_PING = "com.nodetun.vpn.action.PING"
+        const val ACTION_CANCEL_PING = "com.nodetun.vpn.action.CANCEL_PING"
 
         const val EXTRA_LINK = "extra_link"
         const val EXTRA_STATE = "extra_state"
