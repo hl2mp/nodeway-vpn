@@ -12,15 +12,20 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.net.VpnService
 import android.os.Environment
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import java.io.File
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.app.AlertDialog
+import android.content.DialogInterface
+import android.widget.Toast
 import android.os.Looper
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
+import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -316,6 +321,15 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             webChromeClient = object : WebChromeClient() {
                 override fun onConsoleMessage(message: ConsoleMessage): Boolean {
                     Log.d(TAG, "web: ${message.message()}")
+                    return true
+                }
+
+                // Перехватываем нативный alert() из JS, чтобы не показывать
+                // убогое системное диалоговое окно («The page at file:// says»).
+                // Вся обратная связь с пользователем идёт через кастомные модалки в index.html.
+                override fun onJsAlert(view: WebView, url: String, message: String, result: JsResult): Boolean {
+                    Log.d(TAG, "js alert: $message")
+                    result.confirm()
                     return true
                 }
             }
@@ -628,23 +642,74 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         )
     }
 
-    /** Отменить скачивание. */
+    /** Отменить скачивание. Удаляет частично скачанный файл. */
     fun cancelUpdate() {
         apkDownloader.cancel()
         updateDownloading = false
+        updateLocalFile = ""
+        // Удаляем недокачанный файл, чтобы не занимал место в кэше.
+        val partial = File(applicationContext.cacheDir, prefs.updateFileName)
+        if (partial.exists()) partial.delete()
         runOnUiThread { pushUpdateDownloading(false) }
     }
 
-    /** Установить скачанный APK. */
+    /** Установить скачанный APK через системный диалог установки (Intent.ACTION_VIEW). */
     fun installUpdate() {
         val file = File(updateLocalFile)
         if (!file.exists()) return
-        val uri = FileProvider.getUriForFile(this, "com.nodetun.vpn.fileprovider", file)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package.archive")
-            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+        // Проверка разрешения на установку из неизвестных источников (API 26+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+            requestInstallUnknownAppsPermission()
+            return
         }
-        startActivity(intent)
+
+        try {
+            val uri = FileProvider.getUriForFile(this, "com.nodetun.vpn.fileprovider", file)
+
+            // Попытка 1: ACTION_INSTALL_PACKAGE — прямой вызов системного установщика APK
+            val installIntent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                data = uri
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            if (packageManager.resolveActivity(installIntent, 0) != null) {
+                startActivity(installIntent)
+                return
+            }
+
+            // Попытка 2: ACTION_VIEW с MIME-типом — альтернативный способ
+            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package.archive")
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            if (packageManager.resolveActivity(viewIntent, 0) != null) {
+                startActivity(viewIntent)
+            } else {
+                Log.w(TAG, "No activity found to handle APK install intent")
+                Toast.makeText(this, "Не найдено приложение для установки APK", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to install APK", e)
+            Toast.makeText(this, "Ошибка установки APK", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** Запрашивает разрешение на установку из неизвестных источников (API 26+). */
+    private fun requestInstallUnknownAppsPermission() {
+        val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+            data = Uri.parse("package:${packageName}")
+        }
+        if (intent.resolveActivity(packageManager) != null) {
+            AlertDialog.Builder(this)
+                .setTitle("Установка из неизвестных источников")
+                .setMessage("Для обновления приложения необходимо разрешить установку APK из этого источника.")
+                .setPositiveButton("В настройки") { _, _ -> startActivity(intent) }
+                .setNegativeButton("Отмена") { _, _ -> }
+                .setCancelable(false)
+                .show()
+        } else {
+            Log.w(TAG, "No activity to handle ACTION_MANAGE_UNKNOWN_APP_SOURCES")
+        }
     }
 
     /** Сообщает странице состояние скачивания. */
@@ -686,8 +751,19 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleImportLink(intent)
-        intent.data = null
+        if (intent.action == "com.nodetun.vpn.action.INSTALL_RESULT") {
+            val status = intent.getIntExtra("android.content.pm.extra.STATUS", -1)
+            val msg = when (status) {
+                2 -> "Установка успешно завершена"
+                1 -> "Ожидание действия пользователя"
+                else -> "Ошибка установки (статус $status)"
+            }
+            Log.d(TAG, "Install result: $msg")
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+        } else {
+            handleImportLink(intent)
+            intent.data = null
+        }
     }
 
     override fun onStart() {
