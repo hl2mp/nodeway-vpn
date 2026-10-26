@@ -81,7 +81,7 @@
         --update-text: #00201c;
         --update-btn-bg: rgba(0, 0, 0, .2);
         --update-btn-text: #00201c;
-    }
+
         --card: #292c34;
         --card-strong: #0c0e12;
         --card-high: #212429;
@@ -579,6 +579,52 @@
         font-size: 14px;
         text-align: center;
     }
+
+    /* Спиннер в шапке группы: подписка грузится, профилей ещё нет. */
+    .group-head .spinner { flex: none; }
+
+    /* ---------- плашка о результате импорта ---------- */
+
+    /*
+     * Snackbar внизу экрана: ход и результат загрузки подписки.
+     *
+     * Модальный диалог для этого не годится: ошибка сети не требует
+     * подтверждения, а успех не должен блокировать список под ней.
+     */
+    .snackbar {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        max-width: 420px;
+        margin: 0 auto;
+        bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 16px);
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 16px;
+        background: var(--modal-bg);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+        font-size: 14px;
+        line-height: 1.35;
+        text-align: left;
+        color: var(--text);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(12px);
+        transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .snackbar.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+    .snackbar .spinner { flex: none; }
+
+    .snackbar-text { flex: 1; min-width: 0; }
+
+    /* Ошибка отличается рамкой и цветом текста: сообщение не теряется. */
+    .snackbar.error { border: 1px solid var(--red); }
+    .snackbar.error .snackbar-text { color: var(--red); }
 
     /* ---------- журнал ---------- */
 
@@ -1426,6 +1472,12 @@
     </div>
 </main>
 
+<!-- Плашка о ходе и результате импорта: лежит поверх страницы, внизу. -->
+<div class="snackbar" id="snackbar" role="status" aria-live="polite">
+    <span id="snackbarSpinner" hidden><span class="spinner"></span></span>
+    <span class="snackbar-text" id="snackbarText"></span>
+</div>
+
 <div class="scrim" id="scrim"></div>
 
 <div class="sheet" id="sheet">
@@ -1767,7 +1819,10 @@
         alertTitle: document.getElementById('alertTitle'),
         alertText: document.getElementById('alertText'),
         alertOk: document.getElementById('alertOk'),
-        alertCancel: document.getElementById('alertCancel')
+        alertCancel: document.getElementById('alertCancel'),
+        snackbar: document.getElementById('snackbar'),
+        snackbarText: document.getElementById('snackbarText'),
+        snackbarSpinner: document.getElementById('snackbarSpinner')
     };
 
     /* Иконки — SVG, рисуются currentColor и масштабируются вместе с текстом. */
@@ -2031,7 +2086,16 @@
         renderUptime();
         renderLatency();
 
-        var rows = JSON.stringify([model.profiles, model.selectedProfileId]);
+        // Состояние подписок входит в подпись наравне с профилями: пустая группа
+        // со спиннером — единственный признак, что добавленная подписка уже грузится.
+        // Полный объект подписки не годится: в нём есть тикающий отсчёт до обновления.
+        var rows = JSON.stringify([
+            model.profiles,
+            model.selectedProfileId,
+            model.subscriptions.map(function (sub) {
+                return [sub.id, sub.name, sub.count, !!sub.loading];
+            })
+        ]);
         if (rows !== rowsSignature) {
             rowsSignature = rows;
             renderSubscriptions();
@@ -2141,6 +2205,10 @@
             head.appendChild(badge);
         }
 
+        // Подписка грузится: спиннер в шапке — единственный видимый отклик на
+        // добавление, пока профили не пришли и группа стоит пустой.
+        if (options.loading) head.appendChild(spinner());
+
         head.appendChild(chevron());
         head.onclick = function () {
             group.classList.toggle('collapsed');
@@ -2195,7 +2263,8 @@
                 collapsed: collapsed.subscriptions[sub.id],
                 remember: function (value) { collapsed.subscriptions[sub.id] = value; },
                 rows: rows,
-                emptyText: 'Пока нет профилей'
+                loading: !!sub.loading,
+                emptyText: sub.loading ? 'Загрузка подписки…' : 'Пока нет профилей'
             }));
         });
     }
@@ -2753,6 +2822,51 @@
         el.alertCancel.onclick = closeOverlays;
     }
 
+    // ----------------------------------------------------- плашка сообщений
+
+    var snackbarTimer = null;
+
+    /**
+     * Плашка внизу экрана: ход и результат импорта.
+     *
+     * @param message текст сообщения.
+     * @param options.spinner держать спиннер, пока не придёт результат.
+     * @param options.sticky не гасить по таймеру — загрузку завершит следующий вызов.
+     * @param options.error выделить сообщение как ошибку.
+     */
+    function showSnackbar(message, options) {
+        if (!el.snackbar || !message) return;
+        var opts = options || {};
+        clearTimeout(snackbarTimer);
+        el.snackbarSpinner.hidden = !opts.spinner;
+        el.snackbarText.textContent = message;
+        el.snackbar.classList.toggle('error', !!opts.error);
+        el.snackbar.classList.add('visible');
+        if (opts.sticky) return;
+        snackbarTimer = setTimeout(hideSnackbar, opts.error ? 5000 : 2600);
+    }
+
+    function hideSnackbar() {
+        clearTimeout(snackbarTimer);
+        if (el.snackbar) el.snackbar.classList.remove('visible');
+    }
+
+    /**
+     * Ответ моста на импорт из буфера.
+     *
+     * Ответ приходит сразу, а подписка грузится отдельно: флаг `loading`
+     * означает, что это ещё не результат, а только начало загрузки,  — плашка
+     * со спиннером дождётся события onImportResult.
+     */
+    function applyImportReply(reply) {
+        if (!reply) return;
+        if (reply.loading) {
+            showSnackbar(reply.message, { spinner: true, sticky: true });
+        } else {
+            showSnackbar(reply.message, { error: reply.ok === false });
+        }
+    }
+
     var splitMode = 'all';
     var splitPackages = {};
 
@@ -3082,6 +3196,7 @@
     document.getElementById('importProfiles').onclick = function () {
         var reply = parse(bridge.importFromClipboard());
         if (reply) log(reply.message);
+        applyImportReply(reply);
     };
 
     el.scrim.onclick = closeOverlays;
@@ -3133,6 +3248,8 @@
         } else if (action === 'import') {
             var reply = parse(bridge.importFromClipboard());
             if (reply) log(reply.message);
+            // Результат загрузки подписки придёт позже событием onImportResult.
+            applyImportReply(reply);
         }
     });
 
@@ -3266,6 +3383,8 @@
         var data = parse(payload);
         if (!data) return;
         log(data.message);
+        // Загрузка подписки закончилась: плашка меняет спиннер на результат.
+        showSnackbar(data.message, { error: data.ok === false });
         render();
     };
 

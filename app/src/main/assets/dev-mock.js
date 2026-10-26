@@ -832,11 +832,35 @@ setThemeMode: function (mode) {
           message: 'В буфере обмена уже знакомые ссылки — ничего нового'
         });
       }
+      // Подписка добавляется сразу и помечается грузящейся: страница показывает
+      // группу со спиннером, а результат приходит отдельным onImportResult.
       state.model = scenarios.many();
       state.model.subscriptions = state.model.subscriptions.slice(0, 1);
+      state.model.subscriptions[0].loading = true;
+      state.model.subscriptions[0].count = 0;
+      state.model.profiles = [];
       emitProfiles();
+      var source = state.model.subscriptions[0];
+      setTimeout(function () {
+        source.loading = false;
+        state.model.profiles = scenarios.default().profiles;
+        state.model.profiles.forEach(function (profile) {
+          profile.subscriptionId = source.id;
+          profile.fromSubscription = true;
+        });
+        source.count = state.model.profiles.length;
+        emitProfiles();
+        if (window.onImportResult) {
+          window.onImportResult(JSON.stringify({
+            ok: true, added: 3, total: 3, unsupported: 0,
+            title: source.name,
+            message: 'Подписка «' + source.name + '» загружена: профилей 3'
+          }));
+        }
+      }, 1800);
       return JSON.stringify({
-        ok: true, added: 5, total: 5, unsupported: 0,
+        ok: true, added: 0, total: 0, unsupported: 0,
+        loading: true,
         message: 'Загружаем подписку: panel.example.com'
       });
     },

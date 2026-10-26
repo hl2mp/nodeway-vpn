@@ -887,7 +887,11 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             val source = store.addSubscription(SubscriptionSource.create(subscriptionUrl))
             pushProfiles()
             loadSubscription(source, isNew = true)
-            return result(ok = true, message = "Загружаем подписку: ${source.url}")
+            return result(
+                ok = true,
+                message = "Загружаем подписку: ${source.url}",
+                loading = true,
+            )
         }
 
         val parsed = LinkListParser.parse(text)
@@ -1393,6 +1397,13 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     // endregion
 
+    /**
+     * Ответ странице на запрос импорта.
+     *
+     * `loading = true` означает, что это ещё не результат, а только начало
+     * загрузки подписки: страница показывает плашку со спиннером и ждёт
+     * отдельного события [pushImportResult].
+     */
     private fun result(
         ok: Boolean,
         message: String,
@@ -1400,6 +1411,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         total: Int = 0,
         unsupported: Int = 0,
         title: String = "",
+        loading: Boolean = false,
     ): String = JSONObject().apply {
         put("ok", ok)
         put("added", added)
@@ -1407,6 +1419,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         put("unsupported", unsupported)
         put("title", title)
         put("message", message)
+        put("loading", loading)
     }.toString()
 
     // endregion
