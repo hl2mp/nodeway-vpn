@@ -882,6 +882,9 @@
     }
 
     .picker-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         padding: 14px 16px 14px;
         font-size: 13px;
         text-transform: uppercase;
@@ -1531,7 +1534,6 @@
         </div>
         <div class="picker-row">
             <label class="picker-switch"><input type="checkbox" id="pickerSystem"><span>Показывать системные</span></label>
-            <button class="picker-clear" id="pickerClear" type="button">Очистить</button>
         </div>
     </div>
     <div class="picker-loading" id="pickerLoading" hidden><span class="spinner"></span><span>Загрузка приложений…</span></div>
@@ -2871,6 +2873,8 @@
     var splitMode = 'all';
     /** Выбранные пакеты как объект-ключ: проверка в O(1) без пересборки массивов. */
     var splitPackages = {};
+    /** Ссылка на динамическую кнопку «Очистить» в группе «Выбранные». */
+    var chosenClearBtn = null;
 
     var elSplit = {
         all: document.getElementById('splitAll'),
@@ -2918,7 +2922,8 @@
         var count = Object.keys(splitPackages).length;
         elSplit.pick.hidden = splitMode === 'all';
         elSplit.pick.textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
-        elSplit.clear.disabled = count === 0;
+        if (elSplit.clear) elSplit.clear.disabled = count === 0;
+        if (chosenClearBtn) chosenClearBtn.disabled = count === 0;
     }
 
     /** При отказе ядра режим и список пакетов остаются прежними. */
@@ -3012,8 +3017,24 @@
         var rest = apps.filter(function (app) { return !splitPackages[app.pkg]; });
 
         if (chosen.length) {
-            elSplit.list.appendChild(pickerGroup('Выбранные'));
+            var chosenGroup = pickerGroup('Выбранные');
+            var clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'picker-clear';
+            clearBtn.textContent = 'Очистить';
+            clearBtn.disabled = Object.keys(splitPackages).length === 0;
+            clearBtn.onclick = function () {
+                if (!Object.keys(splitPackages).length) return;
+                splitPackages = {};
+                requestApps();
+                renderSplit();
+            };
+            chosenGroup.appendChild(clearBtn);
+            chosenClearBtn = clearBtn;
+            elSplit.list.appendChild(chosenGroup);
             chosen.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
+        } else {
+            chosenClearBtn = null;
         }
         if (rest.length) {
             if (chosen.length) elSplit.list.appendChild(pickerGroup('Остальные'));
@@ -3147,12 +3168,14 @@
      * К ядру список уходит только по кнопке «Готово», поэтому очистка обратима:
      * закрытый лист ничего не меняет.
      */
-    elSplit.clear.onclick = function () {
-        if (!Object.keys(splitPackages).length) return;
-        splitPackages = {};
-        requestApps();
-        renderSplit();
-    };
+    if (elSplit.clear) {
+        elSplit.clear.onclick = function () {
+            if (!Object.keys(splitPackages).length) return;
+            splitPackages = {};
+            requestApps();
+            renderSplit();
+        };
+    }
 
     /* Сворачивание приложения тоже считаем уходом: режим без выбора не сохраняем. */
     document.addEventListener('visibilitychange', function () {
