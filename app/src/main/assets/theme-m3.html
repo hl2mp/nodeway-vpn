@@ -922,6 +922,9 @@
     }
 
     .picker-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         padding: 14px 16px 10px;
         font-size: 12px;
         font-weight: 600;
@@ -1094,8 +1097,72 @@
     }
 
     .edit-modal {
-        max-height: 85vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 100vh;
+        max-height: none;
+        max-width: none;
+        border-radius: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transform: none;
+    }
+    .edit-modal.open {
+        transform: none;
+    }
+    .modal-head {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 16px 12px;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        background: var(--modal-bg);
+    }
+    .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 28px;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 4px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-close-btn svg {
+        width: 20px;
+        height: 20px;
+        display: block;
+    }
+    .modal-title-text {
+        text-align: center;
+        flex: 1;
+    }
+    .form-body {
         overflow-y: auto;
+        flex: 1;
+        -webkit-overflow-scrolling: touch;
+    }
+    .modal-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        background: var(--modal-bg);
+        padding: 16px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
     }
 
     .form-body {
@@ -1511,7 +1578,12 @@
 </div>
 
 <div class="modal edit-modal" id="editModal">
-    <div class="modal-head" id="editModalTitle">Профиль</div>
+    <div class="modal-head" id="editModalTitle">
+        <button type="button" class="modal-close-btn" id="cancelEditBtn" aria-label="Закрыть">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+        <span class="modal-title-text" id="editModalTitleText">Профиль</span>
+    </div>
     <div id="subWarning" class="notice-banner" hidden>
         Профиль из подписки. При её обновлении изменения будут перезаписаны.
     </div>
@@ -1674,7 +1746,6 @@
     </div>
     <div class="modal-actions">
         <button class="sheet-item primary" id="saveProfileBtn">Сохранить</button>
-        <button class="sheet-item" id="cancelEditBtn" style="color:var(--muted)">Отмена</button>
     </div>
 </div>
 
@@ -1707,7 +1778,6 @@
         </div>
         <div class="picker-row">
             <label class="picker-switch"><input type="checkbox" id="pickerSystem"><span>Показывать системные</span></label>
-            <button class="picker-clear" id="pickerClear" type="button">Очистить</button>
         </div>
     </div>
     <div class="picker-loading" id="pickerLoading" hidden><span class="spinner"></span><span>Загрузка приложений…</span></div>
@@ -2509,6 +2579,7 @@
 
     var editingProfileId = null;
     var currentScheme = 'vless';
+    var chosenClearBtn = null;
 
     /**
      * Параметры ссылки, которых нет в форме (flow, alpn, host, serviceName и др.).
@@ -2523,7 +2594,7 @@
         editingProfileId = profileId;
         var profile = profileById(profileId);
 
-        var titleEl = document.getElementById('editModalTitle');
+        var titleEl = document.getElementById('editModalTitleText');
         var subWarnEl = document.getElementById('subWarning');
         var errEl = document.getElementById('editError');
         errEl.hidden = true;
@@ -2921,7 +2992,8 @@
         var count = Object.keys(splitPackages).length;
         elSplit.pick.hidden = splitMode === 'all';
         elSplit.pick.textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
-        elSplit.clear.disabled = count === 0;
+        if (elSplit.clear) elSplit.clear.disabled = count === 0;
+        if (chosenClearBtn) chosenClearBtn.disabled = count === 0;
     }
 
     function setSplitMode(mode) {
@@ -2998,8 +3070,24 @@
         var rest = apps.filter(function (app) { return !splitPackages[app.pkg]; });
 
         if (chosen.length) {
-            elSplit.list.appendChild(pickerGroup('Выбранные'));
+            var chosenGroup = pickerGroup('Выбранные');
+            var clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'picker-clear';
+            clearBtn.textContent = 'Очистить';
+            clearBtn.disabled = Object.keys(splitPackages).length === 0;
+            clearBtn.onclick = function () {
+                if (!Object.keys(splitPackages).length) return;
+                splitPackages = {};
+                requestApps();
+                renderSplit();
+            };
+            chosenGroup.appendChild(clearBtn);
+            chosenClearBtn = clearBtn;
+            elSplit.list.appendChild(chosenGroup);
             chosen.forEach(function (app) { elSplit.list.appendChild(appRow(app)); });
+        } else {
+            chosenClearBtn = null;
         }
         if (rest.length) {
             if (chosen.length) elSplit.list.appendChild(pickerGroup('Остальные'));
@@ -3101,12 +3189,14 @@
         localStorage.setItem('splitSystemCheckbox', this.checked);
         requestApps();
     };
-    elSplit.clear.onclick = function () {
-        if (!Object.keys(splitPackages).length) return;
-        splitPackages = {};
-        requestApps();
-        renderSplit();
-    };
+    if (elSplit.clear) {
+        elSplit.clear.onclick = function () {
+            if (!Object.keys(splitPackages).length) return;
+            splitPackages = {};
+            requestApps();
+            renderSplit();
+        };
+    }
 
     document.addEventListener('visibilitychange', function () {
         if (document.hidden) enforceSplitFallback();
