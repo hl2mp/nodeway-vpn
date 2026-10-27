@@ -123,8 +123,7 @@ flowchart LR
 Готовый AAR лежит в `app/libs/libXray.aar`. Пересобрать ядро можно gomobile bind:
 
 ```sh
-gomobile bind -target android -androidapi 21 \
-  -ldflags="-checklinkname=0 -extldflags=-Wl,-z,max-page-size=16384"
+gomobile bind -target android -androidapi 21 -ldflags="-checklinkname=0 -extldflags=-Wl,-z,max-page-size=16384"
 ```
 
 Флаг `-z max-page-size=16384` обязателен: приложение работает под `targetSdk 37`, страницы памяти на новых устройствах 16 KB.
