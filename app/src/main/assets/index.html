@@ -1763,6 +1763,10 @@
             return;
         }
         journalEntries = reset ? (entries || []).slice() : journalEntries.concat(entries || []);
+        if (reset) {
+            renderedUpTo = 0;
+            renderFull = true;
+        }
         if (journalEntries.length > MAX_JOURNAL_ENTRIES) {
             journalEntries = journalEntries.slice(-MAX_JOURNAL_ENTRIES);
         }
@@ -3498,8 +3502,12 @@
     window.onProfilesChanged = function (payload) {
         var data = parse(payload);
         if (!data) return;
+        // Сохраняем позицию скролла: render() пересобирает DOM списка профилей,
+        // и без этого страница прыгает вверх при выборе профиля из середины списка.
+        var scrollY = window.scrollY;
         model = data;
         render();
+        window.scrollTo(0, scrollY);
     };
 
     window.onImportResult = function (payload) {

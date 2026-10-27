@@ -1506,6 +1506,10 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
      */
     private fun startJournal() {
         Journal.unsubscribe(journalListener)
+        // Сбрасываем планировщикflush: иначе pending callback из прошлого нахождения
+        // на экране может отправить пустую (очищенную) очередь и перестать слать новые записи.
+        journalFlushScheduled = false
+        refreshHandler.removeCallbacks(journalFlush)
         // Всё накопленное уходит снимком — очередь до этого сбросится вместе со страницей.
         synchronized(journalQueue) { journalQueue.clear() }
         pushJournalEntries("onJournalReset", Journal.subscribe(journalListener))
