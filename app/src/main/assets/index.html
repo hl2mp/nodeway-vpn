@@ -1229,6 +1229,7 @@
     <h3 class="section-title">Импорт</h3>
     <div class="group">
         <button class="settings-row center" id="importProfiles">Добавить из буфера</button>
+        <button class="settings-row center" id="scanQrProfiles">Сканировать QR</button>
     </div>
 
     <h3 class="section-title">Раздельное туннелирование</h3>
@@ -1303,6 +1304,7 @@
 <div class="sheet" id="sheet">
     <button class="sheet-item" data-action="manual">Создать вручную</button>
     <button class="sheet-item" data-action="import">Добавить из буфера</button>
+    <button class="sheet-item" data-action="scan">Сканировать QR</button>
     <button class="sheet-item" data-action="cancel">Отмена</button>
 </div>
 
@@ -3284,6 +3286,10 @@
         applyImportReply(reply);
     };
 
+    document.getElementById('scanQrProfiles').onclick = function () {
+        bridge.scanQr();
+    };
+
     el.scrim.onclick = closeOverlays;
 
     document.getElementById('settingsBtn').onclick = function () { showPage('pageSettings'); };
@@ -3338,6 +3344,9 @@
             if (reply) log(reply.message);
             // Результат загрузки подписки придёт позже событием onImportResult.
             applyImportReply(reply);
+        } else if (action === 'scan') {
+            // Запуск нативного сканера QR-кодов.
+            bridge.scanQr();
         }
     });
 
@@ -3535,6 +3544,18 @@
         // Загрузка подписки закончилась: плашка меняет спиннер на результат.
         showSnackbar(data.message, { error: data.ok === false });
         render();
+    };
+
+    /** Результат сканирования QR-кода от нативного сканера. */
+    window.onScanQrResult = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        if (data.loading) {
+            showSnackbar(data.message, { spinner: true, sticky: true });
+        } else {
+            showSnackbar(data.message, { error: data.ok === false });
+            if (data.ok) render();
+        }
     };
 
     // ------------------------------------------------------------------ init

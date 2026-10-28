@@ -45,6 +45,9 @@ class VpnWebBridge(private val host: Host) {
          */
         fun onImportClipboardRequested(): String
 
+        /** Запуск сканера QR-кодов. Результат приходит в window.onScanQrResult(json). */
+        fun onScanQrRequested()
+
         fun onRefreshSubscriptionRequested(id: String)
 
         fun onRemoveSubscriptionRequested(id: String)
@@ -151,6 +154,10 @@ class VpnWebBridge(private val host: Host) {
 
     @JavascriptInterface
     fun importFromClipboard(): String = host.onImportClipboardRequested()
+
+    /** Запуск сканера QR-кодов. Результат приходит в window.onScanQrResult(json). */
+    @JavascriptInterface
+    fun scanQr() = host.onScanQrRequested()
 
     @JavascriptInterface
     fun refreshSubscription(id: String) = host.onRefreshSubscriptionRequested(id)

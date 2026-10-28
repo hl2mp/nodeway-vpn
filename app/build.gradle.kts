@@ -34,8 +34,8 @@ android {
         applicationId = "com.nodetun.vpn"
         minSdk = 24
         targetSdk = 37
-        versionCode = 5
-        versionName = "1.0.5"
+        versionCode = 6
+        versionName = "1.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -107,6 +107,13 @@ dependencies {
     // Настройки WebView, недоступные на платформе: отключение принудительной
     // тёмной темы, которой иначе Android 10 перекрашивает нашу страницу сам.
     implementation(libs.androidx.webkit)
+    // ML Kit Barcode Scanning — распознавание QR-кодов.
+    implementation(libs.mlkit.barcode.scanning)
+    // CameraX — работа с камерой.
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
 
     /*
      * Xray-core 26.9.30, собран из XTLS/libXray@v26.9.30 через gomobile bind:

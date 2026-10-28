@@ -10,4 +10,13 @@
     <string name="notification_subtitle_olcrtc">Трафик защищён ядром olcrtc</string>
 
     <string name="action_disconnect">Отключить</string>
+
+    <!-- QR-код сканер -->
+    <string name="qr_scan_title">Сканировать QR</string>
+    <string name="qr_scan_added">Профиль добавлен</string>
+    <string name="qr_scan_subscription_loading">Загружаем подписку</string>
+    <string name="qr_scan_empty">QR-код пуст</string>
+    <string name="qr_scan_unrecognized">Ссылка не распознана</string>
+    <string name="qr_scan_unsupported">Неподдерживаемый формат QR-кода</string>
+    <string name="qr_camera_permission_denied">Разрешение на камеру не предоставлено</string>
 </resources>

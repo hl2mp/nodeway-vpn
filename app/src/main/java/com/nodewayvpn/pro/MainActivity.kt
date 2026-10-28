@@ -33,6 +33,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -170,6 +171,15 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* optional */ }
+
+    /** Запуск нативного сканера QR-кодов. */
+    private val qrScanLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val qrText = result.data?.getStringExtra(QrScannerActivity.EXTRA_QR_RESULT) ?: return@registerForActivityResult
+                handleQrResult(qrText)
+            }
+        }
 
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -928,6 +938,10 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         )
     }
 
+    override fun onScanQrRequested() {
+        qrScanLauncher.launch(Intent(this, QrScannerActivity::class.java))
+    }
+
 
     override fun onRefreshSubscriptionRequested(id: String) {
         val source = store.subscription(id) ?: return
@@ -1252,6 +1266,67 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         val clip = clipboard.primaryClip ?: return null
         if (clip.itemCount == 0) return null
         return clip.getItemAt(0).coerceToText(this)?.toString()?.takeIf { it.isNotBlank() }
+    }
+
+    /** Обрабатывает результат сканирования QR-кода. */
+    private fun handleQrResult(qrText: String) {
+        val trimmed = qrText.trim()
+        if (trimmed.isBlank()) {
+            pushScanResult(ok = false, message = "QR-код пуст")
+            return
+        }
+
+        // Одиночная ссылка vless:// или olcrtc:// — сохраняем как профиль.
+        if (VlessProfile.isVlessLink(trimmed) || OlcrtcProfile.isOlcrtcLink(trimmed)) {
+            val parseResult = runCatching {
+                when {
+                    VlessProfile.isVlessLink(trimmed) -> VlessProfile.parse(trimmed)
+                    OlcrtcProfile.isOlcrtcLink(trimmed) -> OlcrtcProfile.parse(trimmed)
+                    else -> throw IllegalArgumentException("Неподдерживаемая ссылка")
+                }
+            }
+            val error = parseResult.exceptionOrNull()
+            if (error != null) {
+                pushScanResult(ok = false, message = "Ссылка не распознана: ${error.message}")
+                return
+            }
+
+            val name = runCatching {
+                if (VlessProfile.isVlessLink(trimmed)) VlessProfile.parse(trimmed).remark.ifBlank { trimmed }
+                else OlcrtcProfile.parse(trimmed).remark.ifBlank { trimmed }
+            }.getOrDefault(trimmed.take(50))
+
+            store.saveProfile(null, trimmed, name)
+            runOnUiThread { pushProfiles() }
+            pushScanResult(ok = true, message = "Профиль добавлен")
+            return
+        }
+
+        // http(s) — подписка.
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            val source = store.addSubscription(SubscriptionSource.create(trimmed))
+            pushProfiles()
+            loadSubscription(source, isNew = true)
+            pushScanResult(ok = true, message = "Загружаем подписку: $trimmed", loading = true)
+            return
+        }
+
+        pushScanResult(ok = false, message = "Неподдерживаемый формат QR-кода")
+    }
+
+    /** Отправляет результат сканирования на страницу. */
+    private fun pushScanResult(ok: Boolean, message: String, loading: Boolean = false) {
+        val json = JSONObject().apply {
+            put("ok", ok)
+            put("message", message)
+            put("loading", loading)
+        }.toString()
+        val script = "window.onScanQrResult && window.onScanQrResult('${json.replace("\\", "\\\\").replace("'", "\\'")}');"
+        runOnUiThread {
+            runCatching {
+                webView.evaluateJavascript(script, null)
+            }
+        }
     }
 
     /** Загружает подписку в фоне и отдаёт результат в `window.onImportResult`. */

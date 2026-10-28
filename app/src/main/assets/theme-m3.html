@@ -1476,6 +1476,14 @@
             </svg>
             <span>Добавить из буфера</span>
         </button>
+        <button class="settings-row center" id="scanQrProfiles">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <path d="M8.5 8.5h7"/>
+                <path d="M12 15v4"/>
+            </svg>
+            <span>Сканировать QR</span>
+        </button>
     </div>
 
     <h3 class="section-title">Раздельное туннелирование</h3>
@@ -1550,6 +1558,7 @@
 <div class="sheet" id="sheet">
     <button class="sheet-item" data-action="manual">Создать вручную</button>
     <button class="sheet-item" data-action="import">Добавить из буфера</button>
+    <button class="sheet-item" data-action="scan">Сканировать QR</button>
     <button class="sheet-item" data-action="cancel">Отмена</button>
 </div>
 
@@ -3293,6 +3302,10 @@
         applyImportReply(reply);
     };
 
+    document.getElementById('scanQrProfiles').onclick = function () {
+        bridge.scanQr();
+    };
+
     el.scrim.onclick = closeOverlays;
 
     document.getElementById('settingsBtn').onclick = function () { showPage('pageSettings'); };
@@ -3344,6 +3357,8 @@
             if (reply) log(reply.message);
             // Результат загрузки подписки придёт позже событием onImportResult.
             applyImportReply(reply);
+        } else if (action === 'scan') {
+            bridge.scanQr();
         }
     });
 
@@ -3484,6 +3499,18 @@
         // Загрузка подписки закончилась: плашка меняет спиннер на результат.
         showSnackbar(data.message, { error: data.ok === false });
         render();
+    };
+
+    /** Результат сканирования QR-кода от нативного сканера. */
+    window.onScanQrResult = function (payload) {
+        var data = parse(payload);
+        if (!data) return;
+        if (data.loading) {
+            showSnackbar(data.message, { spinner: true, sticky: true });
+        } else {
+            showSnackbar(data.message, { error: data.ok === false });
+            if (data.ok) render();
+        }
     };
 
     /** Приложение сообщает о доступном обновлении. */
