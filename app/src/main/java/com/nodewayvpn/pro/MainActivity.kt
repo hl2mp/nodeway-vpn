@@ -306,8 +306,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
                     // Режим оформления уже задан адресом страницы, а сделанный
                     // выбор подписан в строке настроек — его страница узнаёт отсюда.
                     pushTheme(pageTheme(), prefs.themeMode)
-                    // Стиль темы (Classic / Material 3) тоже надо подписать на новой странице.
-                    pushThemeStyle(prefs.themeStyle)
                     // Версия ядра olcrtc могла прийти до загрузки страницы — подписываем заново.
                     pushOlcrtcVersion()
                     // Страница перерисована — отдаём ей журнал целиком, без дублей.
@@ -374,7 +372,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         handleImportLink(intent)
         intent.data = null
 
-        webView.loadUrl("file:///android_asset/${themeHtmlFile()}?theme=${pageTheme()}")
+        webView.loadUrl("file:///android_asset/index.html?theme=${pageTheme()}")
         // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
         warmInstalledAppsCache()
         // Версию ядра olcrtc тоже узнаём сразу: она нужна в настройках.
@@ -428,16 +426,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         return if (night == Configuration.UI_MODE_NIGHT_YES) "dark" else "light"
     }
 
-    /**
-     * Имя HTML-файла текущего стиля темы.
-     * Зависит от настройки themeStyle: "classic" -> index.html, "m3" -> theme-m3.html
-     */
-    private fun themeHtmlFile(): String {
-        return when (prefs.themeStyle) {
-            "m3" -> "theme-m3.html"
-            else -> "index.html"
-        }
-    }
 
     /**
      * Вид системных панелей — по теме приложения, а не по системной.
@@ -518,18 +506,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         pushTheme(applied, prefs.themeMode)
     }
 
-    /**
-     * Применяет выбор стиля темы: "classic" или "m3".
-     *
-     * Перезагружает WebView с соответствующим HTML-файлом.
-     */
-    override fun onSetThemeStyleRequested(style: String) {
-        runOnUiThread {
-            prefs.themeStyle = style
-            // Перезагружаем WebView с новым HTML файлом
-            webView.loadUrl("file:///android_asset/${themeHtmlFile()}?theme=${pageTheme()}")
-        }
-    }
 
     override fun onCheckUpdateRequested() {
         Thread({
@@ -577,13 +553,6 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
     }
 
-    /** Сообщает странице выбранный стиль темы (Classic / Material 3). */
-    private fun pushThemeStyle(style: String) {
-        val script = "window.onThemeStyle && window.onThemeStyle('$style');"
-        runOnUiThread {
-            runCatching { webView.evaluateJavascript(script, null) }
-        }
-    }
 
     /**
      * Узнаёт версию ядра olcrtc и отдаёт её странице.

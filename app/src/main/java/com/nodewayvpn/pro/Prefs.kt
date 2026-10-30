@@ -44,16 +44,6 @@ class Prefs(context: Context) {
         get() = sp.getString(KEY_THEME, THEME_SYSTEM).orEmpty().ifBlank { THEME_SYSTEM }
         set(value) = sp.edit().putString(KEY_THEME, value).apply()
 
-    /**
-     * Стиль темы оформления: "classic" (iOS-like) или "m3" (Material 3).
-     *
-     * По умолчанию "classic" — текущий дизайн. При смене стиля WebView перезагружается
-     * с соответствующим HTML-файлом (index.html или theme-m3.html).
-     */
-    var themeStyle: String
-        get() = sp.getString(KEY_THEME_STYLE, THEME_STYLE_CLASSIC).orEmpty().ifBlank { THEME_STYLE_CLASSIC }
-        set(value) = sp.edit().putString(KEY_THEME_STYLE, value).apply()
-
     // --- Обновления ---
 
     /** Время последней проверки обновлений (epoch ms). */
@@ -100,11 +90,8 @@ class Prefs(context: Context) {
         const val KEY_SPLIT_PACKAGES = "split_packages"
         const val KEY_JOURNAL = "journal_enabled"
         const val KEY_THEME = "theme_mode"
-        const val KEY_THEME_STYLE = "theme_style"
         const val TUNNEL_MODE_ALL = "all"
         const val THEME_SYSTEM = "system"
-        const val THEME_STYLE_CLASSIC = "classic"
-        const val THEME_STYLE_M3 = "m3"
         const val KEY_UPDATE_LAST_CHECK = "update_last_check"
         const val KEY_UPDATE_AVAILABLE = "update_available"
         const val KEY_UPDATE_VERSION = "update_version"
