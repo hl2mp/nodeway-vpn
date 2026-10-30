@@ -372,7 +372,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         handleImportLink(intent)
         intent.data = null
 
-        webView.loadUrl("file:///android_asset/index.html?theme=${pageTheme()}")
+        webView.loadUrl("file:///android_asset/index_ios17.html?theme=${pageTheme()}")
         // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
         warmInstalledAppsCache()
         // Версию ядра olcrtc тоже узнаём сразу: она нужна в настройках.

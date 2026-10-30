@@ -834,13 +834,13 @@ class NodewayVpnService : VpnService() {
          * по несколько секунд). Таймаут теперь действует сразу: отмена закрывает
          * сокет пробы, а не ждёт окончания блокирующего чтения.
          */
-        private const val PING_VLESS_TIMEOUT_MS = 30_000L
+        private const val PING_VLESS_TIMEOUT_MS = 15_000L
 
         /**
          * Предел на один olcrtc-профиль: вход в комнату WebRTC (ICE, DTLS) бывает
          * долгим, а в обычном подключении клиенту дают до 90 с.
          */
-        private const val PING_OLCRTC_TIMEOUT_MS = 60_000L
+        private const val PING_OLCRTC_TIMEOUT_MS = 30_000L
 
         /**
          * Последнее опубликованное состояние туннеля.

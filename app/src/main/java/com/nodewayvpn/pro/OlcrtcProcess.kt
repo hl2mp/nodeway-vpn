@@ -169,10 +169,10 @@ class OlcrtcProcess(private val context: Context) {
         private const val SOCKS_PORT = 10808
 
         private const val START_TIMEOUT_MS = 90_000L
-        private const val STOP_GRACE_MS = 6_000L
+        private const val STOP_GRACE_MS = 2_000L
         private const val PROBE_INTERVAL_MS = 400L
         private const val PROBE_TIMEOUT_MS = 1_000
-        private const val POLL_INTERVAL_MS = 100L
+        private const val POLL_INTERVAL_MS = 50L
         private const val LOG_TAIL_LINES = 4
 
         /** Сколько ждём ответа на `--version` от бинарника. */
