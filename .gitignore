@@ -22,6 +22,7 @@ local.properties
 # Ключ подписи и пароли от него в историю не должны.
 /keystore/
 /keystore.properties
+/debug.keystore
 
 # Собранные APK не храним в репозитории (превышают лимит GitHub 100 МБ).
 *.apk
