@@ -4,17 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Nodeway VPN</title>
+<title>NodeTun</title>
 <script>
   (function () {
-    document.documentElement.setAttribute(
-        'data-theme', /[?&]theme=dark/.test(location.search) ? 'dark' : 'light');
+    var match = location.search.match(/[?&]theme=(dark|light)(?:[&#]|$)/i);
+    if (match) document.documentElement.setAttribute('data-theme', match[1].toLowerCase());
   })();
 </script>
 <style>
-    /* ============================================================
-       СОВРЕМЕННАЯ ПАЛИТРА (iOS 17 / Material You гибрид)
-       ============================================================ */
+    
     :root {
         color-scheme: light;
         --bg: #F5F5F7;
@@ -206,9 +204,6 @@
     button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
     svg { display: block; }
 
-    /* ============================================================
-       ВЕРХНЯЯ ПАНЕЛЬ
-       ============================================================ */
     .navbar {
         display: flex;
         align-items: center;
@@ -249,9 +244,6 @@
     }
     .nav-link svg { width: 24px; height: 24px; }
 
-    /* ============================================================
-       БАННЕР ОБНОВЛЕНИЯ
-       ============================================================ */
     .update-banner {
         display: none;
         position: sticky;
@@ -313,9 +305,6 @@
         to { transform: translateY(0); opacity: 1; }
     }
 
-    /* ============================================================
-       КНОПКА ПИТАНИЯ
-       ============================================================ */
     .power-area {
         display: flex;
         flex-direction: column;
@@ -433,9 +422,6 @@
         line-height: 1.4;
     }
 
-    /* ============================================================
-       ГРУППЫ
-       ============================================================ */
     .section-title {
         font-size: 13px;
         color: var(--muted);
@@ -498,9 +484,6 @@
     .group.collapsed .row:last-child,
     .group.collapsed .group-inner > *:last-child { border-bottom: none; }
 
-    /* ============================================================
-       СТРОКИ
-       ============================================================ */
     .row {
         display: flex;
         align-items: center;
@@ -598,9 +581,6 @@
 
     .group-head .spinner { flex: none; }
 
-    /* ============================================================
-       SNACKBAR
-       ============================================================ */
     .snackbar {
         position: fixed;
         left: 16px;
@@ -614,8 +594,7 @@
         gap: 12px;
         padding: 14px 18px;
         border-radius: var(--radius-md);
-        /* Контрастный «тост»: в светлой теме — тёмный, в тёмной — светлый.
-           Так он не сливается с карточками и фоном, как раньше. */
+        
         background: var(--text);
         color: var(--bg);
         backdrop-filter: blur(24px);
@@ -648,7 +627,7 @@
     }
     .snackbar-icon:empty { display: none; }
     .snackbar-text { flex: 1; min-width: 0; color: inherit; }
-    /* Ошибка — красный тост с белым текстом, чтобы сразу бросалась в глаза. */
+    
     .snackbar.error {
         background: var(--red);
         color: #fff;
@@ -656,7 +635,6 @@
     .snackbar.error .snackbar-text { color: #fff; }
     .snackbar.error .spinner { border-color: rgba(255,255,255,.35); border-top-color: #fff; }
 
-    /* Успех — зелёный тост. */
     .snackbar.success {
         background: var(--green);
         color: #fff;
@@ -664,7 +642,6 @@
     .snackbar.success .snackbar-text { color: #fff; }
     .snackbar.success .spinner { border-color: rgba(255,255,255,.35); border-top-color: #fff; }
 
-    /* Предупреждение — оранжевый тост. */
     .snackbar.warning {
         background: var(--orange);
         color: #fff;
@@ -672,7 +649,6 @@
     .snackbar.warning .snackbar-text { color: #fff; }
     .snackbar.warning .spinner { border-color: rgba(255,255,255,.35); border-top-color: #fff; }
 
-    /* Информация — синий тост. */
     .snackbar.info {
         background: var(--blue);
         color: #fff;
@@ -680,9 +656,6 @@
     .snackbar.info .snackbar-text { color: #fff; }
     .snackbar.info .spinner { border-color: rgba(255,255,255,.35); border-top-color: #fff; }
 
-    /* ============================================================
-       ЖУРНАЛ
-       ============================================================ */
     .log {
         background: var(--card);
         border-radius: var(--radius-lg);
@@ -744,9 +717,6 @@
         opacity: 0.7;
     }
 
-    /* ============================================================
-       ПЕРЕКЛЮЧАТЕЛЬ
-       ============================================================ */
     .switch {
         flex: none;
         width: 51px;
@@ -773,9 +743,6 @@
     .switch.on { background: var(--green); }
     .switch.on::after { transform: translateX(20px); }
 
-    /* ============================================================
-       НАСТРОЙКИ
-       ============================================================ */
     .settings-row {
         display: flex;
         align-items: center;
@@ -834,9 +801,6 @@
 
     [hidden] { display: none !important; }
 
-    /* ============================================================
-       РАЗДЕЛЬНОЕ ТУННЕЛИРОВАНИЕ
-       ============================================================ */
     .mode-row { align-items: flex-start; }
     .mode-copy { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
     .mode-copy small { display: block; color: var(--muted); font-size: 13px; line-height: 1.35; }
@@ -867,9 +831,6 @@
         to { transform: scale(1); }
     }
 
-    /* ============================================================
-       ЛИСТ ВЫБОРА ПРИЛОЖЕНИЙ
-       ============================================================ */
     .picker {
         position: fixed;
         inset: 0;
@@ -1034,9 +995,6 @@
         transform: rotate(45deg);
     }
 
-    /* ============================================================
-       ШТОРКА И МОДАЛКИ
-       ============================================================ */
     .scrim {
         position: fixed;
         inset: 0;
@@ -1229,9 +1187,6 @@
         border-radius: var(--radius-sm);
     }
 
-    /* ============================================================
-       ДИАЛОГ ПОДТВЕРЖДЕНИЯ
-       ============================================================ */
     .modal.alert { text-align: center; }
 
     .alert-head {
@@ -1282,12 +1237,40 @@
     .modal-actions { border-top: 1px solid var(--line); }
     .sheet-item.primary { color: var(--blue); font-weight: 600; }
 
-    /* ============================================================
-       SCROLLBAR (для десктопа)
-       ============================================================ */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: var(--muted-2); border-radius: 3px; }
     ::-webkit-scrollbar-track { background: transparent; }
+
+    .page { width: min(100%, 760px); margin-inline: auto; }
+    .navbar, .settings-bar { width: min(100%, 760px); margin-inline: auto; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+        outline: 2px solid var(--blue);
+        outline-offset: 3px;
+    }
+    button:disabled { cursor: default; }
+    .power-btn:disabled { opacity: .82; }
+    .picker { height: 100%; height: 100dvh; }
+    .picker-list { overscroll-behavior: contain; }
+    #logBody { overflow-wrap: anywhere; }
+    .form-input, .form-select, .picker-input { min-height: 44px; }
+    @media (min-width: 761px) {
+        .power-area { padding-top: 34px; }
+        .group, .log { margin-left: 20px; margin-right: 20px; }
+    }
+    @media (max-width: 360px) {
+        .uptime-value { font-size: 34px; }
+        .power-area { padding-top: 18px; }
+        .form-row-2 { grid-template-columns: 1fr; }
+        .settings-row { padding-inline: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            scroll-behavior: auto !important;
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: .01ms !important;
+        }
+    }
 </style>
 </head>
 <body>
@@ -1443,7 +1426,6 @@
     <button class="sheet-item" data-theme-mode="dark">Тёмная</button>
     <button class="sheet-item" data-action="cancel">Отмена</button>
 </div>
-
 
 <div class="modal" id="modal">
     <div class="modal-head" id="modalTitle">Профиль</div>
@@ -1677,8 +1659,6 @@
     var coreVersion = '';
     var olcrtcVersion = '';
     var updateVersion = '';
-    var updateFileName = '';
-    var updateFileSize = '';
     var updateDownloading = false;
     var modalProfileId = '';
     var logCollapsed = false;
@@ -1802,7 +1782,12 @@
         return node;
     }
 
-    function parse(json) { try { return JSON.parse(json); } catch (e) { return null; } }
+    function parse(value) {
+        if (value == null || value === '') return null;
+        if (typeof value === 'object') return value;
+        if (typeof value !== 'string') return null;
+        try { return JSON.parse(value); } catch (e) { return null; }
+    }
 
     var MAX_LOG_LINES = 200;
     var MAX_JOURNAL_ENTRIES = 400;
@@ -1824,6 +1809,8 @@
         if (reset) { renderedUpTo = 0; renderFull = true; }
         if (journalEntries.length > MAX_JOURNAL_ENTRIES) {
             journalEntries = journalEntries.slice(-MAX_JOURNAL_ENTRIES);
+            renderedUpTo = 0;
+            renderFull = true;
         }
         renderJournal();
     }
@@ -1853,11 +1840,12 @@
     }
 
     function journalLine(entry) {
-        var source = entry.s || 'app';
+        var source = String(entry.s || 'app').replace(/[^a-z0-9_-]/gi, '');
+        var level = String(entry.l || 'info').replace(/[^a-z0-9_-]/gi, '');
         var line = document.createElement('div');
-        line.className = 'log-line ' + source + ' ' + (entry.l || 'info');
-        line.textContent = clockOf(entry.t) + '  ' +
-            (source === 'app' ? '' : source + ' · ') + entry.m;
+        line.className = 'log-line ' + (source || 'app') + ' ' + (level || 'info');
+        line.textContent = clockOf(Number(entry.t) || Date.now()) + '  ' +
+            (source === 'app' ? '' : source + ' · ') + String(entry.m || '');
         return line;
     }
 
@@ -1888,8 +1876,19 @@
     };
     window.onJournalEntries = function (payload) { appendJournal(parse(payload), false); };
 
+    function normalizeModel(value) {
+        var next = value && typeof value === 'object' ? value : {};
+        next.profiles = Array.isArray(next.profiles) ? next.profiles : [];
+        next.subscriptions = Array.isArray(next.subscriptions) ? next.subscriptions : [];
+        next.selectedProfileId = next.selectedProfileId || '';
+        next.activeProfileId = next.activeProfileId || '';
+        next.connectedAt = Number(next.connectedAt) || 0;
+        return next;
+    }
+
     function profileById(id) {
-        return model.profiles.filter(function (p) { return p.id === id; })[0] || null;
+        if (!id) return null;
+        return model.profiles.find(function (profile) { return profile.id === id; }) || null;
     }
 
     function formatUptime(millis) {
@@ -2600,7 +2599,7 @@
             if (document.getElementById('vlessInsecure').checked) params.push('allowInsecure=1');
 
             Object.keys(vlessExtraParams).forEach(function (key) {
-                params.push(key + '=' + encodeURIComponent(vlessExtraParams[key]));
+                params.push(encodeURIComponent(key) + '=' + encodeURIComponent(vlessExtraParams[key]));
             });
 
             if (params.length > 0) link += '?' + params.join('&');
@@ -2631,12 +2630,10 @@
         });
     }
 
-
     window.onThemeMode = function (mode) {
         themeMode = mode || 'system';
         renderTheme();
     };
-
 
     function confirm(text, onYes, detail) {
         closeOverlays();
@@ -2808,7 +2805,13 @@
             if (token !== pickerRequest) return;
             var reply = bridge.listInstalledApps(includeSystem, query);
             if (reply && typeof reply.then === 'function') {
-                reply.then(function (data) { applyApps(token, data); });
+                reply.then(function (data) { applyApps(token, data); })
+                    .catch(function () {
+                        if (token !== pickerRequest) return;
+                        hidePickerLoading();
+                        renderApps([]);
+                        showSnackbar('Не удалось получить список приложений', { error: true });
+                    });
                 return;
             }
             applyApps(token, reply);
@@ -2818,7 +2821,8 @@
     function applyApps(token, payload) {
         if (Number(token) !== pickerRequest) return;
         hidePickerLoading();
-        renderApps(parse(payload) || []);
+        var apps = parse(payload);
+        renderApps(Array.isArray(apps) ? apps : (apps && Array.isArray(apps.apps) ? apps.apps : []));
     }
 
     window.onSplitApps = applyApps;
@@ -2919,21 +2923,28 @@
         return ICON_BASE_URL + encodeURIComponent(pkg);
     }
 
-    var iconObserver = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-            if (!entry.isIntersecting) return;
-            iconObserver.unobserve(entry.target);
-            var img = entry.target.querySelector('img[data-pkg]');
-            if (img) img.src = iconUrlFor(img.getAttribute('data-pkg'));
-        });
-    }, { root: elSplit.list, rootMargin: '240px 0px' });
+    var iconObserver = typeof IntersectionObserver === 'function'
+        ? new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (!entry.isIntersecting) return;
+                iconObserver.unobserve(entry.target);
+                var img = entry.target.querySelector('img[data-pkg]');
+                if (img) img.src = iconUrlFor(img.getAttribute('data-pkg'));
+            });
+        }, { root: elSplit.list, rootMargin: '240px 0px' })
+        : null;
 
     function watchIcons() {
-        iconObserver.disconnect();
         var images = elSplit.list.querySelectorAll('img[data-pkg]');
+        if (!iconObserver) {
+            Array.prototype.forEach.call(images, function (img) {
+                if (!img.getAttribute('src')) img.src = iconUrlFor(img.getAttribute('data-pkg'));
+            });
+            return;
+        }
+        iconObserver.disconnect();
         Array.prototype.forEach.call(images, function (img) {
-            if (img.getAttribute('src')) return;
-            iconObserver.observe(img.parentNode);
+            if (!img.getAttribute('src')) iconObserver.observe(img.parentNode);
         });
     }
 
@@ -3043,6 +3054,15 @@
 
     document.getElementById('scanQrProfiles').onclick = function () { bridge.scanQr(); };
 
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        if (elSplit.picker && elSplit.picker.classList.contains('open')) {
+            closePicker();
+            return;
+        }
+        closeOverlays();
+    });
+
     el.scrim.onclick = closeOverlays;
 
     document.getElementById('settingsBtn').onclick = function () { showPage('pageSettings'); };
@@ -3069,8 +3089,6 @@
         if (!mode) return;
         bridge.setThemeMode(mode);
     });
-
-
 
     el.sheet.addEventListener('click', function (event) {
         var action = event.target.getAttribute('data-action');
@@ -3147,10 +3165,8 @@
 
     window.onUpdateAvailable = function (version, fileName, sizeText) {
         updateVersion = version;
-        updateFileName = fileName;
-        updateFileSize = sizeText;
-        el.updateVersion.textContent = version;
-        el.updateSize.textContent = sizeText;
+        el.updateVersion.textContent = version || '';
+        el.updateSize.textContent = sizeText ? ' · ' + sizeText : '';
         el.updateProgress.style.display = 'none';
         el.updateProgressBar.style.width = '0%';
         el.updateBtn.textContent = 'Обновить';
@@ -3191,7 +3207,11 @@
         }
     };
 
-    window.onUpdateProgress = function (percent) { el.updateProgressBar.style.width = percent + '%'; };
+    window.onUpdateProgress = function (percent) {
+        var value = Number(percent);
+        if (!Number.isFinite(value)) value = 0;
+        el.updateProgressBar.style.width = Math.max(0, Math.min(100, value)) + '%';
+    };
 
     window.onUpdateDownloaded = function () {
         el.updateProgress.style.display = 'none';
@@ -3207,9 +3227,13 @@
     window.onVpnState = function (payload) {
         var data = parse(payload);
         if (!data) return;
-        state = data.state;
+        var nextState = data.state;
+        if (['disconnected', 'connecting', 'connected', 'disconnecting', 'error'].indexOf(nextState) < 0) {
+            nextState = 'disconnected';
+        }
+        state = nextState;
         lastMessage = data.message || '';
-        model.latency = Number(data.latency) || 0;
+        model.latency = Math.max(0, Number(data.latency) || 0);
         if (data.ping) {
             var next = normalizePing(data.ping);
             if (next.total > 0) ping = next;
@@ -3232,7 +3256,7 @@
         var data = parse(payload);
         if (!data) return;
         var scrollY = window.scrollY;
-        model = data;
+        model = normalizeModel(data);
         render();
         window.scrollTo(0, scrollY);
     };
@@ -3258,7 +3282,7 @@
     if (bridge) {
         var initial = parse(bridge.getInitialState());
         if (initial) {
-            model = initial.state;
+            model = normalizeModel(initial.state);
             state = model.vpnState || 'disconnected';
             ping = normalizePing(model.ping);
             coreVersion = initial.coreVersion || '';
