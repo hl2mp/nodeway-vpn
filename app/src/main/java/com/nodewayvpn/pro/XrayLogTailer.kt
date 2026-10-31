@@ -43,6 +43,13 @@ class XrayLogTailer(private val file: File) {
 
         try {
             while (running) {
+                // Ядро перезапустили, и файл создан заново: он короче нашей позиции,
+                // поэтому без сброса новые строки не читались бы до тех пор, пока файл
+                // не дорастёт до прежнего размера.
+                if (file.exists() && file.length() < position) {
+                    position = 0L
+                    pending.setLength(0)
+                }
                 val chunk = readTail(position) ?: run {
                     // Файла ещё нет: ядро создаст его при старте.
                     Thread.sleep(POLL_INTERVAL_MS)
@@ -72,6 +79,8 @@ class XrayLogTailer(private val file: File) {
                     // подключения, файл и так удаляется на каждом старте.
                     if (position >= MAX_BYTES) {
                         Log.w(TAG, "log file reached ${MAX_BYTES / 1024 / 1024} MB, stop tailing")
+                        // Поток завершается, значит и start() должен уметь запустить новый.
+                        running = false
                         return
                     }
                 }

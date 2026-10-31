@@ -84,12 +84,7 @@ object Journal {
             text = clean,
             level = level ?: levelOf(clean),
         )
-        val batch = synchronized(lock) {
-            if (buffer.size >= LIMIT) buffer.removeFirst()
-            buffer.addLast(entry)
-            listOf(entry)
-        }
-        listeners.forEach { runCatching { it.onJournalEntries(batch) } }
+        publish(listOf(entry))
     }
 
     /**
@@ -100,7 +95,23 @@ object Journal {
      */
     fun appendAll(source: String, lines: List<String>) {
         if (lines.isEmpty() || !enabled) return
-        lines.forEach { append(source, it) }
+        val now = System.currentTimeMillis()
+        val batch = lines.mapNotNull { line ->
+            val clean = line.trim()
+            if (clean.isEmpty()) null else Entry(now, source, clean, levelOf(clean))
+        }
+        if (batch.isNotEmpty()) publish(batch)
+    }
+
+    /** Кладёт записи в кольцевой буфер и отдаёт подписчикам одной пачкой. */
+    private fun publish(batch: List<Entry>) {
+        synchronized(lock) {
+            batch.forEach { entry ->
+                if (buffer.size >= LIMIT) buffer.removeFirst()
+                buffer.addLast(entry)
+            }
+        }
+        listeners.forEach { runCatching { it.onJournalEntries(batch) } }
     }
 
     /** Стирает накопленное, но не трогает подписчиков. */
@@ -131,7 +142,13 @@ object Journal {
                 else -> LEVEL_INFO
             }
         }
-        return if (GO_LEVEL.containsMatchIn(text)) LEVEL_ERROR else LEVEL_INFO
+        GO_LEVEL.find(text)?.let {
+            return when (it.groupValues[1]) {
+                "WARN" -> LEVEL_WARN
+                else -> LEVEL_ERROR
+            }
+        }
+        return LEVEL_INFO
     }
 
     private val TIMESTAMP_PREFIX =
@@ -140,5 +157,5 @@ object Journal {
     private val XRAY_LEVEL = Regex("^\\[(Info|Warning|Error|Debug)]")
 
     /** Строка от olcrtc начинается с уровня либо несёт его в начале после префикса. */
-    private val GO_LEVEL = Regex("^.*?\\b(FATAL|ERROR|ERRO|WARN)\\b")
+    private val GO_LEVEL = Regex("^(?:\\S+\\s+)?(FATAL|ERROR|ERRO|WARN)\\b")
 }

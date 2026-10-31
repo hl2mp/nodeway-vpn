@@ -5,8 +5,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
@@ -27,6 +29,7 @@ import java.util.concurrent.Executors
  * распознавания QR-кодов. При обнаружении ссылки (vless://, olcrtc://)
  * завершает Activity с результатом через setResult().
  */
+@OptIn(markerClass = [ExperimentalGetImage::class])
 class QrScannerActivity : AppCompatActivity() {
 
     private lateinit var previewView: PreviewView

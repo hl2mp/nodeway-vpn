@@ -194,13 +194,22 @@ data class VlessProfile(
         }
 
         private fun splitHostPort(value: String): Pair<String, Int> {
-            val unbracketed = value.removePrefix("[").removeSuffix("]")
-            // Из ссылки: пример «example.com:443» и голый IPv6-литерал вида «::1».
-            val lastColon = unbracketed.lastIndexOf(':')
-            val looksLikeIpv6 = unbracketed.count { it == ':' } > 1 && value.startsWith("[")
-            require(lastColon > 0 && !looksLikeIpv6) { "Не указан порт сервера" }
-            val host = unbracketed.substring(0, lastColon)
-            val port = unbracketed.substring(lastColon + 1).toIntOrNull()
+            val host: String
+            val portText: String
+            if (value.startsWith("[")) {
+                // IPv6-литерал в скобках: «[2001:db8::1]:443». Порт стоит после «]:».
+                val end = value.indexOf(']')
+                require(end > 1 && value.getOrNull(end + 1) == ':') { "Не указан порт сервера" }
+                host = value.substring(1, end)
+                portText = value.substring(end + 2)
+            } else {
+                // Обычное «example.com:443»; порт — после последнего двоеточия.
+                val lastColon = value.lastIndexOf(':')
+                require(lastColon > 0) { "Не указан порт сервера" }
+                host = value.substring(0, lastColon)
+                portText = value.substring(lastColon + 1)
+            }
+            val port = portText.toIntOrNull()
                 ?: throw IllegalArgumentException("Неверный порт сервера")
             require(port in 1..65535) { "Порт вне диапазона 1..65535" }
             return host to port

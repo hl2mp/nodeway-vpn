@@ -23,6 +23,9 @@ object XrayConfigBuilder {
     /** DNS servers advertised to the TUN interface; shared with [NodewayVpnService]. */
     val DNS_SERVERS = listOf("1.1.1.1", "8.8.8.8")
 
+    /** DNS servers for built-in DNS module: TCP+local bypasses routing, goes direct via Freedom. */
+    private val DNS_SERVERS_INTERNAL = listOf("tcp+local://1.1.1.1", "tcp+local://8.8.8.8")
+
     /** Networks used by the TUN inbound to resolve names. */
     private val PRIVATE_CIDRS = listOf(
         "10.0.0.0/8",
@@ -89,7 +92,7 @@ object XrayConfigBuilder {
         config.put("log", logConfig(logLevel, logFile))
 
         config.put("inbounds", JSONArray().put(socksInbound(socksPort)))
-        config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()))
+        config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()).put(dnsOutbound()))
         config.put("routing", routing)
         config.put("dns", dns)
 
@@ -129,7 +132,7 @@ object XrayConfigBuilder {
         config.put("log", logConfig(logLevel, logFile))
 
         config.put("inbounds", JSONArray().put(tunInbound()))
-        config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()))
+        config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()).put(dnsOutbound()))
         config.put("routing", routing)
         config.put("dns", dns)
 
@@ -174,6 +177,12 @@ object XrayConfigBuilder {
             put("name", TUN_NAME)
             put("mtu", MTU)
             put("dns", JSONArray(DNS_SERVERS))
+            // Намеренно БЕЗ `autoOutboundsInterface`. На Android ядро не умеет само
+            // находить физический интерфейс ("auto" там не поддерживается), и тогда
+            // контроллер сокетов отвечает «iface not found» на КАЖДОЕ исходящее
+            // соединение: не проходят ни DNS, ни рукопожатие с сервером, трафик
+            // встаёт целиком. Свои сокеты ядро выводит из туннеля через protect():
+            // см. XrayCore.registerDialer и ProtectDelegate в NodewayVpnService.
         })
     }
 
@@ -211,6 +220,21 @@ object XrayConfigBuilder {
         put("streamSettings", JSONObject().apply {
             put("sockopt", JSONObject().put("domainStrategy", "UseIP"))
         })
+    }
+
+    /**
+     * DNS outbound для перехвата DNS-трафика из TUN.
+     *
+     * Без своих правил: ядро само отправляет A/AAAA во встроенный DNS-модуль
+     * (настроенный в top-level `dns`), а остальные типы запросов (HTTPS/SVCB, TXT…)
+     * закрывает пустым ответом RCODE 0. Прежняя пара правил `hijack` («domain:
+     * geoip:private» и «всё остальное») ничего не давала: `geoip:` в списке доменов
+     * не работает, а `hijack` без `qtype` на каждый не-A/AAAA запрос писал в лог
+     * ошибку «can only hijack A/AAAA records».
+     */
+    private fun dnsOutbound(): JSONObject = JSONObject().apply {
+        put("tag", "dns-out")
+        put("protocol", "dns")
     }
 
     private fun streamSettings(profile: VlessProfile): JSONObject = JSONObject().apply {
@@ -284,10 +308,12 @@ object XrayConfigBuilder {
     /**
      * Порядок правил важен: первое совпадение выигрывает.
      *
-     * 1. Приватные сети — напрямую.
-     * 2. DNS клиента (порт 53) — напрямую, потому что VLESS не перевозит UDP,
-     *    и запросы к 1.1.1.1/8.8.8.8 из TUN иначе отбрасываются.
-     * 3. Весь остальной UDP (QUIC, WebRTC) — напрямую по той же причине.
+     * 1. Приватные сети — напрямую (через direct outbound).
+     * 2. DNS (порт 53) — перехватываем через dns-out outbound.
+     *    dns-out с action=hijack импортирует запрос в built-in DNS модуль,
+     *    который сам решает: через proxy (VLESS) или direct (Freedom).
+     *    Это позволяет DNS работать даже если 1.1.1.1/8.8.8.8 заблокированы.
+     * 3. Весь остальной UDP (QUIC, WebRTC) — напрямую, так как VLESS не перевозит UDP.
      * 4. Всё остальное (TCP) — через VLESS-прокси.
      */
     private fun routing(): JSONObject = JSONObject().apply {
@@ -300,8 +326,9 @@ object XrayConfigBuilder {
             })
             put(JSONObject().apply {
                 put("type", "field")
-                put("outboundTag", "direct")
+                put("outboundTag", "dns-out")
                 put("port", "53")
+                put("network", "udp,tcp")
             })
             put(JSONObject().apply {
                 put("type", "field")
@@ -311,9 +338,22 @@ object XrayConfigBuilder {
         })
     }
 
+    /**
+     * DNS для VLESS: built-in DNS резолвит адрес VLESS-сервера.
+     * `tcp+local://` — DNS запрос уходит напрямую через Freedom outbound, минуя routing.
+     * Это предотвращает петлю: VLESS-сервер резолвится не через сам VLESS.
+     * queryStrategy=UseIPv4 — VLESS-эндпойнты обычно IPv4.
+     * hosts — предотвращает петлю резолва доменных имён DNS-серверов.
+     */
     private fun dns(): JSONObject = JSONObject().apply {
-        put("servers", JSONArray(DNS_SERVERS))
-        put("queryStrategy", "UseIP")
+        put("servers", JSONArray(DNS_SERVERS_INTERNAL))
+        put("queryStrategy", "UseIPv4")
+        put("hosts", JSONObject().apply {
+            // Cloudflare DNS
+            put("one.one.one.one", JSONArray().put("1.1.1.1"))
+            // Google DNS
+            put("dns.google", JSONArray().put("8.8.8.8"))
+        })
     }
 
     /**
@@ -335,6 +375,17 @@ object XrayConfigBuilder {
                 put("outboundTag", "direct")
                 put("ip", JSONArray(PRIVATE_CIDRS))
             })
+            // DNS из TUN — во встроенный DNS-модуль, ДО правила про прямой UDP,
+            // иначе запросы устройства уходили бы напрямую и обходили туннель.
+            // Правило привязано к входу `tun`: собственные запросы модуля (olcrtcDns)
+            // под него не попадают и идут дальше — по умолчанию в SOCKS olcrtc.
+            put(JSONObject().apply {
+                put("type", "field")
+                put("inboundTag", JSONArray().put("tun"))
+                put("outboundTag", "dns-out")
+                put("port", "53")
+                put("network", "udp,tcp")
+            })
             put(JSONObject().apply {
                 put("type", "field")
                 put("outboundTag", "direct")
@@ -345,10 +396,12 @@ object XrayConfigBuilder {
 
     /**
      * DNS для olcrtc идёт через туннель, поэтому только TCP: UDP-резолвер
-     * через SOCKS работать не будет.
+     * через SOCKS работать не будет. Адрес обязан быть вида `tcp://1.1.1.1`:
+     * запись `tcp+1.1.1.1` ядро принимает за имя хоста UDP-сервера, и резолвер
+     * молча не работает.
      */
     private fun olcrtcDns(): JSONObject = JSONObject().apply {
-        put("servers", JSONArray(DNS_SERVERS.map { "tcp+$it" }))
+        put("servers", JSONArray(DNS_SERVERS.map { "tcp://$it" }))
         put("queryStrategy", "UseIP")
     }
 }
