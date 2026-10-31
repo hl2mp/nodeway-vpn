@@ -71,7 +71,7 @@ jobs:
           echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
           echo "file_name=nodetun-v${VERSION}-universal.apk" >> "$GITHUB_OUTPUT"
 
-      - name: Build debug APK
+      - name: Build NodeTun
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Rename APK to release filename
@@ -90,7 +90,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Debug APK ${{ steps.version.outputs.version }}
+          name: NodeTun ${{ steps.version.outputs.version }}
           generate_release_notes: true
           make_latest: true
           files: |
