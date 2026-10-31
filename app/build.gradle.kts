@@ -52,6 +52,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // x86 (32-bit) — устаревший ABI, используется только старыми эмуляторами;
+            // убираем, чтобы не тянуть лишние нативные библиотеки (Xray, ML Kit и т.д.).
+            ndk {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            }
+        }
         release {
             // null, когда ключа нет: APK выходит неподписанным, сборка не падает.
             signingConfig = signingConfigs.findByName("release")
