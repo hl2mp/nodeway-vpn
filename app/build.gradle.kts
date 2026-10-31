@@ -41,6 +41,16 @@ android {
     }
 
     signingConfigs {
+        // Пользовательский debug-ключ: привязываем свой debug.keystore вместо
+        // дефолтного ~/.android/debug.keystore, чтобы отпечаток был стабильным.
+        // AGP уже создаёт signingConfig с именем "debug", поэтому его нужно
+        // переопределить через getByName, а не создавать заново.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         if (releaseStoreFile != null) {
             create("release") {
                 storeFile = rootProject.file(releaseStoreFile)
@@ -53,6 +63,9 @@ android {
 
     buildTypes {
         debug {
+            // Привязываем собственный debug-ключ (debug.keystore в корне проекта).
+            signingConfig = signingConfigs.getByName("debug")
+
             // x86 (32-bit) — устаревший ABI, используется только старыми эмуляторами;
             // убираем, чтобы не тянуть лишние нативные библиотеки (Xray, ML Kit и т.д.).
             ndk {
