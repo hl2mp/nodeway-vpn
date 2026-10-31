@@ -11,13 +11,13 @@
 local.properties
 
 # Ядро собирается gomobile, см. раздел «Ядро Xray» в README
-/app/libs/*.aar
-/app/libs/*.jar
+#/app/libs/*.aar
+#/app/libs/*.jar
 
 # Клиент olcrtc — вендоренная копия стороннего Go-проекта, в репозиторий не входит.
 # Собирается tools/build-olcrtc.ps1 из исходников, которые лежат рядом.
-/olcrtc/
-/app/src/main/jniLibs
+#/olcrtc/
+#/app/src/main/jniLibs
 
 # Ключ подписи и пароли от него в историю не должны.
 /keystore/
