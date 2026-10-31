@@ -34,8 +34,8 @@ android {
         applicationId = "com.nodetun.vpn"
         minSdk = 24
         targetSdk = 37
-        versionCode = 7
-        versionName = "1.0.7"
+        versionCode = 8
+        versionName = "1.0.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
