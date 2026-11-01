@@ -125,6 +125,13 @@ class NodewayVpnService : VpnService() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
+                // Старая сессия закончилась: цикл замеров от неё надо остановить до
+                // всего остального, иначе он продолжит рассылать CONNECTED (уже с id
+                // нового профиля), пока новое ядро ещё только поднимается.
+                stopProbe()
+                state = VpnState.CONNECTING
+                // Время подключения считается заново — с момента, когда поднимется новый профиль.
+                connectedAt = 0L
                 activeProfileId = intent.getStringExtra(EXTRA_PROFILE_ID).orEmpty()
                 startForeground(NOTIFICATION_ID, buildNotification(VpnState.CONNECTING, link))
                 publishState(VpnState.CONNECTING, "Переключаем профиль")
@@ -241,6 +248,7 @@ class NodewayVpnService : VpnService() {
         // Keep every socket the core opens outside of the tunnel it feeds.
         val delegate = ProtectDelegate()
         XrayCore.registerDialer(delegate)
+        // Register dialer controller for built-in DNS (tcp+local:// servers in JSON config override this)
         XrayCore.setupDns("1.1.1.1:53", delegate)
 
         val error = try {
@@ -286,8 +294,14 @@ class NodewayVpnService : VpnService() {
         val socksPort = probeSocksPort
         probeJob = serviceScope.launch {
             while (isActive) {
-                latencyMs = TunnelProbe.measure(socksPort) ?: 0
-                publishState(state)
+                val measured = TunnelProbe.measure(socksPort) ?: 0
+                // Замер, закончившийся уже после смены состояния (переключение,
+                // отключение), ничего не публикует: иначе интерфейс получил бы
+                // CONNECTED для туннеля, которого нет.
+                if (isActive && state == VpnState.CONNECTED) {
+                    latencyMs = measured
+                    publishState(state)
+                }
                 delay(PROBE_INTERVAL_MS)
             }
         }
@@ -371,7 +385,7 @@ class NodewayVpnService : VpnService() {
             pingIndex = 0
             pingTotal = 0
             pingProfileId = ""
-            
+
             if (cancelled) {
                 // Пользователь нажал "Остановить" — не восстанавливаем, уходим в DISCONNECTED
                 shutdown()
@@ -519,7 +533,6 @@ class NodewayVpnService : VpnService() {
             runCatching { XrayCore.stop() }
                 .onFailure { Log.w(TAG, "stop failed", it) }
             xrayLog.stop()
-            XrayCore.releaseDns()
             releaseTun()
             olcrtc.stop()
             deleteXrayLogFile()
@@ -747,6 +760,7 @@ class NodewayVpnService : VpnService() {
 
         val delegate = ProtectDelegate()
         XrayCore.registerDialer(delegate)
+        // Register dialer controller for built-in DNS (tcp+local:// servers in JSON config override this)
         XrayCore.setupDns("1.1.1.1:53", delegate)
 
         val error = try {
@@ -759,7 +773,6 @@ class NodewayVpnService : VpnService() {
         if (error.isNotEmpty()) {
             Log.w(TAG, "Xray error for ping: $error")
             xrayLog.stop()
-            XrayCore.releaseDns()
             return null
         }
 
@@ -769,7 +782,6 @@ class NodewayVpnService : VpnService() {
         } finally {
             XrayCore.stop()
             xrayLog.stop()
-            XrayCore.releaseDns()
         }
     }
 
@@ -787,8 +799,8 @@ class NodewayVpnService : VpnService() {
     companion object {
         private const val TAG = "NodewayVpnService"
 
-    /** Файл, куда ядро пишет логи для журнала в приложении. */
-    private const val XRAY_LOG_NAME = "xray.log"
+        /** Файл, куда ядро пишет логи для журнала в приложении. */
+        private const val XRAY_LOG_NAME = "xray.log"
 
         const val ACTION_CONNECT = "com.nodetun.vpn.action.CONNECT"
         const val ACTION_SWITCH = "com.nodetun.vpn.action.SWITCH"
@@ -803,18 +815,18 @@ class NodewayVpnService : VpnService() {
         const val EXTRA_PROFILE_ID = "extra_profile_id"
         const val EXTRA_CONNECTED_AT = "extra_connected_at"
 
-    /** Отклик через туннель в мс; 0 — замера не было или туннель не ответил. */
-    const val EXTRA_LATENCY_MS = "extra_latency_ms"
+        /** Отклик через туннель в мс; 0 — замера не было или туннель не ответил. */
+        const val EXTRA_LATENCY_MS = "extra_latency_ms"
 
-    /** Поочерёдная проверка профилей: ссылки и их id в том же порядке. */
-    const val EXTRA_PING_LINKS = "extra_ping_links"
-    const val EXTRA_PING_IDS = "extra_ping_ids"
+        /** Поочерёдная проверка профилей: ссылки и их id в том же порядке. */
+        const val EXTRA_PING_LINKS = "extra_ping_links"
+        const val EXTRA_PING_IDS = "extra_ping_ids"
 
-    /** Прогресс проверки и её результаты, чтобы Activity не отставала. */
-    const val EXTRA_PING_INDEX = "extra_ping_index"
-    const val EXTRA_PING_TOTAL = "extra_ping_total"
-    const val EXTRA_PING_PROFILE_ID = "extra_ping_profile_id"
-    const val EXTRA_PING_RESULTS = "extra_ping_results"
+        /** Прогресс проверки и её результаты, чтобы Activity не отставала. */
+        const val EXTRA_PING_INDEX = "extra_ping_index"
+        const val EXTRA_PING_TOTAL = "extra_ping_total"
+        const val EXTRA_PING_PROFILE_ID = "extra_ping_profile_id"
+        const val EXTRA_PING_RESULTS = "extra_ping_results"
 
         private const val CHANNEL_ID = "nodeway_vpn_service"
         private const val NOTIFICATION_ID = 0x4E57

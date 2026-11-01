@@ -32,15 +32,15 @@ object TunnelProbe {
 
     private const val TAG = "TunnelProbe"
 
-    private const val HOST = "www.google.com"
+    private const val HOST = "connectivitycheck.gstatic.com"
     private const val PORT = 80
 
     /** Таймаут и на connect (рукопожатие SOCKS), и на ожидание первой строки ответа. */
-    private const val ATTEMPT_TIMEOUT_MS = 2_000
+    private const val ATTEMPT_TIMEOUT_MS = 5_000
 
-    private const val WARMUP_ATTEMPTS = 2
-    private const val RETRY_PAUSE_MS = 100L
-    private const val MEASUREMENT_COUNT = 3
+    private const val WARMUP_ATTEMPTS = 3
+    private const val RETRY_PAUSE_MS = 300L
+    private const val MEASUREMENT_COUNT = 2
 
     private const val LOOPBACK = "127.0.0.1"
 

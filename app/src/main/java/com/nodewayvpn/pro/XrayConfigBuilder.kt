@@ -73,7 +73,19 @@ object XrayConfigBuilder {
         socksPort: Int,
         logLevel: String = DEFAULT_LOG_LEVEL,
         logFile: String? = null,
-    ): String = assembleSocks5Inbound(socksPort, logLevel, logFile, vlessOutbound(profile), routing(), dns())
+    ): String = assembleSocks5Inbound(
+        socksPort,
+        logLevel,
+        logFile,
+        vlessOutbound(profile),
+        // AsIs, а не IPIfNonMatch: проба просит у SOCKS домен (www.google.com), и при
+        // IPIfNonMatch ядро сначала резолвит его встроенным DNS напрямую, а уже потом
+        // шлёт в прокси. Если 1.1.1.1 по TCP отвечает медленно или не отвечает, это
+        // таймаут DNS (около 4 с) на КАЖДУЮ проверку: она дольше таймаута пробы и
+        // проваливается «через раз», независимо от того, жив ли сервер.
+        routing(domainStrategy = "AsIs"),
+        dns(),
+    )
 
     /**
      * Собирает конфиг с SOCKS5-inbound (вместо TUN).
@@ -316,8 +328,8 @@ object XrayConfigBuilder {
      * 3. Весь остальной UDP (QUIC, WebRTC) — напрямую, так как VLESS не перевозит UDP.
      * 4. Всё остальное (TCP) — через VLESS-прокси.
      */
-    private fun routing(): JSONObject = JSONObject().apply {
-        put("domainStrategy", "IPIfNonMatch")
+    private fun routing(domainStrategy: String = "IPIfNonMatch"): JSONObject = JSONObject().apply {
+        put("domainStrategy", domainStrategy)
         put("rules", JSONArray().apply {
             put(JSONObject().apply {
                 put("type", "field")
