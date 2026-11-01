@@ -23,8 +23,14 @@ object XrayConfigBuilder {
     /** DNS servers advertised to the TUN interface; shared with [NodewayVpnService]. */
     val DNS_SERVERS = listOf("1.1.1.1", "8.8.8.8")
 
-    /** DNS servers for built-in DNS module: TCP+local bypasses routing, goes direct via Freedom. */
-    private val DNS_SERVERS_INTERNAL = listOf("tcp+local://1.1.1.1", "tcp+local://8.8.8.8")
+    /**
+     * DNS servers for built-in DNS module: TCP через маршрутизацию, то есть через VLESS-туннель.
+     *
+     * Работает только вместе с правилом порта 53, привязанным к входу `tun` (см. [routing]):
+     * без привязки собственные запросы модуля к 1.1.1.1:53 подпадали бы под то же правило,
+     * попадали обратно в `dns-out` и зацикливались — ничего не резолвилось.
+     */
+    private val DNS_SERVERS_INTERNAL = listOf("tcp://1.1.1.1", "tcp://8.8.8.8")
 
     /** Networks used by the TUN inbound to resolve names. */
     private val PRIVATE_CIDRS = listOf(
@@ -321,12 +327,15 @@ object XrayConfigBuilder {
      * Порядок правил важен: первое совпадение выигрывает.
      *
      * 1. Приватные сети — напрямую (через direct outbound).
-     * 2. DNS (порт 53) — перехватываем через dns-out outbound.
-     *    dns-out с action=hijack импортирует запрос в built-in DNS модуль,
-     *    который сам решает: через proxy (VLESS) или direct (Freedom).
-     *    Это позволяет DNS работать даже если 1.1.1.1/8.8.8.8 заблокированы.
-     * 3. Весь остальной UDP (QUIC, WebRTC) — напрямую, так как VLESS не перевозит UDP.
-     * 4. Всё остальное (TCP) — через VLESS-прокси.
+     * 2. DNS (порт 53) ИЗ TUN — перехватываем через dns-out outbound: запрос
+     *    устройства уходит во встроенный DNS-модуль, а тот спрашивает серверы
+     *    из [DNS_SERVERS_INTERNAL] уже через VLESS-туннель. Правило привязано к
+     *    входу `tun`: запросы самого модуля под него не попадают и идут дальше
+     *    по умолчанию — в прокси; без привязки они бы зацикливались в dns-out.
+     * 3. Всё остальное — и TCP, и UDP (QUIC, WebRTC, игры) — через VLESS-прокси:
+     *    отдельного правила для UDP нет, трафик уходит в outbound по умолчанию.
+     *    Сервер должен разрешать UDP; при `flow=xtls-rprx-vision` ядро само отбрасывает
+     *    UDP на порт 443, и браузер откатывается с QUIC на TCP.
      */
     private fun routing(domainStrategy: String = "IPIfNonMatch"): JSONObject = JSONObject().apply {
         put("domainStrategy", domainStrategy)
@@ -338,22 +347,19 @@ object XrayConfigBuilder {
             })
             put(JSONObject().apply {
                 put("type", "field")
+                put("inboundTag", JSONArray().put("tun"))
                 put("outboundTag", "dns-out")
                 put("port", "53")
                 put("network", "udp,tcp")
-            })
-            put(JSONObject().apply {
-                put("type", "field")
-                put("outboundTag", "direct")
-                put("network", "udp")
             })
         })
     }
 
     /**
-     * DNS для VLESS: built-in DNS резолвит адрес VLESS-сервера.
-     * `tcp+local://` — DNS запрос уходит напрямую через Freedom outbound, минуя routing.
-     * Это предотвращает петлю: VLESS-сервер резолвится не через сам VLESS.
+     * DNS для VLESS: запросы приложений резолвит встроенный DNS-модуль, и идут они
+     * через VLESS-туннель (`tcp://`, через маршрутизацию). Адрес самого VLESS-сервера
+     * резолвится не здесь, а системным резолвером Go (см. XrayCore.setupDns) напрямую,
+     * поэтому петли «туннелю нужен DNS, а DNS нужен туннель» нет.
      * queryStrategy=UseIPv4 — VLESS-эндпойнты обычно IPv4.
      * hosts — предотвращает петлю резолва доменных имён DNS-серверов.
      */
