@@ -24,6 +24,10 @@ fun signingValue(key: String, env: String): String? =
 
 val releaseStoreFile = signingValue("storeFile", "NODEWAY_STORE_FILE")
 
+// ABI для релиза через параметр Gradle: ./gradlew app:assembleRelease -PabiFilters=arm64-v8a,x86_64
+val abiFiltersParam = project.findProperty("abiFilters") as? String
+val abiList = abiFiltersParam?.split(",")?.map { it.trim() } ?: emptyList()
+
 android {
     namespace = "com.nodetun.vpn"
     compileSdk {
@@ -80,6 +84,13 @@ android {
                 // R8 выключен намеренно: ядро ходит в Go через JNI и рефлексию,
                 // а про правила сохранения здесь ничего не документировано.
                 enable = false
+            }
+
+            ndk {
+                // Список ABI через -PabiFilters=arm64-v8a,x86_64.
+                // По умолчанию x86 исключён (как в debug), остальные включены.
+                val defaultAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+                abiFilters += if (abiList.isNotEmpty()) abiList else defaultAbis
             }
         }
     }
