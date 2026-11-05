@@ -1,4 +1,4 @@
-# Nodeway VPN
+# NodeTun
 
 Android-клиент для VLESS- и olcrtc-подключений. Интерфейс целиком на HTML/CSS/JS внутри WebView, трафик заворачивает встроенный Xray-core, который владеет TUN-интерфейсом.
 
@@ -19,7 +19,7 @@ Android-клиент для VLESS- и olcrtc-подключений. Интер�
 
 ```mermaid
 flowchart LR
-    UI["WebView UI<br/>assets/index.html"] --> BRIDGE["VpnWebBridge<br/>JS interface"]
+    UI["WebView UI<br/>assets/index_ios17.html"] --> BRIDGE["VpnWebBridge<br/>JS interface"]
     BRIDGE --> ACT["MainActivity<br/>разбор ссылок, подписки"]
     ACT --> SVC["NodewayVpnService<br/>VpnService + foreground"]
     SVC --> TUN["TUN-интерфейс<br/>fd из ParcelFileDescriptor"]
@@ -71,7 +71,7 @@ flowchart LR
 - Проверка идёт в отдельном состоянии `PINGING`: кнопка питания гаснет и не нажимается, а в плашке статуса видно «Проверка: 2 из 5» и имя текущего профиля. Туннель (если был подключен) временно гаснет до начала очереди и восстанавливается после — показывать мельтешение «Подключено / Отключено» было бы враньём.
 - **Для `vless://`** поднимается Xray-core с SOCKS5-inbound на `127.0.0.1` (порт из пула 10809+). Проба ходит в этот SOCKS5, Xray форвардит трафик в VLESS-сервер. Никакого VPN-интерфейса, никакого разрешения пользователя.
 - **Для `olcrtc://`** поднимается процесс клиента olcrtc, который даёт локальный SOCKS5 на `127.0.0.1:10808`. Проба ходит в этот SOCKS5 минуя Xray и TUN — так быстрее, и процесс olcrtc не ломается от попыток хода через свой же туннель.
-- Меряется TTFB до `http://www.google.com/generate_204`. Именно `www` и именно `http`: без `www` сервер отвечает редиректом и лишний круг ушёл бы в измерение вместо туннеля, а TLS-рукопожатие стоило бы дороже самого замера — внутри туннеля трафик и так шифрован.
+- Меряется TTFB до `http://connectivitycheck.gstatic.com/generate_204`. Именно `http`: TLS-рукопожатие стоило бы дороже самого замера — внутри туннеля трафик и так шифрован, а редиректы на `www` только добавили бы лишний круг.
 - Результаты живут только в памяти процесса и намеренно не сохраняются: на устройстве не должно оставаться записи «к каким адресам и когда стучались».
 - Время подключения в UI показывается как `00:00:00` на время проверки, но `connectedAt` в снимке не сбрасывается — после проверки счётчик продолжает идти от исходного момента.
 
@@ -88,7 +88,7 @@ flowchart LR
 
 Системные панели следуют за темой приложения, а не системы, и обновляются из `applySystemBars` — при выборе темы, при смене системной и при запуске. `enableEdgeToEdge()` выбирает вид панелей один раз, по теме системы, и активность при её смене не пересоздаётся, поэтому без этого на светлой странице в тёмной системе остаются белые иконки статус-бара, а на тёмной — тёмные.
 
-Принудительная тёмная тема WebView отключена в `disableForceDark`, а страница отвечает на `prefers-color-scheme` — без этого WebView считает её «не умеющей» в тёмную тему и перекрашивает сам. Но главное — отказ от force-dark в самой теме, `android:forceDarkAllowed=false`.
+Принудительная тёмная тема WebView отключена в `disableForceDark`. Основная страница `index_ios17.html` тему получает параметром `?theme` и на `prefers-color-scheme` не отвечает; на него отвечает только альтернативная `index.html` — без этого WebView считает страницу «не умеющей» в тёмную тему и перекрашивает сам. Но главное — отказ от force-dark в самой теме, `android:forceDarkAllowed=false`.
 
 > [!IMPORTANT]
 > На Xiaomi тёмная тема включается через настройку разработчика «Принудительная тёмная тема» (Override force-dark). Сама подмена не сообщает приложению о теме — она красит окна поверх, даже когда тема приложения светлая, и цвета выходят чужие, чуть не из нашей палитры. Удержать это в `WebSettings` нельзя: подмена повторяет перекрашивание при каждом изменении конфигурации и перебивает то, что выставило приложение. Потому отказ возможен только через тему.
@@ -146,7 +146,7 @@ olcrtc://jitsi?datachannel@https://meet.example.com/abc123#9f86d081884c7d65…$�
 
 | Часть | Что это |
 |-------|---------|
-| `jitsi` | провайдер: `jitsi`, `telemost`, `wbstream` или `none` |
+| `jitsi` | провайдер: `salutejazz`, `vkcalls`, `jitsi`, `telemost`, `wbstream` или `none` |
 | `datachannel` | транспорт: `datachannel`, `vp8channel`, `seichannel`, `videochannel` |
 | `<vp8-fps=60&vp8-batch=64>` | параметры транспорта через `&`; часть можно опустить целиком |
 | `https://meet.example.com/abc123` | ID комнаты — то, что стоит в адресе самой встречи |
@@ -189,7 +189,7 @@ adb shell am start -a android.intent.action.VIEW -d "nodeway://import#https://ex
 
 ## Клиент olcrtc
 
-Исходники лежат в `olcrtc/` и не патчатся: собирается штатный CLI, который принимает YAML как единственный аргумент. Бинарник кладётся в `app/src/main/jniLibs/<abi>/libolcrtc.so` и в git не попадает.
+Исходники лежат вне репозитория (по умолчанию `../olcrtc`) и не патчатся: собирается штатный CLI, который принимает YAML как единственный аргумент. Бинарник кладётся в `app/src/main/jniLibs/<abi>/libolcrtc.so` и в git не попадает.
 
 ```sh
 powershell -ExecutionPolicy Bypass -File tools/build-olcrtc.ps1
@@ -218,7 +218,7 @@ powershell -ExecutionPolicy Bypass -File tools/build-olcrtc.ps1
 
 ```sh
 ./gradlew assembleDebug
-# в MainActivity: file:///android_asset/index.html?demo=1
+# в MainActivity: file:///android_asset/index_ios17.html?demo=1
 ```
 
 Включается мок из `assets/dev-mock.js`: подписки, профили, состояние подключения и журнал без сети. Мок не подменяет живое состояние, если в странице есть нативный мост `NodewayVpn`, так что на реальном устройстве демо-панель не появляется.
@@ -229,10 +229,10 @@ powershell -ExecutionPolicy Bypass -File tools/build-olcrtc.ps1
 
 ## Ограничения
 
-- UDP и QUIC идут напрямую мимо туннеля, VLESS их не перевозит. Для olcrtc так же: SOCKS5 UDP не перевозит, и завернуть его в туннель значит убить резолвер.
-- DNS отправляется напрямую на `1.1.1.1` и `8.8.8.8`. Для olcrtc так нельзя: его DNS уходит в туннель и принудительно идёт по TCP, потому что через SOCKS UDP не работает.
+- Для VLESS UDP и QUIC идут через туннель (сервер должен разрешать UDP; при `flow=xtls-rprx-vision` ядро само отбрасывает UDP на порт 443). Для olcrtc UDP идёт напрямую мимо туннеля: SOCKS5 UDP не перевозит, и завернуть его в туннель значит убить резолвер.
+- DNS перехватывается ядром и резолвится через туннель (TCP) на `1.1.1.1` и `8.8.8.8`. Для olcrtc так же: его DNS идёт по TCP, потому что через SOCKS UDP не работает.
 - Поддерживаются транспорты `tcp` (он же `raw` в новых ссылках), `ws`, `httpupgrade`, `xhttp`, `grpc`, `http`. `kcp` и `quic` не поддерживаются.
-- `olcrtc` собран только под `arm64-v8a` и `x86_64`. На 32-битном устройстве профиль olcrtc не поднимется — ядро Xray там есть, а olcrtc нет.
+- `olcrtc` собран под `arm64-v8a`, `armeabi-v7a`, `x86_64` и `x86` (см. `tools/build-olcrtc.ps1`).
 - Подключение olcrtc требует исходящего UDP для STUN и DTLS. За сетями, которые режут UDP (часть корпоративных сетей и мобильных операторов), ICE не сойдётся даже при успешном входе в комнату.
 
 ## Структура
@@ -258,6 +258,7 @@ powershell -ExecutionPolicy Bypass -File tools/build-olcrtc.ps1
 | `VpnWebBridge.kt` | JS interface для страницы |
 | `AppIcons.kt` | иконки приложений: перехват запросов вместо моста |
 | `Prefs.kt` | настройки приложения (тема, журнал, коллапс групп) |
-| `assets/index.html` | весь UI: разметка, стили, логика (Material 3) |
-| `assets/theme-m3.html` | альтернативная тема (Material 3), синхронизирована с `index.html` |
+| `assets/index_ios17.html` | основной UI, который загружает `MainActivity` |
+| `assets/index.html` | альтернативный UI (Material), синхронизирован с `index_ios17.html` |
+| `assets/index_material3_expressive.html` | вариант UI в стиле Material 3 Expressive |
 | `assets/dev-mock.js` | мок данных для демо-режима (`?demo=1`) |
