@@ -1,269 +1,284 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
-<title>NodeTun</title>
-<script>
-document.documentElement.setAttribute('data-theme', /[?&]theme=dark/.test(location.search) ? 'dark' : 'light');
-</script>
-<style>
-/* ---------- Тема ---------- */
-:root{
-  color-scheme:light;
-  --bg:#F5F5F7;--card:#fff;--card-2:#F9F9FB;--line:#E8E8ED;--line-soft:#F0F0F4;
-  --text:#0A0A0B;--text-2:#3C3C43;--muted:#8E8E93;--muted-2:#AEAEB2;
-  --blue:#0A84FF;--blue-soft:#E5F1FF;--green:#34C759;--red:#FF3B30;--red-soft:#FFE8E6;--orange:#FF9500;
-  --radius-sm:10px;--radius-md:14px;--radius-lg:20px;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.04),0 1px 3px rgba(0,0,0,.06);
-  --shadow-md:0 4px 16px rgba(0,0,0,.08),0 1px 4px rgba(0,0,0,.04);
-  --shadow-lg:0 12px 40px rgba(0,0,0,.14),0 4px 12px rgba(0,0,0,.06);
-  --power-ring:#EDEDF2;
-  --chip-info-bg:#E5F1FF;--chip-info-fg:#0A84FF;--chip-ok-bg:#E3F8E9;--chip-ok-fg:#1E8E3E;
-  --chip-error-bg:#FFE8E6;--chip-error-fg:#C5221F;--chip-idle-bg:#F0F0F4;
-  --pressed-row:#F2F2F7;--pressed-btn:#E5E5EA;--knob:#fff;--track:rgba(120,120,128,.2);
-  --press-tint:rgba(0,0,0,.05);--sheet:rgba(250,250,252,.92);--sheet-strong:rgba(250,250,252,.97);--scrim:rgba(0,0,0,.35);
-  --log-xray:#7f8fa6;--log-olcrtc:#6f9c86;--log-warn:#c9a227;--log-error:#e0625f;
-  --notice-bg:#FFF9E6;--notice-fg:#8A6D3B;--notice-line:#FAEBCC;
-  --update-bg:linear-gradient(135deg,#0A84FF 0%,#5E5CE6 100%);
-  --inset-top:0px;--inset-bottom:0px;
-  --safe-top:max(var(--inset-top),env(safe-area-inset-top,0px));
-  --safe-bottom:max(var(--inset-bottom),env(safe-area-inset-bottom,0px));
-}
-:root[data-theme='dark']{
-  color-scheme:dark;
-  --bg:#000;--card:#1C1C1E;--card-2:#2C2C2E;--line:#2E2E30;--line-soft:#262628;
-  --text:#fff;--text-2:#EBEBF0;--muted-2:#636366;
-  --blue-soft:#0F2A47;--green:#30D158;--red:#FF453A;--red-soft:#3A1A19;--orange:#FF9F0A;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
-  --shadow-md:0 4px 16px rgba(0,0,0,.4),0 1px 4px rgba(0,0,0,.3);
-  --shadow-lg:0 12px 40px rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.35);
-  --power-ring:#2C2C2E;
-  --chip-info-bg:#0F2A47;--chip-info-fg:#4DA6FF;--chip-ok-bg:#0E2C18;--chip-ok-fg:#30D158;
-  --chip-error-bg:#3A1A19;--chip-error-fg:#FF6B5E;--chip-idle-bg:#2C2C2E;
-  --pressed-row:#2C2C2E;--pressed-btn:#3A3A3C;--track:rgba(255,255,255,.18);
-  --press-tint:rgba(255,255,255,.1);--sheet:rgba(28,28,30,.92);--sheet-strong:rgba(30,30,32,.97);--scrim:rgba(0,0,0,.6);
-  --log-xray:#8FA3BA;--log-olcrtc:#7FB89E;--log-warn:#E0B54A;--log-error:#FF7B72;
-  --notice-bg:#3A321C;--notice-fg:#F1C40F;--notice-line:#584A22;
-}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>NodeTun</title>
+  <script>
+    document.documentElement.setAttribute('data-theme', /[?&]theme=dark/.test(location.search) ? 'dark' : 'light');
+  </script>
+  <style>
+    /* ---------- Тема ---------- */
+    :root{
+      color-scheme:light;
+      --bg:#F5F5F7;--card:#fff;--card-2:#F9F9FB;--line:#E8E8ED;--line-soft:#F0F0F4;
+      --text:#0A0A0B;--text-2:#3C3C43;--muted:#8E8E93;--muted-2:#AEAEB2;
+      --blue:#0A84FF;--blue-soft:#E5F1FF;--green:#34C759;--red:#FF3B30;--red-soft:#FFE8E6;--orange:#FF9500;
+      --radius-sm:10px;--radius-md:14px;--radius-lg:20px;
+      --shadow-sm:0 1px 2px rgba(0,0,0,.04),0 1px 3px rgba(0,0,0,.06);
+      --shadow-md:0 4px 16px rgba(0,0,0,.08),0 1px 4px rgba(0,0,0,.04);
+      --shadow-lg:0 12px 40px rgba(0,0,0,.14),0 4px 12px rgba(0,0,0,.06);
+      --power-ring:#EDEDF2;
+      --chip-info-bg:#E5F1FF;--chip-info-fg:#0A84FF;--chip-ok-bg:#E3F8E9;--chip-ok-fg:#1E8E3E;
+      --chip-error-bg:#FFE8E6;--chip-error-fg:#C5221F;--chip-idle-bg:#F0F0F4;
+      --pressed-row:#F2F2F7;--pressed-btn:#E5E5EA;--knob:#fff;--track:rgba(120,120,128,.2);
+      --press-tint:rgba(0,0,0,.05);--sheet:rgba(250,250,252,.92);--sheet-strong:rgba(250,250,252,.97);--scrim:rgba(0,0,0,.35);
+      --log-xray:#7f8fa6;--log-olcrtc:#6f9c86;--log-warn:#c9a227;--log-error:#e0625f;
+      --notice-bg:#FFF9E6;--notice-fg:#8A6D3B;--notice-line:#FAEBCC;
+      --update-bg:linear-gradient(135deg,#0A84FF 0%,#5E5CE6 100%);
+      --inset-top:0px;--inset-bottom:0px;
+      --safe-top:max(var(--inset-top),env(safe-area-inset-top,0px));
+      --safe-bottom:max(var(--inset-bottom),env(safe-area-inset-bottom,0px));
+    }
+    :root[data-theme='dark']{
+      color-scheme:dark;
+      --bg:#000;--card:#1C1C1E;--card-2:#2C2C2E;--line:#2E2E30;--line-soft:#262628;
+      --text:#fff;--text-2:#EBEBF0;--muted-2:#636366;
+      --blue-soft:#0F2A47;--green:#30D158;--red:#FF453A;--red-soft:#3A1A19;--orange:#FF9F0A;
+      --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+      --shadow-md:0 4px 16px rgba(0,0,0,.4),0 1px 4px rgba(0,0,0,.3);
+      --shadow-lg:0 12px 40px rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.35);
+      --power-ring:#2C2C2E;
+      --chip-info-bg:#0F2A47;--chip-info-fg:#4DA6FF;--chip-ok-bg:#0E2C18;--chip-ok-fg:#30D158;
+      --chip-error-bg:#3A1A19;--chip-error-fg:#FF6B5E;--chip-idle-bg:#2C2C2E;
+      --pressed-row:#2C2C2E;--pressed-btn:#3A3A3C;--track:rgba(255,255,255,.18);
+      --press-tint:rgba(255,255,255,.1);--sheet:rgba(28,28,30,.92);--sheet-strong:rgba(30,30,32,.97);--scrim:rgba(0,0,0,.6);
+      --log-xray:#8FA3BA;--log-olcrtc:#7FB89E;--log-warn:#E0B54A;--log-error:#FF7B72;
+      --notice-bg:#3A321C;--notice-fg:#F1C40F;--notice-line:#584A22;
+    }
 
-/* ---------- База ---------- */
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--text);font:17px/1.4 -apple-system,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
-body{padding-bottom:var(--safe-bottom);transition:background .3s,color .3s}
-button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
-svg{display:block}
-[hidden]{display:none!important}
-.page{display:none}
-.page.active{display:block;animation:pageIn .3s ease}
-@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    /* ---------- База ---------- */
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;background:var(--bg);color:var(--text);font:17px/1.4 -apple-system,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+    body{padding-bottom:var(--safe-bottom);transition:background .3s,color .3s}
+    button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+    svg{display:block}
+    [hidden]{display:none!important}
+    .page{display:none}
+    .page.active{display:block;animation:pageIn .3s ease}
+    @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ---------- Верхние панели ---------- */
-.navbar,.settings-bar{position:sticky;top:0;z-index:20;background:var(--bg);padding:calc(var(--safe-top) + 10px) 20px 10px;transition:background .3s}
-.navbar{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px}
-.navbar.hidden{display:none}
-body.has-update .navbar,body.has-update .settings-bar{padding-top:10px}
-.nav-link{color:var(--blue);font-size:17px;font-weight:500;padding:4px 0;transition:opacity .15s}
-.nav-link:active{opacity:.5}
-.nav-link.big{font-size:30px;line-height:1;padding:0 6px;font-weight:300}
-.nav-link.accent{font-weight:600}
-.nav-link svg{width:24px;height:24px}
+    /* ---------- Верхние панели ---------- */
+    .navbar,.settings-bar{position:sticky;top:0;z-index:20;background:var(--bg);padding:calc(var(--safe-top) + 10px) 20px 10px;transition:background .3s}
+    .navbar{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px}
+    .navbar.hidden{display:none}
+    body.has-update .navbar,body.has-update .settings-bar{padding-top:10px}
+    .nav-link{color:var(--blue);font-size:17px;font-weight:500;padding:4px 0;transition:opacity .15s}
+    .nav-link:active{opacity:.5}
+    .nav-link.big{font-size:30px;line-height:1;padding:0 6px;font-weight:300}
+    .nav-link.accent{font-weight:600}
+    .nav-link svg{width:24px;height:24px}
 
-/* ---------- Баннер обновления ---------- */
-.update-banner{display:none;padding:calc(var(--safe-top) + 10px) 20px 12px;background:var(--update-bg);color:#fff;font-size:14px;box-shadow:var(--shadow-md);animation:slideDown .3s cubic-bezier(.16,1,.3,1);position: sticky;top: 0;z-index: 999}
-.update-banner.visible{display:block}
-.update-banner h4{margin:0 0 6px;font-size:15px;font-weight:600}
-.update-banner p{margin:0 0 10px;font-size:13px;opacity:.95}
-.update-banner .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-.update-banner button{background:rgba(255,255,255,.22);color:#fff;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:600;transition:transform .12s,opacity .15s;backdrop-filter:blur(10px)}
-.update-banner button:active{opacity:.8;transform:scale(.96)}
-.update-banner button.cancel{background:transparent}
-.update-banner .progress{margin-top:10px;height:4px;background:rgba(255,255,255,.25);border-radius:2px;overflow:hidden}
-.update-banner .progress-bar{height:100%;width:0;background:#fff;border-radius:2px;transition:width .2s}
-@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:none;opacity:1}}
+    /* ---------- Баннер обновления ---------- */
+    .update-banner{display:none;padding:calc(var(--safe-top) + 10px) 20px 12px;background:var(--update-bg);color:#fff;font-size:14px;box-shadow:var(--shadow-md);animation:slideDown .3s cubic-bezier(.16,1,.3,1);position: sticky;top: 0;z-index: 999}
+    .update-banner.visible{display:block}
+    .update-banner h4{margin:0 0 6px;font-size:15px;font-weight:600}
+    .update-banner p{margin:0 0 10px;font-size:13px;opacity:.95}
+    .update-banner .actions{display:flex;flex-wrap:wrap;margin:6px 0 -8px}
+    .update-banner button{background:rgba(255,255,255,.22);color:#fff;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:600;transition:transform .12s,opacity .15s;backdrop-filter:blur(10px)}
+    .update-banner button:active{opacity:.8;transform:scale(.96)}
+    .update-banner button.cancel{background:transparent}
+    .update-banner .progress{margin-top:10px;height:4px;background:rgba(255,255,255,.25);border-radius:2px;overflow:hidden}
+    .update-banner .progress-bar{height:100%;width:0;background:#fff;border-radius:2px;transition:width .2s}
+    @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:none;opacity:1}}
 
-/* ---------- Кнопка питания ---------- */
-.power-area{display:flex;flex-direction:column;align-items:center;padding:24px 16px 30px}
-.uptime{text-align:center;margin-bottom:28px}
-.uptime-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.uptime-value{margin-top:4px;font-size:38px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px}
-.latency{margin-top:8px;min-height:18px;font:500 13px ui-monospace,"SF Mono",Menlo,monospace;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:1px}
-.power-box{background:var(--power-ring);border-radius:50%;padding:16px;box-shadow:var(--shadow-md);transition:background .3s,box-shadow .3s}
-.power-btn{position:relative;display:grid;place-items:center;width:108px;height:108px;border-radius:50%;background:var(--blue);box-shadow:0 6px 24px rgba(10,132,255,.35);transition:background .3s,transform .15s,box-shadow .3s}
-.power-btn:active{transform:scale(.94)}
-.power-btn.on{background:var(--green);box-shadow:0 6px 28px rgba(52,199,89,.45);animation:pulseOn 2.4s ease-in-out infinite}
-.power-btn.busy{background:var(--muted);box-shadow:0 6px 20px rgba(142,142,147,.3)}
-@keyframes pulseOn{0%,100%{box-shadow:0 6px 28px rgba(52,199,89,.45)}50%{box-shadow:0 6px 40px rgba(52,199,89,.7)}}
-.status-chip{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:24px;padding:10px 22px;border-radius:999px;background:var(--chip-info-bg);color:var(--chip-info-fg);font-size:15px;font-weight:600;transition:background .3s,color .3s}
-.status-chip::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:currentColor}
-.status-chip.on{background:var(--chip-ok-bg);color:var(--chip-ok-fg)}
-.status-chip.error{background:var(--chip-error-bg);color:var(--chip-error-fg)}
-.status-chip.busy{background:var(--chip-idle-bg);color:var(--muted)}
-.status-chip.busy::before{animation:blink 1s ease-in-out infinite}
-.status-hint{margin-top:12px;max-width:320px;font-size:13px;color:var(--muted);text-align:center}
+    /* ---------- Кнопка питания ---------- */
+    .power-area{display:flex;flex-direction:column;align-items:center;padding:24px 16px 30px}
+    .uptime{text-align:center;margin-bottom:28px}
+    .uptime-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .uptime-value{margin-top:4px;font-size:38px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px}
+    .latency{margin-top:8px;min-height:18px;font:500 13px ui-monospace,"SF Mono",Menlo,monospace;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:1px}
+    .power-box{background:var(--power-ring);border-radius:50%;padding:16px;box-shadow:var(--shadow-md);transition:background .3s,box-shadow .3s}
+    .power-btn{position:relative;display:grid;place-items:center;width:108px;height:108px;border-radius:50%;background:var(--blue);box-shadow:0 6px 24px rgba(10,132,255,.35);transition:background .3s,transform .15s,box-shadow .3s}
+    .power-btn:active{transform:scale(.94)}
+    .power-btn.on{background:var(--green);box-shadow:0 6px 28px rgba(52,199,89,.45);animation:pulseOn 2.4s ease-in-out infinite}
+    .power-btn.busy{background:var(--muted);box-shadow:0 6px 20px rgba(142,142,147,.3)}
+    @keyframes pulseOn{0%,100%{box-shadow:0 6px 28px rgba(52,199,89,.45)}50%{box-shadow:0 6px 40px rgba(52,199,89,.7)}}
+    .status-chip{display:inline-flex;align-items:center;justify-content:center;margin-top:24px;padding:10px 22px;border-radius:999px;background:var(--chip-info-bg);color:var(--chip-info-fg);font-size:15px;font-weight:600;transition:background .3s,color .3s}
+    .status-chip::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:currentColor}
+    .status-chip.on{background:var(--chip-ok-bg);color:var(--chip-ok-fg)}
+    .status-chip.error{background:var(--chip-error-bg);color:var(--chip-error-fg)}
+    .status-chip.busy{background:var(--chip-idle-bg);color:var(--muted)}
+    .status-chip.busy::before{animation:blink 1s ease-in-out infinite}
+    .status-hint{margin-top:12px;max-width:320px;font-size:13px;color:var(--muted);text-align:center}
 
-/* ---------- Группы и строки ---------- */
-.section-title{font-size:13px;color:var(--muted);margin:26px 24px 10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
-.group,.log{background:var(--card);border-radius:var(--radius-lg);margin:0 16px 12px;overflow:hidden;box-shadow:var(--shadow-sm);transition:background .3s,box-shadow .3s}
-.group-head{display:flex;align-items:center;gap:10px;width:100%;padding:16px 18px;text-align:left;cursor:pointer;transition:background .15s}
-.group-head:active{background:var(--pressed-row)}
-.group-title{flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.group-count{font-size:13px;color:var(--muted)}
-.chevron{flex:none;color:var(--muted);transition:transform .25s cubic-bezier(.16,1,.3,1)}
-.group.collapsed .chevron,.log.collapsed .chevron{transform:rotate(-90deg)}
-.group-body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s cubic-bezier(.16,1,.3,1)}
-.group-inner{overflow:hidden;min-height:0}
-.group.collapsed .group-body{grid-template-rows:0fr}
+    /* ---------- Группы и строки ---------- */
+    .section-title{font-size:13px;color:var(--muted);margin:26px 24px 10px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+    .group,.log{background:var(--card);border-radius:var(--radius-lg);margin:0 16px 12px;overflow:hidden;box-shadow:var(--shadow-sm);transition:background .3s,box-shadow .3s}
+    .group-head{display:flex;align-items:center;width:100%;padding:16px 18px;text-align:left;cursor:pointer;transition:background .15s}
+    .group-head:active{background:var(--pressed-row)}
+    .group-title{flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .group-count{font-size:13px;color:var(--muted)}
+    .chevron{flex:none;color:var(--muted);transition:transform .25s cubic-bezier(.16,1,.3,1)}
+    .group.collapsed .chevron,.log.collapsed .chevron{transform:rotate(-90deg)}
+    .group-body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s cubic-bezier(.16,1,.3,1)}
+    .group-inner{overflow:hidden;min-height:0}
+    .group.collapsed .group-body{grid-template-rows:0fr}
 
-.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 18px 14px 16px;border-top:1px solid var(--line-soft);transition:background .15s}
-.row:active{background:var(--pressed-row)}
-.row-body{flex:1;min-width:0}
-.row-title,.row-sub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row-title{font-size:16px;font-weight:500}
-.row-sub{font-size:13px;color:var(--muted);margin-top:1px}
-.info-btn{flex:none;display:grid;place-items:center;width:26px;height:26px;border:2px solid var(--blue);border-radius:50%;color:var(--blue);font-size:15px;font-weight:600;line-height:1;transition:background .15s,color .15s}
-.info-btn.active{background:var(--blue);color:#fff}
-.ping-btn{flex:none;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--line-soft);color:var(--blue);transition:background .15s,transform .12s}
-.ping-btn:disabled{opacity:.4;cursor:default}
-.ping-btn:not(:disabled):active{background:var(--pressed-btn);transform:scale(.92)}
-.ping-btn.stop{color:var(--red)}
-.ping-badge{flex:none;display:flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--line-soft);color:var(--muted);font-size:12px;font-weight:600;white-space:nowrap;transition:background .2s,color .2s}
-.ping-badge:empty{display:none}
-.ping-badge.bad{color:var(--red);background:var(--red-soft)}
-.ping-badge.active{color:var(--blue);background:var(--blue-soft)}
-.empty{padding:20px 18px;color:var(--muted);font-size:15px;text-align:center}
-.spinner{display:inline-block;flex:none;width:16px;height:16px;border-radius:50%;border:2px solid var(--track);border-top-color:var(--blue);animation:spin .7s linear infinite;vertical-align:-3px}
+    .row{display:flex;align-items:center;width:100%;text-align:left;padding:14px 18px 14px 16px;border-top:1px solid var(--line-soft);transition:background .15s}
+    .row:active{background:var(--pressed-row)}
+    .row-body{flex:1;min-width:0}
+    .row-title,.row-sub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .row-title{font-size:16px;font-weight:500}
+    .row-sub{font-size:13px;color:var(--muted);margin-top:1px}
+    .info-btn{flex:none;display:grid;place-items:center;width:26px;height:26px;border:2px solid var(--blue);border-radius:50%;color:var(--blue);font-size:15px;font-weight:600;line-height:1;transition:background .15s,color .15s}
+    .info-btn.active{background:var(--blue);color:#fff}
+    .ping-btn{flex:none;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--line-soft);color:var(--blue);transition:background .15s,transform .12s}
+    .ping-btn:disabled{opacity:.4;cursor:default}
+    .ping-btn:not(:disabled):active{background:var(--pressed-btn);transform:scale(.92)}
+    .ping-btn.stop{color:var(--red)}
+    .ping-badge{flex:none;display:flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:var(--line-soft);color:var(--muted);font-size:12px;font-weight:600;white-space:nowrap;transition:background .2s,color .2s}
+    .ping-badge:empty{display:none}
+    .ping-badge.bad{color:var(--red);background:var(--red-soft)}
+    .ping-badge.active{color:var(--blue);background:var(--blue-soft)}
+    .empty{padding:20px 18px;color:var(--muted);font-size:15px;text-align:center}
+    .spinner{display:inline-block;flex:none;width:16px;height:16px;border-radius:50%;border:2px solid var(--track);border-top-color:var(--blue);animation:spin .7s linear infinite;vertical-align:-3px}
 
-/* ---------- Журнал ---------- */
-.log{margin:8px 16px 24px}
-.log .group-title{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px}
-.log.collapsed #logBody,.log.collapsed .log-filter{display:none}
-.log-filter{display:flex;align-items:center;gap:8px;padding:0 18px 12px}
-.log-filter button{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:500;color:var(--muted);transition:background .15s,color .15s}
-.log-filter button.active{background:var(--line-soft);color:var(--text)}
-.log-hint{margin-left:auto;font-size:11px;color:var(--muted);opacity:.7}
-#logBody{padding:0 18px 14px;max-height:240px;overflow-y:auto;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);-webkit-overflow-scrolling:touch}
-.log-line.xray{color:var(--log-xray)}
-.log-line.olcrtc{color:var(--log-olcrtc)}
-.log-line.warn{color:var(--log-warn)}
-.log-line.error{color:var(--log-error)}
+    /* ---------- Журнал ---------- */
+    .log{margin:8px 16px 24px}
+    .log .group-title{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px}
+    .log.collapsed #logBody,.log.collapsed .log-filter{display:none}
+    .log-filter{display:flex;align-items:center;padding:0 18px 12px}
+    .log-filter button{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:500;color:var(--muted);transition:background .15s,color .15s}
+    .log-filter button.active{background:var(--line-soft);color:var(--text)}
+    .log-hint{margin-left:auto;font-size:11px;color:var(--muted);opacity:.7}
+    #logBody{padding:0 18px 14px;max-height:240px;overflow-y:auto;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);-webkit-overflow-scrolling:touch}
+    .log-line.xray{color:var(--log-xray)}
+    .log-line.olcrtc{color:var(--log-olcrtc)}
+    .log-line.warn{color:var(--log-warn)}
+    .log-line.error{color:var(--log-error)}
 
-/* ---------- Настройки ---------- */
-.switch{flex:none;position:relative;width:51px;height:31px;margin-left:auto;border-radius:16px;background:var(--track);transition:background .2s}
-.switch::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:var(--knob);box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .22s cubic-bezier(.16,1,.3,1)}
-.switch.on{background:var(--green)}
-.switch.on::after{transform:translateX(20px)}
-.settings-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:15px 18px;border-top:1px solid var(--line-soft);font-size:16px;transition:background .15s}
-.group>.settings-row:first-child{border-top:none}
-button.settings-row:active{background:var(--pressed-row)}
-.settings-row.center{justify-content:center;color:var(--blue);font-weight:500}
-.settings-row small{display:block;margin-top:2px;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
-.settings-row .value{flex:none;margin-left:auto;color:var(--muted);font-size:15px}
-.settings-row .value.accent{color:var(--blue);margin-left:0}
-.settings-row .value.danger{color:var(--red);margin-left:0}
-.settings-row .value:disabled{opacity:.6;pointer-events:none}
-.settings-row>span:first-child{flex:1;min-width:0}
-.sub-row{align-items:flex-start}
-.mode-row{align-items:flex-start}
-.mode-copy{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
-.mark{flex:none;position:relative;width:22px;height:22px;margin-top:3px;border:2px solid var(--track);border-radius:50%;transition:border-color .2s}
-.mark.on{border-color:var(--blue)}
-.mark.on::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--blue);animation:markIn .2s ease}
-@keyframes markIn{from{transform:scale(0)}to{transform:scale(1)}}
+    /* ---------- Настройки ---------- */
+    .switch{flex:none;position:relative;width:51px;height:31px;margin-left:auto;border-radius:16px;background:var(--track);transition:background .2s}
+    .switch::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:var(--knob);box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .22s cubic-bezier(.16,1,.3,1)}
+    .switch.on{background:var(--green)}
+    .switch.on::after{transform:translateX(20px)}
+    .settings-row{display:flex;align-items:center;width:100%;text-align:left;padding:15px 18px;border-top:1px solid var(--line-soft);font-size:16px;transition:background .15s}
+    .group>.settings-row:first-child{border-top:none}
+    button.settings-row:active{background:var(--pressed-row)}
+    .settings-row.center{justify-content:center;color:var(--blue);font-weight:500}
+    .settings-row small{display:block;margin-top:2px;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+    .settings-row .value{flex:none;margin-left:auto;color:var(--muted);font-size:15px}
+    .settings-row .value.accent{color:var(--blue);margin-left:0}
+    .settings-row .value.danger{color:var(--red);margin-left:0}
+    .settings-row .value:disabled{opacity:.6;pointer-events:none}
+    .settings-row>span:first-child{flex:1;min-width:0}
+    .sub-row{align-items:flex-start}
+    .mode-row{align-items:flex-start}
+    .mode-copy{display:flex;flex-direction:column;flex:1;min-width:0}
+    .mark{flex:none;position:relative;width:22px;height:22px;margin-top:3px;border:2px solid var(--track);border-radius:50%;transition:border-color .2s}
+    .mark.on{border-color:var(--blue)}
+    .mark.on::after{content:"";position:absolute;top:3px;right:3px;bottom:3px;left:3px;border-radius:50%;background:var(--blue);animation:markIn .2s ease}
+    @keyframes markIn{from{transform:scale(0)}to{transform:scale(1)}}
 
-/* ---------- Выбор приложений ---------- */
-.picker{position:fixed;inset:0;z-index:45;display:none;flex-direction:column;background:var(--bg)}
-.picker.open{display:flex;animation:pageIn .25s ease}
-.picker-bar{display:flex;align-items:center;gap:8px;padding:calc(var(--safe-top) + 12px) 12px 12px;background:var(--card);border-bottom:1px solid var(--line)}
-.picker-title{flex:1;text-align:center;font-size:17px;font-weight:600}
-.picker-tools{padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
-.picker-search{position:relative}
-.picker-input{width:100%;padding:12px 44px 12px 14px;border:none;border-radius:var(--radius-sm);background:var(--line-soft);color:inherit;font:inherit;font-size:16px;outline:none;transition:background .2s}
-.picker-input:focus{background:var(--blue-soft)}
-.picker-search-clear{position:absolute;top:50%;right:6px;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:var(--muted)}
-.picker-search-clear:active{background:var(--press-tint)}
-.picker-switch{display:flex;align-items:center;gap:8px;padding-top:12px;font-size:14px;color:var(--muted)}
-.picker-switch input{width:18px;height:18px;accent-color:var(--blue)}
-.picker-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--card)}
-.picker-loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px 16px;color:var(--muted);font-size:15px}
-.picker-group{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--muted);background:var(--bg)}
-.picker-clear{color:var(--blue);font-size:14px;text-transform:none;letter-spacing:0;font-weight:500}
-.picker-clear:disabled{color:var(--muted);opacity:.4}
-.app-row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:10px 18px;border-top:1px solid var(--line-soft);transition:background .15s}
-.app-row:active{background:var(--pressed-row)}
-.app-icon{flex:none;width:42px;height:42px;border-radius:10px;background:var(--line-soft);object-fit:cover}
-.app-copy{flex:1;min-width:0}
-.app-name{display:block;font-size:16px;font-weight:500;overflow-wrap:anywhere}
-.app-pkg{display:block;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
-.app-box{flex:none;position:relative;width:24px;height:24px;border:2px solid var(--track);border-radius:8px;transition:background .15s,border-color .15s}
-.app-row.on .app-box{border-color:var(--blue);background:var(--blue)}
-.app-row.on .app-box::after{content:"";position:absolute;left:7px;top:3px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+    /* ---------- Выбор приложений ---------- */
+    .picker{position:fixed;top:0;right:0;bottom:0;left:0;z-index:45;display:none;flex-direction:column;background:var(--bg)}
+    .picker.open{display:flex;animation:pageIn .25s ease}
+    .picker-bar{display:flex;align-items:center;padding:calc(var(--safe-top) + 12px) 12px 12px;background:var(--card);border-bottom:1px solid var(--line)}
+    .picker-title{flex:1;text-align:center;font-size:17px;font-weight:600}
+    .picker-tools{padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+    .picker-search{position:relative}
+    .picker-input{width:100%;padding:12px 44px 12px 14px;border:none;border-radius:var(--radius-sm);background:var(--line-soft);color:inherit;font:inherit;font-size:16px;outline:none;transition:background .2s}
+    .picker-input:focus{background:var(--blue-soft)}
+    .picker-search-clear{position:absolute;top:50%;right:6px;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:var(--muted)}
+    .picker-search-clear:active{background:var(--press-tint)}
+    .picker-switch{display:flex;align-items:center;padding-top:12px;font-size:14px;color:var(--muted)}
+    .picker-switch input{width:18px;height:18px;accent-color:var(--blue)}
+    .picker-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--card)}
+    .picker-loading{display:flex;align-items:center;justify-content:center;padding:40px 16px;color:var(--muted);font-size:15px}
+    .picker-group{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--muted);background:var(--bg)}
+    .picker-clear{color:var(--blue);font-size:14px;text-transform:none;letter-spacing:0;font-weight:500}
+    .picker-clear:disabled{color:var(--muted);opacity:.4}
+    .app-row{display:flex;align-items:center;width:100%;text-align:left;padding:10px 18px;border-top:1px solid var(--line-soft);transition:background .15s}
+    .app-row:active{background:var(--pressed-row)}
+    .app-icon{flex:none;width:42px;height:42px;border-radius:10px;background:var(--line-soft);object-fit:cover}
+    .app-copy{flex:1;min-width:0}
+    .app-name{display:block;font-size:16px;font-weight:500;overflow-wrap:anywhere}
+    .app-pkg{display:block;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+    .app-box{flex:none;position:relative;width:24px;height:24px;border:2px solid var(--track);border-radius:8px;transition:background .15s,border-color .15s}
+    .app-row.on .app-box{border-color:var(--blue);background:var(--blue)}
+    .app-row.on .app-box::after{content:"";position:absolute;left:7px;top:3px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
 
-/* ---------- Шторки, модалки, тосты ---------- */
-.scrim{position:fixed;inset:0;z-index:40;display:none;background:var(--scrim);backdrop-filter:blur(2px)}
-.scrim.open{display:block;animation:fadeIn .2s ease}
-.sheet,.modal{position:fixed;z-index:41;max-width:480px;margin:0 auto;overflow:hidden;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);backdrop-filter:blur(24px);opacity:0;pointer-events:none;transition:opacity .25s cubic-bezier(.16,1,.3,1),transform .25s cubic-bezier(.16,1,.3,1),visibility .25s;visibility:hidden}
-.sheet.open,.modal.open{opacity:1;pointer-events:auto;visibility:visible}
-.sheet{left:12px;right:12px;bottom:calc(var(--safe-bottom) + 14px);background:var(--sheet);transform:translateY(20px)}
-.sheet.open{transform:none}
-.modal{left:16px;right:16px;top:50%;max-width:440px;max-height:88vh;overflow-y:auto;background:var(--sheet-strong);transform:translateY(-50%) scale(.92)}
-.modal.open{transform:translateY(-50%) scale(1)}
-.sheet-item{display:block;width:100%;padding:18px 12px;text-align:center;font-size:18px;font-weight:500;color:var(--blue);border-bottom:1px solid var(--line);transition:background .15s}
-.sheet-item:active{background:var(--pressed-row)}
-.sheet-item:last-child{border-bottom:none}
-.sheet-item.primary{font-weight:600}
-.sheet-item.muted{color:var(--muted)}
-.sheet-item.danger{color:var(--red)}
-.sheet-item.current::after{content:" ✓"}
-.modal-head{padding:20px 18px 12px;text-align:center;font-size:18px;font-weight:600;overflow-wrap:anywhere}
-.modal-actions{border-top:1px solid var(--line)}
-.detail{display:flex;justify-content:space-between;gap:16px;padding:10px 20px;font-size:14px;border-top:1px solid var(--line-soft)}
-.detail .k{flex:none;color:var(--muted)}
-.detail .v{text-align:right;word-break:break-all}
-.notice-banner{margin:10px 18px 0;padding:10px 14px;border:1px solid var(--notice-line);border-radius:var(--radius-sm);background:var(--notice-bg);color:var(--notice-fg);font-size:12px;line-height:1.45}
+    /* ---------- Шторки, модалки, тосты ---------- */
+    .scrim{position:fixed;top:0;right:0;bottom:0;left:0;z-index:40;display:none;background:var(--scrim);backdrop-filter:blur(2px)}
+    .scrim.open{display:block;animation:fadeIn .2s ease}
+    .sheet,.modal{position:fixed;z-index:41;max-width:480px;margin:0 auto;overflow:hidden;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);backdrop-filter:blur(24px);opacity:0;pointer-events:none;transition:opacity .25s cubic-bezier(.16,1,.3,1),transform .25s cubic-bezier(.16,1,.3,1),visibility .25s;visibility:hidden}
+    .sheet.open,.modal.open{opacity:1;pointer-events:auto;visibility:visible}
+    .sheet{left:12px;right:12px;bottom:calc(var(--safe-bottom) + 14px);background:var(--sheet);transform:translateY(20px)}
+    .sheet.open{transform:none}
+    .modal{left:16px;right:16px;top:50%;max-width:440px;max-height:88vh;overflow-y:auto;background:var(--sheet-strong);transform:translateY(-50%) scale(.92)}
+    .modal.open{transform:translateY(-50%) scale(1)}
+    .sheet-item{display:block;width:100%;padding:18px 12px;text-align:center;font-size:18px;font-weight:500;color:var(--blue);border-bottom:1px solid var(--line);transition:background .15s}
+    .sheet-item:active{background:var(--pressed-row)}
+    .sheet-item:last-child{border-bottom:none}
+    .sheet-item.primary{font-weight:600}
+    .sheet-item.muted{color:var(--muted)}
+    .sheet-item.danger{color:var(--red)}
+    .sheet-item.current::after{content:" ✓"}
+    .modal-head{padding:20px 18px 12px;text-align:center;font-size:18px;font-weight:600;overflow-wrap:anywhere}
+    .modal-actions{border-top:1px solid var(--line)}
+    .detail{display:flex;justify-content:space-between;padding:10px 20px;font-size:14px;border-top:1px solid var(--line-soft)}
+    .detail .k{flex:none;color:var(--muted)}
+    .detail .v{text-align:right;word-break:break-all}
+    .notice-banner{margin:10px 18px 0;padding:10px 14px;border:1px solid var(--notice-line);border-radius:var(--radius-sm);background:var(--notice-bg);color:var(--notice-fg);font-size:12px;line-height:1.45}
 
-.form-body{display:flex;flex-direction:column;gap:14px;padding:14px 18px;text-align:left}
-#vlessFields,#olcrtcFields,#realityFields{display:flex;flex-direction:column;gap:14px}
-.form-row,.form-row-2>div{display:flex;flex-direction:column;gap:6px}
-.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.form-body label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
-.form-input,.form-select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--radius-sm);background:var(--card-2);color:var(--text);font:inherit;font-size:16px;outline:none;transition:border-color .15s,background .15s}
-.form-input:focus,.form-select:focus{border-color:var(--blue);background:var(--card)}
-.scheme-switch{display:flex;padding:3px;border:1.5px solid var(--line);border-radius:var(--radius-sm);background:var(--card-2)}
-.scheme-btn{flex:1;padding:8px;border-radius:8px;color:var(--muted);font-size:14px;font-weight:600;transition:background .15s,color .15s,box-shadow .15s}
-.scheme-btn.active{background:var(--card);color:var(--text);box-shadow:var(--shadow-sm)}
-.form-row.checkbox-row{flex-direction:row;align-items:center;gap:8px}
-.checkbox-row label{font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-2)}
-.checkbox-row input{flex:none;width:20px;height:20px;accent-color:var(--blue)}
-.form-error{padding:10px 14px;border-radius:var(--radius-sm);background:var(--red-soft);color:var(--red);font-size:13px}
+    .form-body{display:flex;flex-direction:column;padding:14px 18px;text-align:left}
+    #vlessFields,#olcrtcFields,#realityFields{display:flex;flex-direction:column}
+    .form-row,.form-row-2>div{display:flex;flex-direction:column}
+    .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-body label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+    .form-input,.form-select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--radius-sm);background:var(--card-2);color:var(--text);font:inherit;font-size:16px;outline:none;transition:border-color .15s,background .15s}
+    .form-input:focus,.form-select:focus{border-color:var(--blue);background:var(--card)}
+    .scheme-switch{display:flex;padding:3px;border:1.5px solid var(--line);border-radius:var(--radius-sm);background:var(--card-2)}
+    .scheme-btn{flex:1;padding:8px;border-radius:8px;color:var(--muted);font-size:14px;font-weight:600;transition:background .15s,color .15s,box-shadow .15s}
+    .scheme-btn.active{background:var(--card);color:var(--text);box-shadow:var(--shadow-sm)}
+    .form-row.checkbox-row{flex-direction:row;align-items:center}
+    .checkbox-row label{font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;color:var(--text-2)}
+    .checkbox-row input{flex:none;width:20px;height:20px;accent-color:var(--blue)}
+    .form-error{padding:10px 14px;border-radius:var(--radius-sm);background:var(--red-soft);color:var(--red);font-size:13px}
 
-.modal.alert{text-align:center}
-.alert-head{padding:24px 20px 6px;font-size:18px;font-weight:600}
-.alert-text{padding:0 20px 6px;font-size:14px;line-height:1.45;color:var(--muted)}
-.alert-actions{display:flex;margin-top:14px;border-top:1px solid var(--line)}
-.alert-btn{flex:1;padding:16px 10px;font-size:17px;font-weight:500;color:var(--blue);border-right:1px solid var(--line);transition:background .15s}
-.alert-btn:active{background:var(--pressed-row)}
-.alert-btn.danger{color:var(--red);font-weight:600;border-right:none}
+    .modal.alert{text-align:center}
+    .alert-head{padding:24px 20px 6px;font-size:18px;font-weight:600}
+    .alert-text{padding:0 20px 6px;font-size:14px;line-height:1.45;color:var(--muted)}
+    .alert-actions{display:flex;margin-top:14px;border-top:1px solid var(--line)}
+    .alert-btn{flex:1;padding:16px 10px;font-size:17px;font-weight:500;color:var(--blue);border-right:1px solid var(--line);transition:background .15s}
+    .alert-btn:active{background:var(--pressed-row)}
+    .alert-btn.danger{color:var(--red);font-weight:600;border-right:none}
 
-.snackbar{position:fixed;left:16px;right:16px;bottom:calc(var(--safe-bottom) + 20px);z-index:50;max-width:440px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:var(--radius-md);background:var(--tb,var(--text));color:var(--tc,var(--bg));box-shadow:0 12px 40px rgba(0,0,0,.28),0 4px 12px rgba(0,0,0,.12);backdrop-filter:blur(24px);font-size:14px;font-weight:500;opacity:0;pointer-events:none;transform:translateY(16px) scale(.96);transition:opacity .25s cubic-bezier(.16,1,.3,1),transform .25s cubic-bezier(.16,1,.3,1)}
-.snackbar.visible{opacity:1;pointer-events:auto;transform:none}
-.snackbar.error{--tb:var(--red);--tc:#fff}
-.snackbar.success{--tb:var(--green);--tc:#fff}
-.snackbar.warning{--tb:var(--orange);--tc:#fff}
-.snackbar.info{--tb:var(--blue);--tc:#fff}
-.snackbar .spinner{border-color:rgba(127,127,127,.4);border-top-color:currentColor}
-.snackbar-icon{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;font-size:16px;line-height:1}
-.snackbar-icon:empty{display:none}
-.snackbar-text{flex:1;min-width:0}
+    .snackbar{position:fixed;left:16px;right:16px;bottom:calc(var(--safe-bottom) + 20px);z-index:50;max-width:440px;margin:0 auto;display:flex;align-items:center;padding:14px 18px;border-radius:var(--radius-md);background:var(--tb,var(--text));color:var(--tc,var(--bg));box-shadow:0 12px 40px rgba(0,0,0,.28),0 4px 12px rgba(0,0,0,.12);backdrop-filter:blur(24px);font-size:14px;font-weight:500;opacity:0;pointer-events:none;transform:translateY(16px) scale(.96);transition:opacity .25s cubic-bezier(.16,1,.3,1),transform .25s cubic-bezier(.16,1,.3,1)}
+    .snackbar.visible{opacity:1;pointer-events:auto;transform:none}
+    .snackbar.error{--tb:var(--red);--tc:#fff}
+    .snackbar.success{--tb:var(--green);--tc:#fff}
+    .snackbar.warning{--tb:var(--orange);--tc:#fff}
+    .snackbar.info{--tb:var(--blue);--tc:#fff}
+    .snackbar .spinner{border-color:rgba(127,127,127,.4);border-top-color:currentColor}
+    .snackbar-icon{flex:none;display:inline-grid;place-items:center;width:20px;height:20px;font-size:16px;line-height:1}
+    .snackbar-icon:empty{display:none}
+    .snackbar-text{flex:1;min-width:0}
 
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-thumb{background:var(--muted-2);border-radius:3px}
-::-webkit-scrollbar-track{background:transparent}
-</style>
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-thumb{background:var(--muted-2);border-radius:3px}
+    ::-webkit-scrollbar-track{background:transparent}
+    /* ---------- Совместимость: WebView < 84 (нет flex-gap) ---------- */
+    .update-banner .actions>*{margin:0 8px 8px 0}
+    .status-chip::before{margin-right:8px}
+    .group-head>:not(:last-child),.picker-switch>:not(:last-child),.log-filter>:not(:last-child),.picker-bar>:not(:last-child){margin-right:8px}
+    .group-head>:not(:last-child){margin-right:10px}
+    .picker-loading>:not(:last-child){margin-right:10px}
+    .row>:not(:last-child),.settings-row>:not(:last-child),.picker-group>:not(:last-child),.snackbar>:not(:last-child){margin-right:12px}
+    .app-row>:not(:last-child){margin-right:14px}
+    .detail>:not(:last-child){margin-right:16px}
+    .picker-switch>input{margin-right:11px}
+    .mode-copy>:not([hidden])~:not([hidden]){margin-top:5px}
+    .form-body>:not([hidden])~:not([hidden]),#vlessFields>:not([hidden])~:not([hidden]),#olcrtcFields>:not([hidden])~:not([hidden]),#realityFields>:not([hidden])~:not([hidden]){margin-top:14px}
+    .form-row>:not([hidden])~:not([hidden]),.form-row-2>div>:not([hidden])~:not([hidden]){margin-top:6px}
+    .form-row.checkbox-row>:not([hidden])~:not([hidden]){margin-top:0}
+    .checkbox-row>input{margin-right:11px}
+  </style>
 </head>
 <body>
 
@@ -499,1130 +514,1130 @@ button.settings-row:active{background:var(--pressed-row)}
 </div>
 <script src="dev-mock.js"></script>
 <script>
-(() => {
-'use strict';
+  (() => {
+  'use strict';
 
-/* ================= Мост и утилиты ================= */
-const native = window.NodewayVpn || null;
-const call = (name, ...args) => (native && typeof native[name] === 'function') ? native[name](...args) : null;
-const $ = id => document.getElementById(id);
-const parse = json => {
-  if (json && typeof json === 'object') return json;
-  try { return JSON.parse(json); } catch (e) { return null; }
-};
-const pad = n => String(n).padStart(2, '0');
-const clear = node => { node.textContent = ''; };
-const keys = obj => Object.keys(obj);
-const dec = s => { try { return decodeURIComponent(s); } catch (e) { return s; } };
-const h = (tag, cls, text) => {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text != null) node.textContent = text;
-  return node;
-};
-const store = {
-  get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } },
-  set(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
-};
-
-const ICON_POWER_ON = '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><path d="M9.1 6.9v10.2M14.9 6.9v10.2"/></svg>';
-const ICON_POWER_OFF = '<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 4.5V12"/><path d="M7.6 7a6.8 6.8 0 1 0 8.8 0"/></svg>';
-const ICON_PING = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 12h3l2-6 3 12 2.5-8 1.5 4H21"/></svg>';
-const ICON_STOP = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
-const ICON_CHEV = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg>';
-
-const chevron = () => {
-  const node = h('span', 'chevron');
-  node.innerHTML = ICON_CHEV;
-  return node;
-};
-
-/* ================= Состояние ================= */
-const STATE_TEXT = { disconnected: 'Отключено', connecting: 'Подключение', connected: 'Подключено', disconnecting: 'Отключение', error: 'Ошибка' };
-const THEME_NAMES = { system: 'Как в системе', light: 'Светлая', dark: 'Тёмная' };
-const MAX_LOG_LINES = 200;
-const MAX_JOURNAL = 400;
-
-const normalizeModel = data => {
-  const m = Object.assign({ profiles: [], subscriptions: [], selectedProfileId: '', activeProfileId: '', connectedAt: 0 }, data);
-  if (!Array.isArray(m.profiles)) m.profiles = [];
-  if (!Array.isArray(m.subscriptions)) m.subscriptions = [];
-  return m;
-};
-const normalizePing = raw => {
-  const results = {};
-  keys((raw && raw.results) || {}).forEach(k => { results[k] = Number(raw.results[k]); });
-  return {
-    running: !!(raw && raw.running),
-    index: Number(raw && raw.index) || 0,
-    total: Number(raw && raw.total) || 0,
-    profileId: (raw && raw.profileId) || '',
-    results
+  /* ================= Мост и утилиты ================= */
+  const native = window.NodewayVpn || null;
+  const call = (name, ...args) => (native && typeof native[name] === 'function') ? native[name](...args) : null;
+  const $ = id => document.getElementById(id);
+  const parse = json => {
+    if (json && typeof json === 'object') return json;
+    try { return JSON.parse(json); } catch (e) { return null; }
   };
-};
+  const pad = n => String(n).padStart(2, '0');
+  const clear = node => { node.textContent = ''; };
+  const keys = obj => Object.keys(obj);
+  const dec = s => { try { return decodeURIComponent(s); } catch (e) { return s; } };
+  const h = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+  const store = {
+    get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } },
+    set(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+  };
 
-let state = 'disconnected';
-let lastMessage = '';
-let latencyMs = 0;
-let model = normalizeModel();
-let ping = normalizePing();
-let pingStopping = false;
-let pingStartKey = '';
-let modalProfileId = '';
-let themeMode = 'system';
-let currentPage = 'pageHome';
+  const ICON_POWER_ON = '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><path d="M9.1 6.9v10.2M14.9 6.9v10.2"/></svg>';
+  const ICON_POWER_OFF = '<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 4.5V12"/><path d="M7.6 7a6.8 6.8 0 1 0 8.8 0"/></svg>';
+  const ICON_PING = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 12h3l2-6 3 12 2.5-8 1.5 4H21"/></svg>';
+  const ICON_STOP = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>';
+  const ICON_CHEV = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg>';
 
-const IDS = ['powerBtn', 'uptime', 'latency', 'statusText', 'statusHint', 'statusChip', 'subscriptions', 'localGroup', 'subAdmin',
-  'logBody', 'logChev', 'logCard', 'logFilter', 'logHint', 'journalRow', 'journalSwitch', 'scrim', 'sheet', 'themeSheet',
-  'themeRow', 'themeValue', 'modal', 'modalTitle', 'modalBody', 'modalConnect', 'editModal', 'coreVersion', 'olcrtcVersion',
-  'appVersion', 'updateBanner', 'updateVersion', 'updateSize', 'updateProgress', 'updateBtn', 'updateCloseBtn',
-  'alert', 'alertTitle', 'alertText', 'alertOk', 'alertCancel', 'snackbar', 'snackbarText', 'snackbarIcon', 'snackbarSpinner'];
-const el = {};
-IDS.forEach(id => { el[id] = $(id); });
-el.updateProgressBar = el.updateProgress.querySelector('.progress-bar');
+  const chevron = () => {
+    const node = h('span', 'chevron');
+    node.innerHTML = ICON_CHEV;
+    return node;
+  };
 
-/* Свёрнутые группы */
-const COLLAPSED_KEY = 'nodeway.collapsed';
-const collapsed = (() => {
-  const saved = parse(store.get(COLLAPSED_KEY)) || {};
-  return { subscriptions: saved.subscriptions || {}, local: !!saved.local, log: !!saved.log };
-})();
-const saveCollapsed = () => store.set(COLLAPSED_KEY, JSON.stringify(collapsed));
+  /* ================= Состояние ================= */
+  const STATE_TEXT = { disconnected: 'Отключено', connecting: 'Подключение', connected: 'Подключено', disconnecting: 'Отключение', error: 'Ошибка' };
+  const THEME_NAMES = { system: 'Как в системе', light: 'Светлая', dark: 'Тёмная' };
+  const MAX_LOG_LINES = 200;
+  const MAX_JOURNAL = 400;
 
-/* ================= Уведомления и диалоги ================= */
-let toastTimer = null;
-function toast(message, o = {}) {
-  if (!message) return;
-  clearTimeout(toastTimer);
-  const kind = o.spinner ? '' : o.error ? 'error' : o.success ? 'success' : o.warning ? 'warning' : o.info ? 'info' : '';
-  el.snackbar.className = 'snackbar visible' + (kind ? ' ' + kind : '');
-  el.snackbarSpinner.hidden = !o.spinner;
-  el.snackbarIcon.textContent = o.spinner ? '' : ({ error: '✕', warning: '⚠', info: 'ℹ' }[kind] || '✓');
-  el.snackbarText.textContent = message;
-  if (!o.sticky) toastTimer = setTimeout(hideToast, o.error ? 5000 : 2600);
-}
-function hideToast() { clearTimeout(toastTimer); el.snackbar.classList.remove('visible'); }
+  const normalizeModel = data => {
+    const m = Object.assign({ profiles: [], subscriptions: [], selectedProfileId: '', activeProfileId: '', connectedAt: 0 }, data);
+    if (!Array.isArray(m.profiles)) m.profiles = [];
+    if (!Array.isArray(m.subscriptions)) m.subscriptions = [];
+    return m;
+  };
+  const normalizePing = raw => {
+    const results = {};
+    keys((raw && raw.results) || {}).forEach(k => { results[k] = Number(raw.results[k]); });
+    return {
+      running: !!(raw && raw.running),
+      index: Number(raw && raw.index) || 0,
+      total: Number(raw && raw.total) || 0,
+      profileId: (raw && raw.profileId) || '',
+      results
+    };
+  };
 
-function showReply(reply) {
-  if (!reply || !reply.message) return;
-  if (reply.loading) toast(reply.message, { spinner: true, sticky: true });
-  else toast(reply.message, { error: reply.ok === false, success: reply.ok === true });
-}
+  let state = 'disconnected';
+  let lastMessage = '';
+  let latencyMs = 0;
+  let model = normalizeModel();
+  let ping = normalizePing();
+  let pingStopping = false;
+  let pingStartKey = '';
+  let modalProfileId = '';
+  let themeMode = 'system';
+  let currentPage = 'pageHome';
 
-const OVERLAYS = ['sheet', 'themeSheet', 'modal', 'editModal', 'alert', 'scrim'];
-function closeOverlays() { OVERLAYS.forEach(id => el[id].classList.remove('open')); }
-function openOverlay(node) { node.classList.add('open'); el.scrim.classList.add('open'); }
+  const IDS = ['powerBtn', 'uptime', 'latency', 'statusText', 'statusHint', 'statusChip', 'subscriptions', 'localGroup', 'subAdmin',
+    'logBody', 'logChev', 'logCard', 'logFilter', 'logHint', 'journalRow', 'journalSwitch', 'scrim', 'sheet', 'themeSheet',
+    'themeRow', 'themeValue', 'modal', 'modalTitle', 'modalBody', 'modalConnect', 'editModal', 'coreVersion', 'olcrtcVersion',
+    'appVersion', 'updateBanner', 'updateVersion', 'updateSize', 'updateProgress', 'updateBtn', 'updateCloseBtn',
+    'alert', 'alertTitle', 'alertText', 'alertOk', 'alertCancel', 'snackbar', 'snackbarText', 'snackbarIcon', 'snackbarSpinner'];
+  const el = {};
+  IDS.forEach(id => { el[id] = $(id); });
+  el.updateProgressBar = el.updateProgress.querySelector('.progress-bar');
 
-function dialog(title, text, okLabel, onOk) {
-  closeOverlays();
-  el.alertTitle.textContent = title;
-  el.alertText.textContent = text || '';
-  el.alertText.hidden = !text;
-  el.alertOk.textContent = okLabel;
-  el.alertCancel.hidden = !onOk;
-  el.alertOk.onclick = () => { closeOverlays(); if (onOk) onOk(); };
-  el.alertCancel.onclick = closeOverlays;
-  openOverlay(el.alert);
-}
-const askDelete = (title, text, onYes) => dialog(title, text, 'Удалить', onYes);
+  /* Свёрнутые группы */
+  const COLLAPSED_KEY = 'nodeway.collapsed';
+  const collapsed = (() => {
+    const saved = parse(store.get(COLLAPSED_KEY)) || {};
+    return { subscriptions: saved.subscriptions || {}, local: !!saved.local, log: !!saved.log };
+  })();
+  const saveCollapsed = () => store.set(COLLAPSED_KEY, JSON.stringify(collapsed));
 
-/* ================= Журнал ================= */
-let journal = [];
-let journalEnabled = false;
-let logFilter = 'all';
-let renderedUpTo = 0;
-let renderFull = true;
-
-const visibleIn = e => logFilter === 'all' || e.l === 'warn' || e.l === 'error';
-const clockOf = ms => { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
-
-function appendJournal(entries, reset) {
-  if (!journalEnabled) { journal = []; renderFull = true; return; }
-  journal = reset ? (entries || []).slice() : journal.concat(entries || []);
-  if (reset) { renderedUpTo = 0; renderFull = true; }
-  const over = journal.length - MAX_JOURNAL;
-  if (over > 0) { journal = journal.slice(over); renderedUpTo = Math.max(0, renderedUpTo - over); }
-  renderJournal();
-}
-
-function renderJournal() {
-  const shown = journal.filter(visibleIn).length;
-  el.logHint.textContent = shown === journal.length ? '' : shown + ' из ' + journal.length;
-  if (!journalEnabled || collapsed.log) return;
-
-  if (renderFull || renderedUpTo > journal.length) { clear(el.logBody); renderedUpTo = 0; renderFull = false; }
-  for (let i = renderedUpTo; i < journal.length; i++) {
-    const e = journal[i];
-    if (!visibleIn(e)) continue;
-    const source = e.s || 'app';
-    el.logBody.appendChild(h('div', 'log-line ' + source + ' ' + (e.l || 'info'),
-      clockOf(e.t) + '  ' + (source === 'app' ? '' : source + ' · ') + e.m));
+  /* ================= Уведомления и диалоги ================= */
+  let toastTimer = null;
+  function toast(message, o = {}) {
+    if (!message) return;
+    clearTimeout(toastTimer);
+    const kind = o.spinner ? '' : o.error ? 'error' : o.success ? 'success' : o.warning ? 'warning' : o.info ? 'info' : '';
+    el.snackbar.className = 'snackbar visible' + (kind ? ' ' + kind : '');
+    el.snackbarSpinner.hidden = !o.spinner;
+    el.snackbarIcon.textContent = o.spinner ? '' : ({ error: '✕', warning: '⚠', info: 'ℹ' }[kind] || '✓');
+    el.snackbarText.textContent = message;
+    if (!o.sticky) toastTimer = setTimeout(hideToast, o.error ? 5000 : 2600);
   }
-  renderedUpTo = journal.length;
-  while (el.logBody.childElementCount > MAX_LOG_LINES) el.logBody.removeChild(el.logBody.firstChild);
-  el.logBody.scrollTop = el.logBody.scrollHeight;
-}
+  function hideToast() { clearTimeout(toastTimer); el.snackbar.classList.remove('visible'); }
 
-function log(message) {
-  if (message && journalEnabled) appendJournal([{ t: Date.now(), s: 'app', l: 'info', m: message }], false);
-}
-
-function applyJournalEnabled(value) {
-  journalEnabled = !!value;
-  el.journalSwitch.classList.toggle('on', journalEnabled);
-  el.logCard.hidden = !journalEnabled;
-  journal = [];
-  renderFull = true;
-  clear(el.logBody);
-}
-
-function applyLogCollapsed() {
-  el.logCard.classList.toggle('collapsed', collapsed.log);
-}
-
-/* ================= Главная: питание, аптайм, пинг ================= */
-const profileById = id => model.profiles.find(p => p.id === id) || null;
-const selectedProfile = () => profileById(model.selectedProfileId);
-
-function formatUptime(ms) {
-  const t = Math.max(0, Math.floor(ms / 1000));
-  return pad(Math.floor(t / 3600)) + ':' + pad(Math.floor(t % 3600 / 60)) + ':' + pad(t % 60);
-}
-
-function renderUptime() {
-  const running = !ping.running && state === 'connected' && model.connectedAt > 0;
-  el.uptime.textContent = running ? formatUptime(Date.now() - model.connectedAt) : '00:00:00';
-}
-
-function renderLatency() {
-  el.latency.textContent = state === 'connected' && latencyMs > 0 ? 'Отклик через туннель: ' + latencyMs + ' мс' : '';
-}
-
-let powerIconOn = null;
-function renderPower() {
-  const on = state === 'connected';
-  const busy = state === 'connecting' || state === 'disconnecting';
-  const checking = ping.running;
-
-  el.powerBtn.className = 'power-btn' + (on ? ' on' : '') + (busy || checking ? ' busy' : '');
-  if (powerIconOn !== on) { powerIconOn = on; el.powerBtn.innerHTML = on ? ICON_POWER_ON : ICON_POWER_OFF; }
-  el.powerBtn.disabled = busy || checking;
-
-  el.statusChip.className = 'status-chip' + (checking || busy ? ' busy' : on ? ' on' : state === 'error' ? ' error' : '');
-  el.statusText.textContent = checking
-    ? (pingStopping ? 'Остановка…' : 'Проверка: ' + (ping.index + 1) + ' из ' + ping.total)
-    : STATE_TEXT[state] || STATE_TEXT.disconnected;
-
-  let hint;
-  if (checking) {
-    const current = profileById(ping.profileId);
-    hint = current ? 'Проверяем: ' + current.name : 'Проверяем профиль…';
-  } else if (state === 'error') {
-    hint = lastMessage || 'Не удалось подключиться';
-  } else if (on && profileById(model.activeProfileId)) {
-    hint = profileById(model.activeProfileId).name;
-  } else {
-    const sel = selectedProfile();
-    hint = sel ? 'Выбрано: ' + sel.name : 'Выберите профиль и нажмите кнопку питания';
+  function showReply(reply) {
+    if (!reply || !reply.message) return;
+    if (reply.loading) toast(reply.message, { spinner: true, sticky: true });
+    else toast(reply.message, { error: reply.ok === false, success: reply.ok === true });
   }
-  el.statusHint.textContent = hint;
-}
 
-function updatePingBadges() {
-  document.querySelectorAll('.row[data-profile-id]').forEach(row => {
-    const badge = row.querySelector('.ping-badge');
-    const id = row.dataset.profileId;
-    const ms = ping.results[id];
-    const current = ping.running && ping.profileId === id;
-    const known = typeof ms === 'number' && !isNaN(ms);
-    badge.className = 'ping-badge' + (current ? ' active' : '') + (known && ms < 0 ? ' bad' : '');
-    badge.textContent = current ? '…' : known ? (ms < 0 ? '—' : ms + ' мс') : '';
-  });
-}
+  const OVERLAYS = ['sheet', 'themeSheet', 'modal', 'editModal', 'alert', 'scrim'];
+  function closeOverlays() { OVERLAYS.forEach(id => el[id].classList.remove('open')); }
+  function openOverlay(node) { node.classList.add('open'); el.scrim.classList.add('open'); }
 
-function updatePingButtons() {
-  if (!ping.running) { pingStopping = false; pingStartKey = ''; }
-  const buttons = Array.from(document.querySelectorAll('.ping-btn'));
-  let owners = ping.running ? buttons.filter(btn => {
-    const ids = btn._pingIds || [];
-    return ping.profileId ? ids.includes(ping.profileId) : !!pingStartKey && ids.join(',') === pingStartKey;
-  }) : [];
-  if (ping.running && !owners.length && ping.profileId) owners = buttons;
+  function dialog(title, text, okLabel, onOk) {
+    closeOverlays();
+    el.alertTitle.textContent = title;
+    el.alertText.textContent = text || '';
+    el.alertText.hidden = !text;
+    el.alertOk.textContent = okLabel;
+    el.alertCancel.hidden = !onOk;
+    el.alertOk.onclick = () => { closeOverlays(); if (onOk) onOk(); };
+    el.alertCancel.onclick = closeOverlays;
+    openOverlay(el.alert);
+  }
+  const askDelete = (title, text, onYes) => dialog(title, text, 'Удалить', onYes);
 
-  buttons.forEach(btn => {
-    const isOwner = owners.includes(btn);
-    const stop = ping.running && isOwner;
-    btn.classList.toggle('stop', stop);
-    btn.disabled = ping.running && (!isOwner || pingStopping);
-    if (btn._stop !== stop) {
-      btn._stop = stop;
-      btn.innerHTML = stop ? ICON_STOP : ICON_PING;
-      btn.setAttribute('aria-label', stop ? 'Остановить проверку' : btn._idleLabel);
+  /* ================= Журнал ================= */
+  let journal = [];
+  let journalEnabled = false;
+  let logFilter = 'all';
+  let renderedUpTo = 0;
+  let renderFull = true;
+
+  const visibleIn = e => logFilter === 'all' || e.l === 'warn' || e.l === 'error';
+  const clockOf = ms => { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
+
+  function appendJournal(entries, reset) {
+    if (!journalEnabled) { journal = []; renderFull = true; return; }
+    journal = reset ? (entries || []).slice() : journal.concat(entries || []);
+    if (reset) { renderedUpTo = 0; renderFull = true; }
+    const over = journal.length - MAX_JOURNAL;
+    if (over > 0) { journal = journal.slice(over); renderedUpTo = Math.max(0, renderedUpTo - over); }
+    renderJournal();
+  }
+
+  function renderJournal() {
+    const shown = journal.filter(visibleIn).length;
+    el.logHint.textContent = shown === journal.length ? '' : shown + ' из ' + journal.length;
+    if (!journalEnabled || collapsed.log) return;
+
+    if (renderFull || renderedUpTo > journal.length) { clear(el.logBody); renderedUpTo = 0; renderFull = false; }
+    for (let i = renderedUpTo; i < journal.length; i++) {
+      const e = journal[i];
+      if (!visibleIn(e)) continue;
+      const source = e.s || 'app';
+      el.logBody.appendChild(h('div', 'log-line ' + source + ' ' + (e.l || 'info'),
+        clockOf(e.t) + '  ' + (source === 'app' ? '' : source + ' · ') + e.m));
     }
-  });
-}
-
-function startPing(ids) {
-  if (!ids.length || ping.running) return;
-  pingStartKey = ids.join(',');
-  call('pingProfiles', JSON.stringify(ids));
-}
-
-function stopPing() {
-  if (!ping.running || pingStopping) return;
-  pingStopping = true;
-  call('cancelPing');
-  renderPower();
-  updatePingButtons();
-}
-
-/* ================= Список профилей ================= */
-let rowsSignature = null;
-let subsSignature = null;
-
-function render() {
-  renderPower();
-  renderUptime();
-  renderLatency();
-
-  const rows = JSON.stringify([model.profiles, model.selectedProfileId,
-    model.subscriptions.map(s => [s.id, s.name, s.count, !!s.loading])]);
-  if (rows !== rowsSignature) {
-    rowsSignature = rows;
-    renderSubscriptions();
-    renderLocals();
+    renderedUpTo = journal.length;
+    while (el.logBody.childElementCount > MAX_LOG_LINES) el.logBody.removeChild(el.logBody.firstChild);
+    el.logBody.scrollTop = el.logBody.scrollHeight;
   }
-  syncActiveRows();
 
-  const subs = JSON.stringify(model.subscriptions);
-  if (subs !== subsSignature) { subsSignature = subs; renderSubAdmin(); }
-
-  updatePingBadges();
-  updatePingButtons();
-}
-
-function syncActiveRows() {
-  document.querySelectorAll('.row[data-profile-id]').forEach(row => {
-    row.querySelector('.info-btn').classList.toggle('active', row.dataset.profileId === model.activeProfileId);
-  });
-}
-
-function profileGroup(o, group) {
-  group = group || h('div');
-  group.className = 'group' + (o.collapsed ? ' collapsed' : '');
-
-  const head = h('div', 'group-head');
-  head.setAttribute('role', 'button');
-  head.tabIndex = 0;
-  head.appendChild(h('span', 'group-title', o.title));
-
-  if (o.pingable) {
-    const ids = o.rows.map(p => p.id);
-    const btn = h('button', 'ping-btn');
-    btn.type = 'button';
-    btn._pingIds = ids;
-    btn._stop = false;
-    btn._idleLabel = 'Проверить профили группы «' + o.title + '»';
-    btn.setAttribute('aria-label', btn._idleLabel);
-    btn.innerHTML = ICON_PING;
-    btn.onclick = e => { e.stopPropagation(); if (ping.running) stopPing(); else startPing(ids); };
-    head.appendChild(btn);
+  function log(message) {
+    if (message && journalEnabled) appendJournal([{ t: Date.now(), s: 'app', l: 'info', m: message }], false);
   }
-  head.appendChild(h('span', 'group-count', o.count ? String(o.count) : ''));
-  if (o.loading) head.appendChild(h('span', 'spinner'));
-  head.appendChild(chevron());
 
-  head.onclick = () => {
-    group.classList.toggle('collapsed');
-    o.remember(group.classList.contains('collapsed'));
-    saveCollapsed();
-  };
-  head.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); head.click(); } };
-
-  const inner = h('div', 'group-inner');
-  if (o.rows.length) o.rows.forEach(p => inner.appendChild(profileRow(p)));
-  else inner.appendChild(h('div', 'empty', o.emptyText));
-
-  const body = h('div', 'group-body');
-  body.appendChild(inner);
-  group.append(head, body);
-  return group;
-}
-
-function renderSubscriptions() {
-  clear(el.subscriptions);
-  if (!model.subscriptions.length) {
-    el.subscriptions.appendChild(h('div', 'empty', 'Подписок нет — добавьте ссылку подписки из буфера обмена'));
-    return;
+  function applyJournalEnabled(value) {
+    journalEnabled = !!value;
+    el.journalSwitch.classList.toggle('on', journalEnabled);
+    el.logCard.hidden = !journalEnabled;
+    journal = [];
+    renderFull = true;
+    clear(el.logBody);
   }
-  model.subscriptions.forEach(sub => {
-    const name = sub.name || 'Подписка';
-    const rows = model.profiles.filter(p => p.subscriptionId === sub.id);
-    el.subscriptions.appendChild(profileGroup({
-      title: name.includes('☁') ? name : '☁️ ' + name,
+
+  function applyLogCollapsed() {
+    el.logCard.classList.toggle('collapsed', collapsed.log);
+  }
+
+  /* ================= Главная: питание, аптайм, пинг ================= */
+  const profileById = id => model.profiles.find(p => p.id === id) || null;
+  const selectedProfile = () => profileById(model.selectedProfileId);
+
+  function formatUptime(ms) {
+    const t = Math.max(0, Math.floor(ms / 1000));
+    return pad(Math.floor(t / 3600)) + ':' + pad(Math.floor(t % 3600 / 60)) + ':' + pad(t % 60);
+  }
+
+  function renderUptime() {
+    const running = !ping.running && state === 'connected' && model.connectedAt > 0;
+    el.uptime.textContent = running ? formatUptime(Date.now() - model.connectedAt) : '00:00:00';
+  }
+
+  function renderLatency() {
+    el.latency.textContent = state === 'connected' && latencyMs > 0 ? 'Отклик через туннель: ' + latencyMs + ' мс' : '';
+  }
+
+  let powerIconOn = null;
+  function renderPower() {
+    const on = state === 'connected';
+    const busy = state === 'connecting' || state === 'disconnecting';
+    const checking = ping.running;
+
+    el.powerBtn.className = 'power-btn' + (on ? ' on' : '') + (busy || checking ? ' busy' : '');
+    if (powerIconOn !== on) { powerIconOn = on; el.powerBtn.innerHTML = on ? ICON_POWER_ON : ICON_POWER_OFF; }
+    el.powerBtn.disabled = busy || checking;
+
+    el.statusChip.className = 'status-chip' + (checking || busy ? ' busy' : on ? ' on' : state === 'error' ? ' error' : '');
+    el.statusText.textContent = checking
+      ? (pingStopping ? 'Остановка…' : 'Проверка: ' + (ping.index + 1) + ' из ' + ping.total)
+      : STATE_TEXT[state] || STATE_TEXT.disconnected;
+
+    let hint;
+    if (checking) {
+      const current = profileById(ping.profileId);
+      hint = current ? 'Проверяем: ' + current.name : 'Проверяем профиль…';
+    } else if (state === 'error') {
+      hint = lastMessage || 'Не удалось подключиться';
+    } else if (on && profileById(model.activeProfileId)) {
+      hint = profileById(model.activeProfileId).name;
+    } else {
+      const sel = selectedProfile();
+      hint = sel ? 'Выбрано: ' + sel.name : 'Выберите профиль и нажмите кнопку питания';
+    }
+    el.statusHint.textContent = hint;
+  }
+
+  function updatePingBadges() {
+    document.querySelectorAll('.row[data-profile-id]').forEach(row => {
+      const badge = row.querySelector('.ping-badge');
+      const id = row.dataset.profileId;
+      const ms = ping.results[id];
+      const current = ping.running && ping.profileId === id;
+      const known = typeof ms === 'number' && !isNaN(ms);
+      badge.className = 'ping-badge' + (current ? ' active' : '') + (known && ms < 0 ? ' bad' : '');
+      badge.textContent = current ? '…' : known ? (ms < 0 ? '—' : ms + ' мс') : '';
+    });
+  }
+
+  function updatePingButtons() {
+    if (!ping.running) { pingStopping = false; pingStartKey = ''; }
+    const buttons = Array.from(document.querySelectorAll('.ping-btn'));
+    let owners = ping.running ? buttons.filter(btn => {
+      const ids = btn._pingIds || [];
+      return ping.profileId ? ids.includes(ping.profileId) : !!pingStartKey && ids.join(',') === pingStartKey;
+    }) : [];
+    if (ping.running && !owners.length && ping.profileId) owners = buttons;
+
+    buttons.forEach(btn => {
+      const isOwner = owners.includes(btn);
+      const stop = ping.running && isOwner;
+      btn.classList.toggle('stop', stop);
+      btn.disabled = ping.running && (!isOwner || pingStopping);
+      if (btn._stop !== stop) {
+        btn._stop = stop;
+        btn.innerHTML = stop ? ICON_STOP : ICON_PING;
+        btn.setAttribute('aria-label', stop ? 'Остановить проверку' : btn._idleLabel);
+      }
+    });
+  }
+
+  function startPing(ids) {
+    if (!ids.length || ping.running) return;
+    pingStartKey = ids.join(',');
+    call('pingProfiles', JSON.stringify(ids));
+  }
+
+  function stopPing() {
+    if (!ping.running || pingStopping) return;
+    pingStopping = true;
+    call('cancelPing');
+    renderPower();
+    updatePingButtons();
+  }
+
+  /* ================= Список профилей ================= */
+  let rowsSignature = null;
+  let subsSignature = null;
+
+  function render() {
+    renderPower();
+    renderUptime();
+    renderLatency();
+
+    const rows = JSON.stringify([model.profiles, model.selectedProfileId,
+      model.subscriptions.map(s => [s.id, s.name, s.count, !!s.loading])]);
+    if (rows !== rowsSignature) {
+      rowsSignature = rows;
+      renderSubscriptions();
+      renderLocals();
+    }
+    syncActiveRows();
+
+    const subs = JSON.stringify(model.subscriptions);
+    if (subs !== subsSignature) { subsSignature = subs; renderSubAdmin(); }
+
+    updatePingBadges();
+    updatePingButtons();
+  }
+
+  function syncActiveRows() {
+    document.querySelectorAll('.row[data-profile-id]').forEach(row => {
+      row.querySelector('.info-btn').classList.toggle('active', row.dataset.profileId === model.activeProfileId);
+    });
+  }
+
+  function profileGroup(o, group) {
+    group = group || h('div');
+    group.className = 'group' + (o.collapsed ? ' collapsed' : '');
+
+    const head = h('div', 'group-head');
+    head.setAttribute('role', 'button');
+    head.tabIndex = 0;
+    head.appendChild(h('span', 'group-title', o.title));
+
+    if (o.pingable) {
+      const ids = o.rows.map(p => p.id);
+      const btn = h('button', 'ping-btn');
+      btn.type = 'button';
+      btn._pingIds = ids;
+      btn._stop = false;
+      btn._idleLabel = 'Проверить профили группы «' + o.title + '»';
+      btn.setAttribute('aria-label', btn._idleLabel);
+      btn.innerHTML = ICON_PING;
+      btn.onclick = e => { e.stopPropagation(); if (ping.running) stopPing(); else startPing(ids); };
+      head.appendChild(btn);
+    }
+    head.appendChild(h('span', 'group-count', o.count ? String(o.count) : ''));
+    if (o.loading) head.appendChild(h('span', 'spinner'));
+    head.appendChild(chevron());
+
+    head.onclick = () => {
+      group.classList.toggle('collapsed');
+      o.remember(group.classList.contains('collapsed'));
+      saveCollapsed();
+    };
+    head.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); head.click(); } };
+
+    const inner = h('div', 'group-inner');
+    if (o.rows.length) o.rows.forEach(p => inner.appendChild(profileRow(p)));
+    else inner.appendChild(h('div', 'empty', o.emptyText));
+
+    const body = h('div', 'group-body');
+    body.appendChild(inner);
+    group.append(head, body);
+    return group;
+  }
+
+  function renderSubscriptions() {
+    clear(el.subscriptions);
+    if (!model.subscriptions.length) {
+      el.subscriptions.appendChild(h('div', 'empty', 'Подписок нет — добавьте ссылку подписки из буфера обмена'));
+      return;
+    }
+    model.subscriptions.forEach(sub => {
+      const name = sub.name || 'Подписка';
+      const rows = model.profiles.filter(p => p.subscriptionId === sub.id);
+      el.subscriptions.appendChild(profileGroup({
+        title: name.includes('☁') ? name : '☁️ ' + name,
+        pingable: true,
+        count: rows.length,
+        collapsed: collapsed.subscriptions[sub.id],
+        remember: v => { collapsed.subscriptions[sub.id] = v; },
+        rows,
+        loading: !!sub.loading,
+        emptyText: sub.loading ? 'Загрузка подписки…' : 'Пока нет профилей'
+      }));
+    });
+  }
+
+  function renderLocals() {
+    clear(el.localGroup);
+    const rows = model.profiles.filter(p => !p.fromSubscription);
+    profileGroup({
+      title: 'Локальные профили',
       pingable: true,
       count: rows.length,
-      collapsed: collapsed.subscriptions[sub.id],
-      remember: v => { collapsed.subscriptions[sub.id] = v; },
+      collapsed: collapsed.local,
+      remember: v => { collapsed.local = v; },
       rows,
-      loading: !!sub.loading,
-      emptyText: sub.loading ? 'Загрузка подписки…' : 'Пока нет профилей'
-    }));
-  });
-}
-
-function renderLocals() {
-  clear(el.localGroup);
-  const rows = model.profiles.filter(p => !p.fromSubscription);
-  profileGroup({
-    title: 'Локальные профили',
-    pingable: true,
-    count: rows.length,
-    collapsed: collapsed.local,
-    remember: v => { collapsed.local = v; },
-    rows,
-    emptyText: 'Профилей нет — скопируйте vless- или olcrtc-ссылку и импортируйте из буфера'
-  }, el.localGroup);
-}
-
-function profileRow(profile) {
-  const row = h('button', 'row');
-  row.type = 'button';
-  row.dataset.profileId = profile.id;
-
-  row.appendChild(h('span', 'mark' + (profile.id === model.selectedProfileId ? ' on' : '')));
-
-  const body = h('span', 'row-body');
-  body.appendChild(h('span', 'row-title', profile.name));
-  body.appendChild(h('span', 'row-sub', profile.type === 'olcrtc'
-    ? 'OLCRTC / ' + (profile.provider || '—').toUpperCase() + ' / ' + (profile.transport || '—')
-    : 'VLESS / ' + (profile.network || 'tcp').toUpperCase() + ' / ' + (profile.security || 'none').toUpperCase()));
-  row.appendChild(body);
-
-  row.appendChild(h('span', 'ping-badge'));
-
-  const info = h('span', 'info-btn', 'i');
-  info.setAttribute('role', 'button');
-  info.setAttribute('aria-label', 'Подробнее о профиле');
-  info.onclick = e => { e.stopPropagation(); openModal(profile.id); };
-  row.appendChild(info);
-
-  row.onclick = () => { if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id); };
-  return row;
-}
-
-/* ================= Подписки (настройки) ================= */
-let countdownTimer = null;
-
-function countdownText(sub) {
-  const minutes = sub.refreshMinutes || 0;
-  if (minutes <= 0) return '';
-  let due;
-  if (typeof sub.nextRefreshAt === 'number') due = sub.nextRefreshAt;
-  else {
-    const since = sub.updatedAt > 0 ? sub.updatedAt : (sub.addedAt || 0);
-    if (!since) return '—';
-    due = since + minutes * 60000;
+      emptyText: 'Профилей нет — скопируйте vless- или olcrtc-ссылку и импортируйте из буфера'
+    }, el.localGroup);
   }
-  const left = Math.floor((due - Date.now()) / 1000);
-  if (left <= 0) return 'сейчас';
-  if (left < 60) return left + ' сек';
-  if (left < 3600) return Math.floor(left / 60) + ' мин';
-  return Math.ceil(left / 3600) + ' ч';
-}
 
-const countdownNodes = () => el.subAdmin.querySelectorAll('small[data-refresh-minutes]');
+  function profileRow(profile) {
+    const row = h('button', 'row');
+    row.type = 'button';
+    row.dataset.profileId = profile.id;
 
-function syncCountdownTimer() {
-  const need = currentPage === 'pageSettings' && countdownNodes().length > 0;
-  if (!need) { clearInterval(countdownTimer); countdownTimer = null; return; }
-  if (countdownTimer) return;
-  countdownTimer = setInterval(() => {
-    countdownNodes().forEach(node => {
-      const d = node.dataset;
-      node.textContent = 'Обновление через: ' + countdownText({
-        refreshMinutes: +d.refreshMinutes, updatedAt: +d.updatedAt, addedAt: +d.addedAt,
-        nextRefreshAt: d.nextRefreshAt === undefined ? undefined : +d.nextRefreshAt
-      });
-    });
-  }, 1000);
-}
+    row.appendChild(h('span', 'mark' + (profile.id === model.selectedProfileId ? ' on' : '')));
 
-function renderSubAdmin() {
-  clear(el.subAdmin);
-  if (!model.subscriptions.length) {
-    el.subAdmin.appendChild(h('div', 'empty', 'Подписок нет'));
-    syncCountdownTimer();
-    return;
-  }
-  model.subscriptions.forEach(sub => {
-    const name = sub.name || 'Подписка';
-    const row = h('div', 'settings-row sub-row');
+    const body = h('span', 'row-body');
+    body.appendChild(h('span', 'row-title', profile.name));
+    body.appendChild(h('span', 'row-sub', profile.type === 'olcrtc'
+      ? 'OLCRTC / ' + (profile.provider || '—').toUpperCase() + ' / ' + (profile.transport || '—')
+      : 'VLESS / ' + (profile.network || 'tcp').toUpperCase() + ' / ' + (profile.security || 'none').toUpperCase()));
+    row.appendChild(body);
 
-    const info = h('span', 'sub-info');
-    info.appendChild(h('span', null, name));
-    info.appendChild(h('small', null, 'Профилей: ' + (sub.count || 0)));
-    if (sub.refreshMinutes > 0) {
-      const left = h('small', null, 'Обновление через: ' + countdownText(sub));
-      Object.assign(left.dataset, { refreshMinutes: sub.refreshMinutes, updatedAt: sub.updatedAt || 0, addedAt: sub.addedAt || 0 });
-      if (typeof sub.nextRefreshAt === 'number') left.dataset.nextRefreshAt = sub.nextRefreshAt;
-      info.appendChild(left);
-    }
+    row.appendChild(h('span', 'ping-badge'));
+
+    const info = h('span', 'info-btn', 'i');
+    info.setAttribute('role', 'button');
+    info.setAttribute('aria-label', 'Подробнее о профиле');
+    info.onclick = e => { e.stopPropagation(); openModal(profile.id); };
     row.appendChild(info);
 
-    const refresh = h('button', 'value accent');
-    if (sub.loading) { refresh.disabled = true; refresh.appendChild(h('span', 'spinner')); }
+    row.onclick = () => { if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id); };
+    return row;
+  }
+
+  /* ================= Подписки (настройки) ================= */
+  let countdownTimer = null;
+
+  function countdownText(sub) {
+    const minutes = sub.refreshMinutes || 0;
+    if (minutes <= 0) return '';
+    let due;
+    if (typeof sub.nextRefreshAt === 'number') due = sub.nextRefreshAt;
     else {
-      refresh.textContent = 'Обновить';
-      refresh.onclick = () => { log('обновляем «' + name + '»'); call('refreshSubscription', sub.id); };
+      const since = sub.updatedAt > 0 ? sub.updatedAt : (sub.addedAt || 0);
+      if (!since) return '—';
+      due = since + minutes * 60000;
     }
-    row.appendChild(refresh);
-
-    const remove = h('button', 'value danger', 'Удалить');
-    remove.onclick = () => {
-      const count = sub.count || 0;
-      askDelete('Удалить подписку?',
-        'Подписка «' + name + '» и её профили' + (count ? ' (' + count + ')' : '') + ' будут удалены без возможности восстановления.',
-        () => { call('removeSubscription', sub.id); log('подписка удалена'); });
-    };
-    row.appendChild(remove);
-
-    el.subAdmin.appendChild(row);
-  });
-  syncCountdownTimer();
-}
-
-/* ================= Карточка профиля ================= */
-function openModal(profileId) {
-  const p = profileById(profileId);
-  if (!p) return;
-  modalProfileId = profileId;
-  el.modalTitle.textContent = p.name;
-  clear(el.modalBody);
-
-  const source = p.fromSubscription ? (p.subscriptionName || 'подписка') : (p.source === 'manual' ? 'вручную' : 'буфер обмена');
-  const details = (p.type === 'olcrtc' ? [
-    ['Тип', 'OLCRTC'], ['Провайдер', (p.provider || '—').toUpperCase()], ['Транспорт', p.transport], ['Комната', p.room]
-  ] : [
-    ['Адрес', p.address + (p.port ? ':' + p.port : '')], ['Сеть', (p.network || 'tcp').toUpperCase()],
-    ['Защита', (p.security || 'none').toUpperCase()], ['SNI', p.sni]
-  ]).concat([['Источник', source], ['Ссылка', p.link]]);
-
-  details.forEach(([k, v]) => {
-    const row = h('div', 'detail');
-    row.append(h('span', 'k', k), h('span', 'v', v || '—'));
-    el.modalBody.appendChild(row);
-  });
-
-  el.modalConnect.textContent = p.id === model.activeProfileId ? 'Отключиться' : 'Подключиться';
-  openOverlay(el.modal);
-}
-
-/* ================= Редактор профиля ================= */
-const F = id => $(id);
-const val = id => F(id).value.trim();
-const setVal = (id, v) => { F(id).value = v == null ? '' : v; };
-let editingProfileId = null;
-let currentScheme = 'vless';
-let vlessExtra = {};
-
-function setScheme(scheme) {
-  currentScheme = scheme;
-  const isVless = scheme === 'vless';
-  F('schemeVlessBtn').classList.toggle('active', isVless);
-  F('schemeOlcrtcBtn').classList.toggle('active', !isVless);
-  F('vlessFields').hidden = !isVless;
-  F('olcrtcFields').hidden = isVless;
-  showEditError('');
-}
-
-function showEditError(text) {
-  const node = F('editError');
-  node.textContent = text;
-  node.hidden = !text;
-}
-
-/* Выставляет значение select; неизвестное значение добавляется как временная опция, чтобы не потерять его при сохранении. */
-function setSelectValue(id, value) {
-  const node = F(id);
-  const wanted = value || '';
-  node.querySelectorAll('option[data-custom]').forEach(o => o.remove());
-  if (!Array.from(node.options).some(o => o.value === wanted)) {
-    const custom = h('option', null, wanted || '— не задано');
-    custom.value = wanted;
-    custom.dataset.custom = '';
-    node.appendChild(custom);
+    const left = Math.floor((due - Date.now()) / 1000);
+    if (left <= 0) return 'сейчас';
+    if (left < 60) return left + ' сек';
+    if (left < 3600) return Math.floor(left / 60) + ' мин';
+    return Math.ceil(left / 3600) + ' ч';
   }
-  node.value = wanted;
-}
 
-function clearEditFields() {
-  setVal('vlessAddress', ''); setVal('vlessPort', '443'); setVal('vlessId', '');
-  setSelectValue('vlessSecurity', 'none'); setSelectValue('vlessNetwork', 'tcp');
-  setVal('vlessSni', ''); setVal('vlessPath', '');
-  setSelectValue('vlessMode', ''); setSelectValue('vlessFlow', ''); setSelectValue('vlessFp', '');
-  setVal('vlessPbk', ''); setVal('vlessSid', ''); setVal('vlessSpx', '/');
-  F('vlessInsecure').checked = false;
-  F('realityFields').hidden = true;
-  setSelectValue('olcrtcProvider', 'jitsi'); setSelectValue('olcrtcTransport', 'datachannel');
-  setVal('olcrtcRoom', ''); setVal('olcrtcKey', ''); setVal('olcrtcPayload', '');
-  vlessExtra = {};
-}
+  const countdownNodes = () => el.subAdmin.querySelectorAll('small[data-refresh-minutes]');
 
-const VLESS_MANAGED = ['security', 'type', 'sni', 'path', 'mode', 'flow', 'encryption', 'pbk', 'sid', 'spx', 'fp', 'allowInsecure'];
+  function syncCountdownTimer() {
+    const need = currentPage === 'pageSettings' && countdownNodes().length > 0;
+    if (!need) { clearInterval(countdownTimer); countdownTimer = null; return; }
+    if (countdownTimer) return;
+    countdownTimer = setInterval(() => {
+      countdownNodes().forEach(node => {
+        const d = node.dataset;
+        node.textContent = 'Обновление через: ' + countdownText({
+          refreshMinutes: +d.refreshMinutes, updatedAt: +d.updatedAt, addedAt: +d.addedAt,
+          nextRefreshAt: d.nextRefreshAt === undefined ? undefined : +d.nextRefreshAt
+        });
+      });
+    }, 1000);
+  }
 
-function parseLinkToFields(link) {
-  const raw = (link || '').trim();
-  let m;
-  if ((m = /^vless:\/\/([^@]*)@([^?#]*)(?:\?([^#]*))?/.exec(raw))) {
-    setScheme('vless');
-    const hp = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(m[2]) || [];
-    const params = {};
-    (m[3] || '').split('&').forEach(pair => {
-      const i = pair.indexOf('=');
-      const k = i < 0 ? pair : pair.slice(0, i);
-      if (k) params[dec(k)] = i < 0 ? '' : dec(pair.slice(i + 1));
+  function renderSubAdmin() {
+    clear(el.subAdmin);
+    if (!model.subscriptions.length) {
+      el.subAdmin.appendChild(h('div', 'empty', 'Подписок нет'));
+      syncCountdownTimer();
+      return;
+    }
+    model.subscriptions.forEach(sub => {
+      const name = sub.name || 'Подписка';
+      const row = h('div', 'settings-row sub-row');
+
+      const info = h('span', 'sub-info');
+      info.appendChild(h('span', null, name));
+      info.appendChild(h('small', null, 'Профилей: ' + (sub.count || 0)));
+      if (sub.refreshMinutes > 0) {
+        const left = h('small', null, 'Обновление через: ' + countdownText(sub));
+        Object.assign(left.dataset, { refreshMinutes: sub.refreshMinutes, updatedAt: sub.updatedAt || 0, addedAt: sub.addedAt || 0 });
+        if (typeof sub.nextRefreshAt === 'number') left.dataset.nextRefreshAt = sub.nextRefreshAt;
+        info.appendChild(left);
+      }
+      row.appendChild(info);
+
+      const refresh = h('button', 'value accent');
+      if (sub.loading) { refresh.disabled = true; refresh.appendChild(h('span', 'spinner')); }
+      else {
+        refresh.textContent = 'Обновить';
+        refresh.onclick = () => { log('обновляем «' + name + '»'); call('refreshSubscription', sub.id); };
+      }
+      row.appendChild(refresh);
+
+      const remove = h('button', 'value danger', 'Удалить');
+      remove.onclick = () => {
+        const count = sub.count || 0;
+        askDelete('Удалить подписку?',
+          'Подписка «' + name + '» и её профили' + (count ? ' (' + count + ')' : '') + ' будут удалены без возможности восстановления.',
+          () => { call('removeSubscription', sub.id); log('подписка удалена'); });
+      };
+      row.appendChild(remove);
+
+      el.subAdmin.appendChild(row);
     });
+    syncCountdownTimer();
+  }
+
+  /* ================= Карточка профиля ================= */
+  function openModal(profileId) {
+    const p = profileById(profileId);
+    if (!p) return;
+    modalProfileId = profileId;
+    el.modalTitle.textContent = p.name;
+    clear(el.modalBody);
+
+    const source = p.fromSubscription ? (p.subscriptionName || 'подписка') : (p.source === 'manual' ? 'вручную' : 'буфер обмена');
+    const details = (p.type === 'olcrtc' ? [
+      ['Тип', 'OLCRTC'], ['Провайдер', (p.provider || '—').toUpperCase()], ['Транспорт', p.transport], ['Комната', p.room]
+    ] : [
+      ['Адрес', p.address + (p.port ? ':' + p.port : '')], ['Сеть', (p.network || 'tcp').toUpperCase()],
+      ['Защита', (p.security || 'none').toUpperCase()], ['SNI', p.sni]
+    ]).concat([['Источник', source], ['Ссылка', p.link]]);
+
+    details.forEach(([k, v]) => {
+      const row = h('div', 'detail');
+      row.append(h('span', 'k', k), h('span', 'v', v || '—'));
+      el.modalBody.appendChild(row);
+    });
+
+    el.modalConnect.textContent = p.id === model.activeProfileId ? 'Отключиться' : 'Подключиться';
+    openOverlay(el.modal);
+  }
+
+  /* ================= Редактор профиля ================= */
+  const F = id => $(id);
+  const val = id => F(id).value.trim();
+  const setVal = (id, v) => { F(id).value = v == null ? '' : v; };
+  let editingProfileId = null;
+  let currentScheme = 'vless';
+  let vlessExtra = {};
+
+  function setScheme(scheme) {
+    currentScheme = scheme;
+    const isVless = scheme === 'vless';
+    F('schemeVlessBtn').classList.toggle('active', isVless);
+    F('schemeOlcrtcBtn').classList.toggle('active', !isVless);
+    F('vlessFields').hidden = !isVless;
+    F('olcrtcFields').hidden = isVless;
+    showEditError('');
+  }
+
+  function showEditError(text) {
+    const node = F('editError');
+    node.textContent = text;
+    node.hidden = !text;
+  }
+
+  /* Выставляет значение select; неизвестное значение добавляется как временная опция, чтобы не потерять его при сохранении. */
+  function setSelectValue(id, value) {
+    const node = F(id);
+    const wanted = value || '';
+    node.querySelectorAll('option[data-custom]').forEach(o => o.remove());
+    if (!Array.from(node.options).some(o => o.value === wanted)) {
+      const custom = h('option', null, wanted || '— не задано');
+      custom.value = wanted;
+      custom.dataset.custom = '';
+      node.appendChild(custom);
+    }
+    node.value = wanted;
+  }
+
+  function clearEditFields() {
+    setVal('vlessAddress', ''); setVal('vlessPort', '443'); setVal('vlessId', '');
+    setSelectValue('vlessSecurity', 'none'); setSelectValue('vlessNetwork', 'tcp');
+    setVal('vlessSni', ''); setVal('vlessPath', '');
+    setSelectValue('vlessMode', ''); setSelectValue('vlessFlow', ''); setSelectValue('vlessFp', '');
+    setVal('vlessPbk', ''); setVal('vlessSid', ''); setVal('vlessSpx', '/');
+    F('vlessInsecure').checked = false;
+    F('realityFields').hidden = true;
+    setSelectValue('olcrtcProvider', 'jitsi'); setSelectValue('olcrtcTransport', 'datachannel');
+    setVal('olcrtcRoom', ''); setVal('olcrtcKey', ''); setVal('olcrtcPayload', '');
     vlessExtra = {};
-    keys(params).forEach(k => { if (!VLESS_MANAGED.includes(k)) vlessExtra[k] = params[k]; });
-
-    const security = params.security || 'none';
-    let net = (params.type || 'tcp').toLowerCase();
-    if (net === 'splithttp') net = 'xhttp';
-    if (net === 'http') net = 'h2';
-
-    setVal('vlessId', dec(m[1]));
-    setVal('vlessAddress', (hp[1] || '').replace(/^\[|\]$/g, ''));
-    setVal('vlessPort', hp[2] || '443');
-    setSelectValue('vlessSecurity', security);
-    setSelectValue('vlessNetwork', net);
-    setVal('vlessSni', params.sni);
-    setVal('vlessPath', params.path);
-    setSelectValue('vlessMode', params.mode);
-    setSelectValue('vlessFlow', params.flow);
-    setVal('vlessPbk', params.pbk);
-    setVal('vlessSid', params.sid);
-    setVal('vlessSpx', params.spx || '/');
-    setSelectValue('vlessFp', params.fp);
-    F('vlessInsecure').checked = params.allowInsecure === '1' || params.allowInsecure === 'true';
-    F('realityFields').hidden = security !== 'reality';
-  } else if ((m = /^olcrtc:\/\/([^?]*)\?([^<@]*)(?:<([^>]*)>)?@([^#]*)#([^$]*)/.exec(raw))) {
-    setScheme('olcrtc');
-    setSelectValue('olcrtcProvider', m[1] || 'jitsi');
-    setSelectValue('olcrtcTransport', m[2] || 'datachannel');
-    setVal('olcrtcPayload', m[3]);
-    setVal('olcrtcRoom', m[4]);
-    setVal('olcrtcKey', m[5]);
-  }
-}
-
-function buildLinkFromFields() {
-  const name = val('editName');
-  if (currentScheme === 'olcrtc') {
-    const payload = val('olcrtcPayload');
-    return 'olcrtc://' + F('olcrtcProvider').value + '?' + F('olcrtcTransport').value +
-      (payload ? '<' + payload + '>' : '') + '@' + val('olcrtcRoom') + '#' + val('olcrtcKey') + (name ? '$' + name : '');
   }
 
-  let addr = val('vlessAddress');
-  if (addr.includes(':') && !addr.startsWith('[')) addr = '[' + addr + ']';
-  const params = ['encryption=none'];
-  const add = (k, v) => { if (v) params.push(k + '=' + encodeURIComponent(v)); };
-  const security = F('vlessSecurity').value;
-  const network = F('vlessNetwork').value;
-  const path = val('vlessPath');
-  const spx = val('vlessSpx');
+  const VLESS_MANAGED = ['security', 'type', 'sni', 'path', 'mode', 'flow', 'encryption', 'pbk', 'sid', 'spx', 'fp', 'allowInsecure'];
 
-  if (network !== 'tcp') add('type', network);
-  if (security !== 'none') add('security', security);
-  add('sni', val('vlessSni'));
-  if (path !== '/') add('path', path);
-  add('mode', F('vlessMode').value);
-  add('flow', F('vlessFlow').value);
-  if (security === 'reality') {
-    add('pbk', val('vlessPbk'));
-    add('sid', val('vlessSid'));
-    if (spx !== '/') add('spx', spx);
+  function parseLinkToFields(link) {
+    const raw = (link || '').trim();
+    let m;
+    if ((m = /^vless:\/\/([^@]*)@([^?#]*)(?:\?([^#]*))?/.exec(raw))) {
+      setScheme('vless');
+      const hp = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(m[2]) || [];
+      const params = {};
+      (m[3] || '').split('&').forEach(pair => {
+        const i = pair.indexOf('=');
+        const k = i < 0 ? pair : pair.slice(0, i);
+        if (k) params[dec(k)] = i < 0 ? '' : dec(pair.slice(i + 1));
+      });
+      vlessExtra = {};
+      keys(params).forEach(k => { if (!VLESS_MANAGED.includes(k)) vlessExtra[k] = params[k]; });
+
+      const security = params.security || 'none';
+      let net = (params.type || 'tcp').toLowerCase();
+      if (net === 'splithttp') net = 'xhttp';
+      if (net === 'http') net = 'h2';
+
+      setVal('vlessId', dec(m[1]));
+      setVal('vlessAddress', (hp[1] || '').replace(/^\[|\]$/g, ''));
+      setVal('vlessPort', hp[2] || '443');
+      setSelectValue('vlessSecurity', security);
+      setSelectValue('vlessNetwork', net);
+      setVal('vlessSni', params.sni);
+      setVal('vlessPath', params.path);
+      setSelectValue('vlessMode', params.mode);
+      setSelectValue('vlessFlow', params.flow);
+      setVal('vlessPbk', params.pbk);
+      setVal('vlessSid', params.sid);
+      setVal('vlessSpx', params.spx || '/');
+      setSelectValue('vlessFp', params.fp);
+      F('vlessInsecure').checked = params.allowInsecure === '1' || params.allowInsecure === 'true';
+      F('realityFields').hidden = security !== 'reality';
+    } else if ((m = /^olcrtc:\/\/([^?]*)\?([^<@]*)(?:<([^>]*)>)?@([^#]*)#([^$]*)/.exec(raw))) {
+      setScheme('olcrtc');
+      setSelectValue('olcrtcProvider', m[1] || 'jitsi');
+      setSelectValue('olcrtcTransport', m[2] || 'datachannel');
+      setVal('olcrtcPayload', m[3]);
+      setVal('olcrtcRoom', m[4]);
+      setVal('olcrtcKey', m[5]);
+    }
   }
-  add('fp', F('vlessFp').value);
-  if (F('vlessInsecure').checked) params.push('allowInsecure=1');
-  keys(vlessExtra).forEach(k => add(encodeURIComponent(k), vlessExtra[k]));
 
-  return 'vless://' + val('vlessId') + '@' + addr + ':' + (val('vlessPort') || '443') +
-    '?' + params.join('&') + (name ? '#' + encodeURIComponent(name) : '');
-}
+  function buildLinkFromFields() {
+    const name = val('editName');
+    if (currentScheme === 'olcrtc') {
+      const payload = val('olcrtcPayload');
+      return 'olcrtc://' + F('olcrtcProvider').value + '?' + F('olcrtcTransport').value +
+        (payload ? '<' + payload + '>' : '') + '@' + val('olcrtcRoom') + '#' + val('olcrtcKey') + (name ? '$' + name : '');
+    }
 
-function validateFields() {
-  if (currentScheme === 'olcrtc') {
-    if (!val('olcrtcRoom')) return 'Укажите комнату';
-    if (!val('olcrtcKey')) return 'Укажите ключ шифрования';
+    let addr = val('vlessAddress');
+    if (addr.includes(':') && !addr.startsWith('[')) addr = '[' + addr + ']';
+    const params = ['encryption=none'];
+    const add = (k, v) => { if (v) params.push(k + '=' + encodeURIComponent(v)); };
+    const security = F('vlessSecurity').value;
+    const network = F('vlessNetwork').value;
+    const path = val('vlessPath');
+    const spx = val('vlessSpx');
+
+    if (network !== 'tcp') add('type', network);
+    if (security !== 'none') add('security', security);
+    add('sni', val('vlessSni'));
+    if (path !== '/') add('path', path);
+    add('mode', F('vlessMode').value);
+    add('flow', F('vlessFlow').value);
+    if (security === 'reality') {
+      add('pbk', val('vlessPbk'));
+      add('sid', val('vlessSid'));
+      if (spx !== '/') add('spx', spx);
+    }
+    add('fp', F('vlessFp').value);
+    if (F('vlessInsecure').checked) params.push('allowInsecure=1');
+    keys(vlessExtra).forEach(k => add(encodeURIComponent(k), vlessExtra[k]));
+
+    return 'vless://' + val('vlessId') + '@' + addr + ':' + (val('vlessPort') || '443') +
+      '?' + params.join('&') + (name ? '#' + encodeURIComponent(name) : '');
+  }
+
+  function validateFields() {
+    if (currentScheme === 'olcrtc') {
+      if (!val('olcrtcRoom')) return 'Укажите комнату';
+      if (!val('olcrtcKey')) return 'Укажите ключ шифрования';
+      return '';
+    }
+    if (!val('vlessAddress')) return 'Укажите адрес сервера';
+    if (!val('vlessId')) return 'Укажите UUID';
+    const port = Number(val('vlessPort') || 443);
+    if (!(port >= 1 && port <= 65535)) return 'Порт должен быть от 1 до 65535';
     return '';
   }
-  if (!val('vlessAddress')) return 'Укажите адрес сервера';
-  if (!val('vlessId')) return 'Укажите UUID';
-  const port = Number(val('vlessPort') || 443);
-  if (!(port >= 1 && port <= 65535)) return 'Порт должен быть от 1 до 65535';
-  return '';
-}
 
-function openEditModal(profileId) {
-  closeOverlays();
-  editingProfileId = profileId;
-  const p = profileById(profileId);
-  showEditError('');
-  clearEditFields();
-  F('editModalTitle').textContent = p ? 'Редактирование профиля' : 'Новый профиль';
-  F('subWarning').hidden = !(p && p.fromSubscription);
-  setVal('editName', p ? p.name : '');
-  setScheme(p && p.type === 'olcrtc' ? 'olcrtc' : 'vless');
-  if (p) parseLinkToFields(p.link);
-  el.editModal.scrollTop = 0;
-  openOverlay(el.editModal);
-}
-
-function saveProfile() {
-  const problem = validateFields();
-  if (problem) { showEditError(problem); return; }
-  const reply = parse(call('saveProfile', editingProfileId, buildLinkFromFields(), val('editName')));
-  if (reply && reply.ok) {
+  function openEditModal(profileId) {
     closeOverlays();
-    log(reply.message || 'Профиль сохранён');
-  } else {
-    showEditError((reply && reply.message) || 'Ошибка сохранения профиля');
+    editingProfileId = profileId;
+    const p = profileById(profileId);
+    showEditError('');
+    clearEditFields();
+    F('editModalTitle').textContent = p ? 'Редактирование профиля' : 'Новый профиль';
+    F('subWarning').hidden = !(p && p.fromSubscription);
+    setVal('editName', p ? p.name : '');
+    setScheme(p && p.type === 'olcrtc' ? 'olcrtc' : 'vless');
+    if (p) parseLinkToFields(p.link);
+    el.editModal.scrollTop = 0;
+    openOverlay(el.editModal);
   }
-}
 
-/* ================= Тема ================= */
-function renderTheme() {
-  el.themeValue.textContent = THEME_NAMES[themeMode] || THEME_NAMES.system;
-  el.themeSheet.querySelectorAll('[data-theme-mode]').forEach(item => {
-    item.classList.toggle('current', item.dataset.themeMode === themeMode);
-  });
-}
-
-/* ================= Раздельное туннелирование ================= */
-let splitMode = 'all';
-let splitPackages = {};
-let pickerSnapshot = null;
-let lastApps = [];
-let pickerRequest = 0;
-let loadingTimer = null;
-let searchTimer = null;
-
-const sp = {
-  all: $('splitAll'), allow: $('splitAllow'), exclude: $('splitExclude'), pick: $('splitPick'),
-  picker: $('appPicker'), list: $('pickerList'), loading: $('pickerLoading'), query: $('pickerQuery'),
-  searchClear: $('pickerSearchClear'), system: $('pickerSystem'), title: $('pickerTitle')
-};
-const packageCount = () => keys(splitPackages).length;
-
-function renderSplit() {
-  [['all', sp.all], ['allow', sp.allow], ['exclude', sp.exclude]].forEach(([mode, row]) => {
-    row.querySelector('.mark').classList.toggle('on', splitMode === mode);
-  });
-  const count = packageCount();
-  sp.pick.hidden = splitMode === 'all';
-  sp.pick.textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
-  const clearBtn = sp.list.querySelector('.picker-clear');
-  if (clearBtn) clearBtn.disabled = count === 0;
-}
-
-function loadSplit() {
-  const data = parse(call('getSplitTunnelSettings'));
-  if (data) {
-    splitMode = data.mode || 'all';
-    splitPackages = {};
-    (data.packages || []).forEach(pkg => { splitPackages[pkg] = true; });
-    renderSplit();
-  }
-  const saved = store.get('splitSystemCheckbox');
-  if (saved !== null) sp.system.checked = saved === 'true';
-}
-
-function setSplitMode(mode) {
-  if (mode === splitMode) return;
-  const reply = parse(call('setSplitTunnelMode', mode)) || {};
-  if (reply.ok === false) { toast(reply.error || 'Не удалось сменить режим', { error: true }); return; }
-  splitMode = mode;
-  renderSplit();
-}
-
-function enforceSplitFallback() {
-  if (splitMode === 'all' || packageCount()) return;
-  splitMode = 'all';
-  call('setSplitTunnelMode', 'all');
-  renderSplit();
-  toast('Режим сброшен: не выбрано ни одного приложения', { info: true });
-}
-
-function openPicker() {
-  pickerSnapshot = Object.assign({}, splitPackages);
-  sp.title.textContent = splitMode === 'allow' ? 'Приложения через VPN' : 'Приложения в обход';
-  sp.query.value = '';
-  syncSearchClear();
-  sp.picker.classList.add('open');
-  requestApps();
-}
-
-function closePicker() { sp.picker.classList.remove('open'); }
-
-function requestApps() {
-  const token = ++pickerRequest;
-  clearTimeout(loadingTimer);
-  loadingTimer = setTimeout(() => { sp.loading.hidden = false; }, 150);
-  clear(sp.list);
-  const includeSystem = sp.system.checked;
-  const query = sp.query.value.trim();
-  if (native && native.listInstalledAppsAsync) {
-    native.listInstalledAppsAsync(String(token), includeSystem, query);
-    return;
-  }
-  setTimeout(() => {
-    if (token !== pickerRequest) return;
-    const reply = call('listInstalledApps', includeSystem, query);
-    if (reply && typeof reply.then === 'function') reply.then(data => applyApps(token, data));
-    else applyApps(token, reply);
-  }, 0);
-}
-
-function applyApps(token, payload) {
-  if (Number(token) !== pickerRequest) return;
-  clearTimeout(loadingTimer);
-  sp.loading.hidden = true;
-  lastApps = parse(payload) || [];
-  renderApps(lastApps);
-}
-
-/* Перерисовка из кэша (без запроса в натив) с сохранением позиции прокрутки по соседней строке. */
-function rerenderApps() {
-  const list = sp.list;
-  const top = list.getBoundingClientRect().top;
-  const scroll = list.scrollTop;
-  const mainRows = () => Array.from(list.querySelectorAll('.app-row:not([data-dup])'));
-  const anchor = mainRows().find(r => r.getBoundingClientRect().bottom > top + 1);
-  const before = anchor ? anchor.getBoundingClientRect().top - top : 0;
-  renderApps(lastApps);
-  list.scrollTop = scroll;
-  if (!anchor) return;
-  const next = mainRows().find(r => r.dataset.pkg === anchor.dataset.pkg);
-  if (next) list.scrollTop += next.getBoundingClientRect().top - top - before;
-}
-
-function pickerGroup(title) { return h('div', 'picker-group', title); }
-
-function renderApps(apps) {
-  clear(sp.list);
-  const chosen = apps.filter(a => splitPackages[a.pkg]);
-
-  if (chosen.length) {
-    const group = pickerGroup('Выбранные · ' + chosen.length);
-    const clearBtn = h('button', 'picker-clear', 'Очистить');
-    clearBtn.type = 'button';
-    clearBtn.onclick = () => { splitPackages = {}; renderSplit(); rerenderApps(); };
-    group.appendChild(clearBtn);
-    sp.list.appendChild(group);
-    chosen.forEach(a => sp.list.appendChild(appRow(a, true)));
-    sp.list.appendChild(pickerGroup('Все приложения'));
-  }
-  apps.forEach(a => sp.list.appendChild(appRow(a, false)));
-  if (!apps.length) sp.list.appendChild(h('div', 'empty', sp.query.value.trim() ? 'Ничего не найдено' : 'Нет приложений для выбора'));
-  watchIcons();
-}
-
-function appRow(app, duplicate) {
-  const row = h('button', 'app-row' + (splitPackages[app.pkg] ? ' on' : ''));
-  row.type = 'button';
-  row.dataset.pkg = app.pkg;
-  if (duplicate) row.dataset.dup = '1';
-
-  const icon = h('img', 'app-icon');
-  icon.alt = '';
-  icon.dataset.pkg = app.pkg;
-  row.appendChild(icon);
-
-  const copy = h('span', 'app-copy');
-  copy.append(h('span', 'app-name', app.label || app.pkg), h('span', 'app-pkg', app.pkg));
-  row.appendChild(copy);
-  row.appendChild(h('span', 'app-box'));
-
-  row.onclick = () => {
-    if (splitPackages[app.pkg]) delete splitPackages[app.pkg]; else splitPackages[app.pkg] = true;
-    renderSplit();
-    rerenderApps();
-  };
-  return row;
-}
-
-const iconUrlFor = pkg => window.__nodewayIconUrl ? window.__nodewayIconUrl(pkg) : 'https://nodeway.internal/icon/' + encodeURIComponent(pkg);
-
-const iconObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (!entry.isIntersecting) return;
-    iconObserver.unobserve(entry.target);
-    const img = entry.target.querySelector('img[data-pkg]');
-    if (img) img.src = iconUrlFor(img.dataset.pkg);
-  });
-}, { root: sp.list, rootMargin: '240px 0px' }) : null;
-
-function watchIcons() {
-  const images = sp.list.querySelectorAll('img[data-pkg]');
-  if (!iconObserver) { images.forEach(img => { img.src = iconUrlFor(img.dataset.pkg); }); return; }
-  iconObserver.disconnect();
-  images.forEach(img => { if (!img.getAttribute('src')) iconObserver.observe(img.parentNode); });
-}
-
-function syncSearchClear() { sp.searchClear.hidden = !sp.query.value.length; }
-
-/* ================= Обновление приложения ================= */
-let updateStage = 'idle'; // idle | downloading | ready
-
-function setUpdateStage(stage) {
-  updateStage = stage;
-  el.updateProgress.hidden = stage !== 'downloading';
-  if (stage !== 'downloading') el.updateProgressBar.style.width = '0%';
-  el.updateBtn.textContent = { idle: 'Обновить', downloading: 'Отмена', ready: 'Установить' }[stage];
-  el.updateBtn.disabled = false;
-}
-
-function showUpdateBanner(visible) {
-  el.updateBanner.classList.toggle('visible', visible);
-  document.body.classList.toggle('has-update', visible);
-}
-
-el.updateBtn.onclick = () => {
-  if (updateStage === 'downloading') { setUpdateStage('idle'); call('cancelUpdate'); }
-  else if (updateStage === 'ready') call('installUpdate');
-  else call('startUpdate');
-};
-el.updateCloseBtn.onclick = () => { showUpdateBanner(false); setUpdateStage('idle'); call('cancelUpdate'); };
-
-/* ================= Навигация ================= */
-function showPage(id) {
-  if (id !== 'pageSettings') enforceSplitFallback();
-  currentPage = id;
-  document.querySelectorAll('.page').forEach(page => page.classList.toggle('active', page.id === id));
-  document.querySelector('.navbar').classList.toggle('hidden', id !== 'pageHome');
-  syncCountdownTimer();
-  window.scrollTo(0, 0);
-}
-
-function importClipboard() {
-  const reply = parse(call('importFromClipboard'));
-  if (reply) log(reply.message);
-  showReply(reply);
-}
-
-/* ================= Обработчики ================= */
-el.powerBtn.onclick = () => {
-  if (state === 'connected') { call('requestDisconnect'); return; }
-  const profile = selectedProfile() || model.profiles[0];
-  if (!profile) {
-    toast('Сначала добавьте профиль', { info: true });
-    showPage('pageSettings');
-    return;
-  }
-  if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id);
-  call('requestConnect', profile.id);
-};
-
-$('addBtn').onclick = () => openOverlay(el.sheet);
-$('settingsBtn').onclick = () => showPage('pageSettings');
-$('backBtn').onclick = () => showPage('pageHome');
-el.scrim.onclick = closeOverlays;
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlays(); });
-
-$('logHead').onclick = () => {
-  collapsed.log = !collapsed.log;
-  applyLogCollapsed();
-  saveCollapsed();
-  if (!collapsed.log) { renderFull = true; renderJournal(); }
-};
-el.logFilter.onclick = e => {
-  const button = e.target.closest('button');
-  if (!button) return;
-  logFilter = button.dataset.level;
-  el.logFilter.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === button));
-  renderFull = true;
-  renderJournal();
-};
-el.journalRow.onclick = () => {
-  const wasEnabled = journalEnabled;
-  const reply = parse(call('setJournalEnabled', !journalEnabled));
-  if (!reply) return;
-  applyJournalEnabled(reply.enabled);
-  if (!wasEnabled && state === 'connected') log('вывод Xray появится со следующего подключения');
-};
-
-$('checkUpdateBtn').onclick = () => call('checkUpdate');
-$('importProfiles').onclick = importClipboard;
-$('scanQrProfiles').onclick = () => call('scanQr');
-
-el.themeRow.onclick = () => { renderTheme(); openOverlay(el.themeSheet); };
-el.themeSheet.addEventListener('click', e => {
-  const btn = e.target.closest('.sheet-item');
-  if (!btn) return;
-  closeOverlays();
-  if (btn.dataset.themeMode) call('setThemeMode', btn.dataset.themeMode);
-});
-
-el.sheet.addEventListener('click', e => {
-  const action = e.target.dataset.action;
-  if (!action) return;
-  closeOverlays();
-  if (action === 'manual') openEditModal(null);
-  else if (action === 'import') importClipboard();
-  else if (action === 'scan') call('scanQr');
-});
-
-el.modal.addEventListener('click', e => {
-  const action = e.target.dataset.action;
-  if (!action) return;
-  const profile = profileById(modalProfileId);
-  if (action === 'modal-close') closeOverlays();
-  else if (action === 'modal-edit') openEditModal(modalProfileId);
-  else if (!profile) closeOverlays();
-  else if (action === 'modal-connect') {
-    closeOverlays();
-    if (profile.id === model.activeProfileId) call('requestDisconnect');
-    else {
-      if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id);
-      call('requestConnect', profile.id);
+  function saveProfile() {
+    const problem = validateFields();
+    if (problem) { showEditError(problem); return; }
+    const reply = parse(call('saveProfile', editingProfileId, buildLinkFromFields(), val('editName')));
+    if (reply && reply.ok) {
+      closeOverlays();
+      log(reply.message || 'Профиль сохранён');
+    } else {
+      showEditError((reply && reply.message) || 'Ошибка сохранения профиля');
     }
-  } else if (action === 'modal-remove') {
-    askDelete('Удалить профиль?', 'Профиль «' + profile.name + '» будет удалён без возможности восстановления.', () => {
-      call('removeProfile', profile.id);
-      log('профиль «' + profile.name + '» удалён');
+  }
+
+  /* ================= Тема ================= */
+  function renderTheme() {
+    el.themeValue.textContent = THEME_NAMES[themeMode] || THEME_NAMES.system;
+    el.themeSheet.querySelectorAll('[data-theme-mode]').forEach(item => {
+      item.classList.toggle('current', item.dataset.themeMode === themeMode);
     });
   }
-});
 
-F('schemeVlessBtn').onclick = () => setScheme('vless');
-F('schemeOlcrtcBtn').onclick = () => setScheme('olcrtc');
-F('vlessSecurity').onchange = function () { F('realityFields').hidden = this.value !== 'reality'; };
-F('saveProfileBtn').onclick = saveProfile;
-F('cancelEditBtn').onclick = closeOverlays;
+  /* ================= Раздельное туннелирование ================= */
+  let splitMode = 'all';
+  let splitPackages = {};
+  let pickerSnapshot = null;
+  let lastApps = [];
+  let pickerRequest = 0;
+  let loadingTimer = null;
+  let searchTimer = null;
 
-sp.all.onclick = () => setSplitMode('all');
-sp.allow.onclick = () => setSplitMode('allow');
-sp.exclude.onclick = () => setSplitMode('exclude');
-sp.pick.onclick = openPicker;
-$('pickerClose').onclick = () => {
-  if (pickerSnapshot) splitPackages = pickerSnapshot;
-  pickerSnapshot = null;
-  renderSplit();
-  closePicker();
-};
-$('pickerDone').onclick = () => {
-  const packages = keys(splitPackages);
-  const reply = parse(call('setSelectedPackages', JSON.stringify(packages))) || {};
-  if (reply.ok === false) { toast(reply.error || 'Не удалось сохранить список', { error: true }); return; }
-  pickerSnapshot = null;
-  closePicker();
-  log('в списке приложений: ' + packages.length);
-  enforceSplitFallback();
-};
-sp.system.onchange = () => { store.set('splitSystemCheckbox', sp.system.checked); requestApps(); };
-sp.query.oninput = () => { clearTimeout(searchTimer); syncSearchClear(); searchTimer = setTimeout(requestApps, 250); };
-sp.searchClear.onclick = () => {
-  clearTimeout(searchTimer);
-  sp.query.value = '';
-  syncSearchClear();
-  requestApps();
-  sp.query.focus();
-};
+  const sp = {
+    all: $('splitAll'), allow: $('splitAllow'), exclude: $('splitExclude'), pick: $('splitPick'),
+    picker: $('appPicker'), list: $('pickerList'), loading: $('pickerLoading'), query: $('pickerQuery'),
+    searchClear: $('pickerSearchClear'), system: $('pickerSystem'), title: $('pickerTitle')
+  };
+  const packageCount = () => keys(splitPackages).length;
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && !sp.picker.classList.contains('open')) enforceSplitFallback();
-});
-
-/* ================= Вызовы из нативного кода ================= */
-window.setInsets = (top, bottom) => {
-  const root = document.documentElement.style;
-  root.setProperty('--inset-top', (top || 0) + 'px');
-  root.setProperty('--inset-bottom', (bottom || 0) + 'px');
-};
-window.setUiMode = mode => document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
-window.onThemeMode = mode => { themeMode = mode || 'system'; renderTheme(); };
-window.onOlcrtcVersion = v => { el.olcrtcVersion.textContent = v || '—'; };
-
-window.onJournalEnabled = applyJournalEnabled;
-window.onJournalReset = payload => { renderFull = true; journal = []; appendJournal(parse(payload), true); };
-window.onJournalEntries = payload => appendJournal(parse(payload), false);
-
-window.onUpdateAvailable = (version, fileName, sizeText) => {
-  const size = String(sizeText || '').trim();
-  el.updateVersion.textContent = version || '';
-  el.updateSize.textContent = size ? (size[0] === '(' ? ' ' : ' · ') + size : '';
-  setUpdateStage('idle');
-  showUpdateBanner(true);
-};
-window.onUpdateDownloading = downloading => {
-  if (downloading) setUpdateStage('downloading');
-  else if (updateStage !== 'ready') setUpdateStage('idle');
-};
-window.onUpdateProgress = percent => { el.updateProgressBar.style.width = percent + '%'; };
-window.onUpdateDownloaded = () => setUpdateStage('ready');
-window.onUpdateNotAvailable = () => dialog('Обновлений нет', 'Вы используете последнюю версию приложения.', 'ОК', null);
-
-window.onVpnState = payload => {
-  const data = parse(payload);
-  if (!data) return;
-  state = data.state;
-  lastMessage = data.message || '';
-  latencyMs = Number(data.latency) || 0;
-  if (data.ping) {
-    const next = normalizePing(data.ping);
-    if (next.total > 0) ping = next;
-    else Object.assign(ping, { running: next.running, index: next.index, total: next.total, profileId: next.profileId }, { results: Object.assign(ping.results, next.results) });
+  function renderSplit() {
+    [['all', sp.all], ['allow', sp.allow], ['exclude', sp.exclude]].forEach(([mode, row]) => {
+      row.querySelector('.mark').classList.toggle('on', splitMode === mode);
+    });
+    const count = packageCount();
+    sp.pick.hidden = splitMode === 'all';
+    sp.pick.textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
+    const clearBtn = sp.list.querySelector('.picker-clear');
+    if (clearBtn) clearBtn.disabled = count === 0;
   }
-  renderPower();
-  renderUptime();
-  renderLatency();
-  updatePingBadges();
-  updatePingButtons();
-};
 
-window.onProfilesChanged = payload => {
-  const data = parse(payload);
-  if (!data) return;
-  const scrollY = window.scrollY;
-  model = normalizeModel(data);
+  function loadSplit() {
+    const data = parse(call('getSplitTunnelSettings'));
+    if (data) {
+      splitMode = data.mode || 'all';
+      splitPackages = {};
+      (data.packages || []).forEach(pkg => { splitPackages[pkg] = true; });
+      renderSplit();
+    }
+    const saved = store.get('splitSystemCheckbox');
+    if (saved !== null) sp.system.checked = saved === 'true';
+  }
+
+  function setSplitMode(mode) {
+    if (mode === splitMode) return;
+    const reply = parse(call('setSplitTunnelMode', mode)) || {};
+    if (reply.ok === false) { toast(reply.error || 'Не удалось сменить режим', { error: true }); return; }
+    splitMode = mode;
+    renderSplit();
+  }
+
+  function enforceSplitFallback() {
+    if (splitMode === 'all' || packageCount()) return;
+    splitMode = 'all';
+    call('setSplitTunnelMode', 'all');
+    renderSplit();
+    toast('Режим сброшен: не выбрано ни одного приложения', { info: true });
+  }
+
+  function openPicker() {
+    pickerSnapshot = Object.assign({}, splitPackages);
+    sp.title.textContent = splitMode === 'allow' ? 'Приложения через VPN' : 'Приложения в обход';
+    sp.query.value = '';
+    syncSearchClear();
+    sp.picker.classList.add('open');
+    requestApps();
+  }
+
+  function closePicker() { sp.picker.classList.remove('open'); }
+
+  function requestApps() {
+    const token = ++pickerRequest;
+    clearTimeout(loadingTimer);
+    loadingTimer = setTimeout(() => { sp.loading.hidden = false; }, 150);
+    clear(sp.list);
+    const includeSystem = sp.system.checked;
+    const query = sp.query.value.trim();
+    if (native && native.listInstalledAppsAsync) {
+      native.listInstalledAppsAsync(String(token), includeSystem, query);
+      return;
+    }
+    setTimeout(() => {
+      if (token !== pickerRequest) return;
+      const reply = call('listInstalledApps', includeSystem, query);
+      if (reply && typeof reply.then === 'function') reply.then(data => applyApps(token, data));
+      else applyApps(token, reply);
+    }, 0);
+  }
+
+  function applyApps(token, payload) {
+    if (Number(token) !== pickerRequest) return;
+    clearTimeout(loadingTimer);
+    sp.loading.hidden = true;
+    lastApps = parse(payload) || [];
+    renderApps(lastApps);
+  }
+
+  /* Перерисовка из кэша (без запроса в натив) с сохранением позиции прокрутки по соседней строке. */
+  function rerenderApps() {
+    const list = sp.list;
+    const top = list.getBoundingClientRect().top;
+    const scroll = list.scrollTop;
+    const mainRows = () => Array.from(list.querySelectorAll('.app-row:not([data-dup])'));
+    const anchor = mainRows().find(r => r.getBoundingClientRect().bottom > top + 1);
+    const before = anchor ? anchor.getBoundingClientRect().top - top : 0;
+    renderApps(lastApps);
+    list.scrollTop = scroll;
+    if (!anchor) return;
+    const next = mainRows().find(r => r.dataset.pkg === anchor.dataset.pkg);
+    if (next) list.scrollTop += next.getBoundingClientRect().top - top - before;
+  }
+
+  function pickerGroup(title) { return h('div', 'picker-group', title); }
+
+  function renderApps(apps) {
+    clear(sp.list);
+    const chosen = apps.filter(a => splitPackages[a.pkg]);
+
+    if (chosen.length) {
+      const group = pickerGroup('Выбранные · ' + chosen.length);
+      const clearBtn = h('button', 'picker-clear', 'Очистить');
+      clearBtn.type = 'button';
+      clearBtn.onclick = () => { splitPackages = {}; renderSplit(); rerenderApps(); };
+      group.appendChild(clearBtn);
+      sp.list.appendChild(group);
+      chosen.forEach(a => sp.list.appendChild(appRow(a, true)));
+      sp.list.appendChild(pickerGroup('Все приложения'));
+    }
+    apps.forEach(a => sp.list.appendChild(appRow(a, false)));
+    if (!apps.length) sp.list.appendChild(h('div', 'empty', sp.query.value.trim() ? 'Ничего не найдено' : 'Нет приложений для выбора'));
+    watchIcons();
+  }
+
+  function appRow(app, duplicate) {
+    const row = h('button', 'app-row' + (splitPackages[app.pkg] ? ' on' : ''));
+    row.type = 'button';
+    row.dataset.pkg = app.pkg;
+    if (duplicate) row.dataset.dup = '1';
+
+    const icon = h('img', 'app-icon');
+    icon.alt = '';
+    icon.dataset.pkg = app.pkg;
+    row.appendChild(icon);
+
+    const copy = h('span', 'app-copy');
+    copy.append(h('span', 'app-name', app.label || app.pkg), h('span', 'app-pkg', app.pkg));
+    row.appendChild(copy);
+    row.appendChild(h('span', 'app-box'));
+
+    row.onclick = () => {
+      if (splitPackages[app.pkg]) delete splitPackages[app.pkg]; else splitPackages[app.pkg] = true;
+      renderSplit();
+      rerenderApps();
+    };
+    return row;
+  }
+
+  const iconUrlFor = pkg => window.__nodewayIconUrl ? window.__nodewayIconUrl(pkg) : 'https://nodeway.internal/icon/' + encodeURIComponent(pkg);
+
+  const iconObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      iconObserver.unobserve(entry.target);
+      const img = entry.target.querySelector('img[data-pkg]');
+      if (img) img.src = iconUrlFor(img.dataset.pkg);
+    });
+  }, { root: sp.list, rootMargin: '240px 0px' }) : null;
+
+  function watchIcons() {
+    const images = sp.list.querySelectorAll('img[data-pkg]');
+    if (!iconObserver) { images.forEach(img => { img.src = iconUrlFor(img.dataset.pkg); }); return; }
+    iconObserver.disconnect();
+    images.forEach(img => { if (!img.getAttribute('src')) iconObserver.observe(img.parentNode); });
+  }
+
+  function syncSearchClear() { sp.searchClear.hidden = !sp.query.value.length; }
+
+  /* ================= Обновление приложения ================= */
+  let updateStage = 'idle'; // idle | downloading | ready
+
+  function setUpdateStage(stage) {
+    updateStage = stage;
+    el.updateProgress.hidden = stage !== 'downloading';
+    if (stage !== 'downloading') el.updateProgressBar.style.width = '0%';
+    el.updateBtn.textContent = { idle: 'Обновить', downloading: 'Отмена', ready: 'Установить' }[stage];
+    el.updateBtn.disabled = false;
+  }
+
+  function showUpdateBanner(visible) {
+    el.updateBanner.classList.toggle('visible', visible);
+    document.body.classList.toggle('has-update', visible);
+  }
+
+  el.updateBtn.onclick = () => {
+    if (updateStage === 'downloading') { setUpdateStage('idle'); call('cancelUpdate'); }
+    else if (updateStage === 'ready') call('installUpdate');
+    else call('startUpdate');
+  };
+  el.updateCloseBtn.onclick = () => { showUpdateBanner(false); setUpdateStage('idle'); call('cancelUpdate'); };
+
+  /* ================= Навигация ================= */
+  function showPage(id) {
+    if (id !== 'pageSettings') enforceSplitFallback();
+    currentPage = id;
+    document.querySelectorAll('.page').forEach(page => page.classList.toggle('active', page.id === id));
+    document.querySelector('.navbar').classList.toggle('hidden', id !== 'pageHome');
+    syncCountdownTimer();
+    window.scrollTo(0, 0);
+  }
+
+  function importClipboard() {
+    const reply = parse(call('importFromClipboard'));
+    if (reply) log(reply.message);
+    showReply(reply);
+  }
+
+  /* ================= Обработчики ================= */
+  el.powerBtn.onclick = () => {
+    if (state === 'connected') { call('requestDisconnect'); return; }
+    const profile = selectedProfile() || model.profiles[0];
+    if (!profile) {
+      toast('Сначала добавьте профиль', { info: true });
+      showPage('pageSettings');
+      return;
+    }
+    if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id);
+    call('requestConnect', profile.id);
+  };
+
+  $('addBtn').onclick = () => openOverlay(el.sheet);
+  $('settingsBtn').onclick = () => showPage('pageSettings');
+  $('backBtn').onclick = () => showPage('pageHome');
+  el.scrim.onclick = closeOverlays;
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlays(); });
+
+  $('logHead').onclick = () => {
+    collapsed.log = !collapsed.log;
+    applyLogCollapsed();
+    saveCollapsed();
+    if (!collapsed.log) { renderFull = true; renderJournal(); }
+  };
+  el.logFilter.onclick = e => {
+    const button = e.target.closest('button');
+    if (!button) return;
+    logFilter = button.dataset.level;
+    el.logFilter.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === button));
+    renderFull = true;
+    renderJournal();
+  };
+  el.journalRow.onclick = () => {
+    const wasEnabled = journalEnabled;
+    const reply = parse(call('setJournalEnabled', !journalEnabled));
+    if (!reply) return;
+    applyJournalEnabled(reply.enabled);
+    if (!wasEnabled && state === 'connected') log('вывод Xray появится со следующего подключения');
+  };
+
+  $('checkUpdateBtn').onclick = () => call('checkUpdate');
+  $('importProfiles').onclick = importClipboard;
+  $('scanQrProfiles').onclick = () => call('scanQr');
+
+  el.themeRow.onclick = () => { renderTheme(); openOverlay(el.themeSheet); };
+  el.themeSheet.addEventListener('click', e => {
+    const btn = e.target.closest('.sheet-item');
+    if (!btn) return;
+    closeOverlays();
+    if (btn.dataset.themeMode) call('setThemeMode', btn.dataset.themeMode);
+  });
+
+  el.sheet.addEventListener('click', e => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+    closeOverlays();
+    if (action === 'manual') openEditModal(null);
+    else if (action === 'import') importClipboard();
+    else if (action === 'scan') call('scanQr');
+  });
+
+  el.modal.addEventListener('click', e => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+    const profile = profileById(modalProfileId);
+    if (action === 'modal-close') closeOverlays();
+    else if (action === 'modal-edit') openEditModal(modalProfileId);
+    else if (!profile) closeOverlays();
+    else if (action === 'modal-connect') {
+      closeOverlays();
+      if (profile.id === model.activeProfileId) call('requestDisconnect');
+      else {
+        if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id);
+        call('requestConnect', profile.id);
+      }
+    } else if (action === 'modal-remove') {
+      askDelete('Удалить профиль?', 'Профиль «' + profile.name + '» будет удалён без возможности восстановления.', () => {
+        call('removeProfile', profile.id);
+        log('профиль «' + profile.name + '» удалён');
+      });
+    }
+  });
+
+  F('schemeVlessBtn').onclick = () => setScheme('vless');
+  F('schemeOlcrtcBtn').onclick = () => setScheme('olcrtc');
+  F('vlessSecurity').onchange = function () { F('realityFields').hidden = this.value !== 'reality'; };
+  F('saveProfileBtn').onclick = saveProfile;
+  F('cancelEditBtn').onclick = closeOverlays;
+
+  sp.all.onclick = () => setSplitMode('all');
+  sp.allow.onclick = () => setSplitMode('allow');
+  sp.exclude.onclick = () => setSplitMode('exclude');
+  sp.pick.onclick = openPicker;
+  $('pickerClose').onclick = () => {
+    if (pickerSnapshot) splitPackages = pickerSnapshot;
+    pickerSnapshot = null;
+    renderSplit();
+    closePicker();
+  };
+  $('pickerDone').onclick = () => {
+    const packages = keys(splitPackages);
+    const reply = parse(call('setSelectedPackages', JSON.stringify(packages))) || {};
+    if (reply.ok === false) { toast(reply.error || 'Не удалось сохранить список', { error: true }); return; }
+    pickerSnapshot = null;
+    closePicker();
+    log('в списке приложений: ' + packages.length);
+    enforceSplitFallback();
+  };
+  sp.system.onchange = () => { store.set('splitSystemCheckbox', sp.system.checked); requestApps(); };
+  sp.query.oninput = () => { clearTimeout(searchTimer); syncSearchClear(); searchTimer = setTimeout(requestApps, 250); };
+  sp.searchClear.onclick = () => {
+    clearTimeout(searchTimer);
+    sp.query.value = '';
+    syncSearchClear();
+    requestApps();
+    sp.query.focus();
+  };
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !sp.picker.classList.contains('open')) enforceSplitFallback();
+  });
+
+  /* ================= Вызовы из нативного кода ================= */
+  window.setInsets = (top, bottom) => {
+    const root = document.documentElement.style;
+    root.setProperty('--inset-top', (top || 0) + 'px');
+    root.setProperty('--inset-bottom', (bottom || 0) + 'px');
+  };
+  window.setUiMode = mode => document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+  window.onThemeMode = mode => { themeMode = mode || 'system'; renderTheme(); };
+  window.onOlcrtcVersion = v => { el.olcrtcVersion.textContent = v || '—'; };
+
+  window.onJournalEnabled = applyJournalEnabled;
+  window.onJournalReset = payload => { renderFull = true; journal = []; appendJournal(parse(payload), true); };
+  window.onJournalEntries = payload => appendJournal(parse(payload), false);
+
+  window.onUpdateAvailable = (version, fileName, sizeText) => {
+    const size = String(sizeText || '').trim();
+    el.updateVersion.textContent = version || '';
+    el.updateSize.textContent = size ? (size[0] === '(' ? ' ' : ' · ') + size : '';
+    setUpdateStage('idle');
+    showUpdateBanner(true);
+  };
+  window.onUpdateDownloading = downloading => {
+    if (downloading) setUpdateStage('downloading');
+    else if (updateStage !== 'ready') setUpdateStage('idle');
+  };
+  window.onUpdateProgress = percent => { el.updateProgressBar.style.width = percent + '%'; };
+  window.onUpdateDownloaded = () => setUpdateStage('ready');
+  window.onUpdateNotAvailable = () => dialog('Обновлений нет', 'Вы используете последнюю версию приложения.', 'ОК', null);
+
+  window.onVpnState = payload => {
+    const data = parse(payload);
+    if (!data) return;
+    state = data.state;
+    lastMessage = data.message || '';
+    latencyMs = Number(data.latency) || 0;
+    if (data.ping) {
+      const next = normalizePing(data.ping);
+      if (next.total > 0) ping = next;
+      else Object.assign(ping, { running: next.running, index: next.index, total: next.total, profileId: next.profileId }, { results: Object.assign(ping.results, next.results) });
+    }
+    renderPower();
+    renderUptime();
+    renderLatency();
+    updatePingBadges();
+    updatePingButtons();
+  };
+
+  window.onProfilesChanged = payload => {
+    const data = parse(payload);
+    if (!data) return;
+    const scrollY = window.scrollY;
+    model = normalizeModel(data);
+    render();
+    window.scrollTo(0, scrollY);
+  };
+
+  window.onImportResult = window.onScanQrResult = payload => {
+    const data = parse(payload);
+    if (!data) return;
+    if (!data.loading) log(data.message);
+    showReply(data);
+  };
+
+  window.onSplitApps = applyApps;
+
+  /* ================= Старт ================= */
+  el.logChev.innerHTML = ICON_CHEV;
+  applyLogCollapsed();
+
+  if (native) {
+    const initial = parse(call('getInitialState'));
+    if (initial) {
+      model = normalizeModel(initial.state);
+      state = model.vpnState || 'disconnected';
+      latencyMs = Number(model.latency) || 0;
+      ping = normalizePing(model.ping);
+      applyJournalEnabled(!!initial.journalEnabled);
+      el.coreVersion.textContent = initial.coreVersion || '—';
+      el.olcrtcVersion.textContent = initial.olcrtcVersion || '—';
+      if (initial.appVersion) el.appVersion.textContent = initial.appVersion;
+    }
+    loadSplit();
+    log('интерфейс готов');
+  }
+
   render();
-  window.scrollTo(0, scrollY);
-};
-
-window.onImportResult = window.onScanQrResult = payload => {
-  const data = parse(payload);
-  if (!data) return;
-  if (!data.loading) log(data.message);
-  showReply(data);
-};
-
-window.onSplitApps = applyApps;
-
-/* ================= Старт ================= */
-el.logChev.innerHTML = ICON_CHEV;
-applyLogCollapsed();
-
-if (native) {
-  const initial = parse(call('getInitialState'));
-  if (initial) {
-    model = normalizeModel(initial.state);
-    state = model.vpnState || 'disconnected';
-    latencyMs = Number(model.latency) || 0;
-    ping = normalizePing(model.ping);
-    applyJournalEnabled(!!initial.journalEnabled);
-    el.coreVersion.textContent = initial.coreVersion || '—';
-    el.olcrtcVersion.textContent = initial.olcrtcVersion || '—';
-    if (initial.appVersion) el.appVersion.textContent = initial.appVersion;
-  }
-  loadSplit();
-  log('интерфейс готов');
-}
-
-render();
-setInterval(() => { if (!document.hidden) renderUptime(); }, 1000);
-})();
+  setInterval(() => { if (!document.hidden) renderUptime(); }, 1000);
+  })();
 </script>
 </body>
 </html>
