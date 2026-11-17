@@ -166,6 +166,10 @@ class NodewayVpnService : VpnService() {
                 // Сервис остаётся жив (foreground), но в состоянии DISCONNECTED
             }
 
+            ACTION_PROBE_LATENCY -> {
+                probeLatencyNow()
+            }
+
             else -> {
                 Log.w(TAG, "Unknown action: ${intent?.action}")
                 stopSelf()
@@ -311,6 +315,24 @@ class NodewayVpnService : VpnService() {
         probeJob?.cancel()
         probeJob = null
         latencyMs = 0
+    }
+
+    /**
+     * Разовый замер отклика активного туннеля по запросу из интерфейса.
+     *
+     * Нужен для ручной проверки: фоновый цикл [startProbe] обновляет значение
+     * раз в минуту, а здесь отдаём результат сразу, не перезапуская туннель.
+     */
+    private fun probeLatencyNow() {
+        if (state != VpnState.CONNECTED || pinging) return
+        serviceScope.launch {
+            val socksPort = probeSocksPort
+            val measured = TunnelProbe.measure(socksPort) ?: 0
+            if (isActive && state == VpnState.CONNECTED && !pinging) {
+                latencyMs = measured
+                publishState(state)
+            }
+        }
     }
 
     /**
@@ -808,6 +830,7 @@ class NodewayVpnService : VpnService() {
         const val ACTION_STATE = "com.nodetun.vpn.action.STATE"
         const val ACTION_PING = "com.nodetun.vpn.action.PING"
         const val ACTION_CANCEL_PING = "com.nodetun.vpn.action.CANCEL_PING"
+        const val ACTION_PROBE_LATENCY = "com.nodetun.vpn.action.PROBE_LATENCY"
 
         const val EXTRA_LINK = "extra_link"
         const val EXTRA_STATE = "extra_state"
@@ -924,6 +947,18 @@ class NodewayVpnService : VpnService() {
         fun cancelPing(context: Context) {
             val intent = Intent(context, NodewayVpnService::class.java)
                 .setAction(ACTION_CANCEL_PING)
+            runCatching { context.startService(intent) }
+        }
+
+        /**
+         * Разовый замер отклика активного туннеля.
+         *
+         * Используется для ручного обновления значения в интерфейсе без ожидания
+         * очередного тика фонового цикла.
+         */
+        fun probeLatency(context: Context) {
+            val intent = Intent(context, NodewayVpnService::class.java)
+                .setAction(ACTION_PROBE_LATENCY)
             runCatching { context.startService(intent) }
         }
     }

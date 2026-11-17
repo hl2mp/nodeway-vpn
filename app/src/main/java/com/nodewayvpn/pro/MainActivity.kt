@@ -372,7 +372,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         handleImportLink(intent)
         intent.data = null
 
-        webView.loadUrl("file:///android_asset/index_ios17.html?theme=${pageTheme()}")
+        webView.loadUrl("file:///android_asset/m3.html?theme=${pageTheme()}")
         // Список приложений считается сразу, чтобы лист выбора открывался мгновенно.
         warmInstalledAppsCache()
         // Версию ядра olcrtc тоже узнаём сразу: она нужна в настройках.
@@ -820,6 +820,14 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         NodewayVpnService.cancelPing(this)
         // Мгновенный визуальный отклик до прихода broadcast от сервиса
         pushState(VpnState.DISCONNECTED.code, "Проверка остановлена")
+    }
+
+    override fun onProbeLatencyRequested() {
+        runOnUiThread {
+            if (vpnState == VpnState.CONNECTED.code) {
+                NodewayVpnService.probeLatency(this)
+            }
+        }
     }
 
     /**

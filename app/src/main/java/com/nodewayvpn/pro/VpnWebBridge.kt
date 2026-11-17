@@ -36,6 +36,9 @@ class VpnWebBridge(private val host: Host) {
      */
     fun onCancelPingRequested()
 
+    /** Ручной замер отклика активного туннеля. */
+    fun onProbeLatencyRequested()
+
         /**
          * Синхронно: читает буфер обмена и импортирует его содержимое.
          *
@@ -201,6 +204,12 @@ class VpnWebBridge(private val host: Host) {
      */
     @JavascriptInterface
     fun cancelPing() = host.onCancelPingRequested()
+
+    /**
+     * Разовый замер отклика активного туннеля (ручное обновление пинга на главной).
+     */
+    @JavascriptInterface
+    fun probeLatency() = host.onProbeLatencyRequested()
 
     @JavascriptInterface
     fun getSplitTunnelSettings(): String = host.onGetSplitTunnelSettings()

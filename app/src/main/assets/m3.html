@@ -1,0 +1,3011 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>NodeTun</title>
+
+  <script>
+    (function () {
+      const queryTheme = new URLSearchParams(location.search).get('theme');
+      if (queryTheme === 'dark' || queryTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', queryTheme);
+      } else {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      }
+    })();
+  </script>
+
+  <style>
+    :root {
+      color-scheme: light;
+      /* M3 Tonal Palette - Indigo/Teal Dynamic Harmony */
+      --md-sys-color-primary: #005ac1;
+      --md-sys-color-on-primary: #ffffff;
+      --md-sys-color-primary-container: #d8e2ff;
+      --md-sys-color-on-primary-container: #001a41;
+
+      --md-sys-color-secondary: #575e71;
+      --md-sys-color-on-secondary: #ffffff;
+      --md-sys-color-secondary-container: #dbe2f9;
+      --md-sys-color-on-secondary-container: #141b2c;
+
+      --md-sys-color-tertiary: #715573;
+      --md-sys-color-on-tertiary: #ffffff;
+      --md-sys-color-tertiary-container: #fbd7fc;
+      --md-sys-color-on-tertiary-container: #29132d;
+
+      --md-sys-color-error: #ba1a1a;
+      --md-sys-color-on-error: #ffffff;
+      --md-sys-color-error-container: #ffdad6;
+      --md-sys-color-on-error-container: #410002;
+
+      --md-sys-color-success: #198754;
+      --md-sys-color-on-success: #ffffff;
+      --md-sys-color-success-container: #c4eed0;
+      --md-sys-color-on-success-container: #00210e;
+
+      --md-sys-color-background: #fdfbff;
+      --md-sys-color-on-background: #1a1b1f;
+
+      --md-sys-color-surface: #fdfbff;
+      --md-sys-color-on-surface: #1a1b1f;
+      --md-sys-color-surface-variant: #e1e2ec;
+      --md-sys-color-on-surface-variant: #44474f;
+
+      --md-sys-color-surface-container-lowest: #ffffff;
+      --md-sys-color-surface-container-low: #f7f3f9;
+      --md-sys-color-surface-container: #f1edfa;
+      --md-sys-color-surface-container-high: #ece7f4;
+      --md-sys-color-surface-container-highest: #e6e1ee;
+
+      --md-sys-color-outline: #74777f;
+      --md-sys-color-outline-variant: #c4c6d0;
+      --md-sys-color-scrim: #000000;
+
+      /* Status Colors */
+      --status-active-glow: rgba(0, 90, 193, 0.2);
+      --status-connected-glow: rgba(25, 135, 84, 0.25);
+
+      /* Elevation Shadows */
+      --md-sys-elevation-1: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+      --md-sys-elevation-2: 0 2px 6px 2px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+      --md-sys-elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+
+      /* Insets */
+      --inset-top: 0px;
+      --inset-bottom: 0px;
+    }
+
+    :root[data-theme='dark'] {
+      color-scheme: dark;
+      --md-sys-color-primary: #adc6ff;
+      --md-sys-color-on-primary: #002e69;
+      --md-sys-color-primary-container: #004494;
+      --md-sys-color-on-primary-container: #d8e2ff;
+
+      --md-sys-color-secondary: #bfc6dc;
+      --md-sys-color-on-secondary: #293041;
+      --md-sys-color-secondary-container: #3f4759;
+      --md-sys-color-on-secondary-container: #dbe2f9;
+
+      --md-sys-color-tertiary: #dfbbde;
+      --md-sys-color-on-tertiary: #402843;
+      --md-sys-color-tertiary-container: #583e5a;
+      --md-sys-color-on-tertiary-container: #fbd7fc;
+
+      --md-sys-color-error: #ffb4ab;
+      --md-sys-color-on-error: #690005;
+      --md-sys-color-error-container: #93000a;
+      --md-sys-color-on-error-container: #ffdad6;
+
+      --md-sys-color-success: #75db9e;
+      --md-sys-color-on-success: #003919;
+      --md-sys-color-success-container: #005227;
+      --md-sys-color-on-success-container: #91f8b8;
+
+      --md-sys-color-background: #121316;
+      --md-sys-color-on-background: #e3e2e6;
+
+      --md-sys-color-surface: #121316;
+      --md-sys-color-on-surface: #e3e2e6;
+      --md-sys-color-surface-variant: #44474f;
+      --md-sys-color-on-surface-variant: #c4c6d0;
+
+      --md-sys-color-surface-container-lowest: #0c0e11;
+      --md-sys-color-surface-container-low: #1a1c1e;
+      --md-sys-color-surface-container: #1e2023;
+      --md-sys-color-surface-container-high: #292a2d;
+      --md-sys-color-surface-container-highest: #333538;
+
+      --md-sys-color-outline: #8e9099;
+      --md-sys-color-outline-variant: #44474f;
+      --md-sys-color-scrim: #000000;
+
+      --status-active-glow: rgba(173, 198, 255, 0.2);
+      --status-connected-glow: rgba(117, 219, 158, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--md-sys-color-background);
+      color: var(--md-sys-color-on-background);
+      font-family: 'Roboto Flex', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      padding-bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 88px);
+    }
+
+    .material-symbols-rounded {
+      font-size: 24px;
+      width: 1em;
+      height: 1em;
+      line-height: 1;
+      display: inline-block;
+      flex: none;
+      overflow: hidden;
+      vertical-align: middle;
+      color: inherit;
+    }
+
+    /* App Bar Header - M3 Center-aligned / Medium Top App Bar */
+    .m3-top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      padding: 0 16px;
+      background: var(--md-sys-color-surface);
+      transition: background-color 0.2s ease, box-shadow 0.2s ease;
+      padding-top: calc(max(var(--inset-top), env(safe-area-inset-top)));
+      box-sizing: content-box;
+    }
+
+    .m3-top-bar.scrolled {
+      background: var(--md-sys-color-surface-container);
+      box-shadow: var(--md-sys-elevation-2);
+    }
+
+    .m3-top-bar-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .m3-top-bar-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));
+      color: var(--md-sys-color-on-primary);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 20px;
+      box-shadow: var(--md-sys-elevation-1);
+    }
+
+    .m3-top-bar-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .m3-top-bar-headline {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      line-height: 1.2;
+    }
+
+    .m3-top-bar-subtext {
+      font-size: 12px;
+      color: var(--md-sys-color-outline);
+      font-weight: 500;
+    }
+
+    .m3-top-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .m3-icon-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: var(--md-sys-color-on-surface-variant);
+      border: none;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background-color 0.2s, color 0.2s, transform 0.1s;
+    }
+
+    .m3-icon-button:active {
+      transform: scale(0.92);
+      background-color: rgba(128, 128, 128, 0.2);
+    }
+
+    .m3-icon-button.filled-tonal {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+
+    /* Update Banner (M3 Expressive Notice) */
+    .update-banner {
+      display: none;
+      margin: 12px 16px;
+      padding: 16px;
+      border-radius: 20px;
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      box-shadow: var(--md-sys-elevation-2);
+      animation: m3BannerEnter 0.3s cubic-bezier(0.05, 0.7, 0.1, 1);
+    }
+
+    .update-banner.visible {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    @keyframes m3BannerEnter {
+      from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .update-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .update-header h4 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .update-body p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--md-sys-color-on-primary-container);
+      opacity: 0.9;
+    }
+
+    .update-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    /* Screens & Navigation */
+    .page {
+      display: none;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    .page.active {
+      display: block;
+      animation: fadeInView 0.25s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    @keyframes fadeInView {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ================= Hero Connection Card (M3 Elevated Hero) ================= */
+    .m3-hero-card {
+      position: relative;
+      background: var(--md-sys-color-surface-container);
+      border-radius: 28px;
+      padding: 28px 20px 24px;
+      margin-top: 10px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: var(--md-sys-elevation-1);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      overflow: hidden;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .m3-hero-card.connected {
+      background: var(--md-sys-color-surface-container-high);
+      border-color: var(--md-sys-color-success);
+      box-shadow: 0 12px 32px var(--status-connected-glow);
+    }
+
+    .m3-hero-pill-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      background: var(--md-sys-color-surface-variant);
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      margin-bottom: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .m3-hero-pill-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--md-sys-color-outline);
+      transition: background 0.3s;
+    }
+
+    .m3-hero-card.connected .m3-hero-pill-status {
+      background: var(--md-sys-color-success-container);
+      color: var(--md-sys-color-on-success-container);
+    }
+
+    .m3-hero-card.connected .m3-hero-pill-status .dot {
+      background: var(--md-sys-color-success);
+      box-shadow: 0 0 10px var(--md-sys-color-success);
+    }
+
+    /* Master Switcher FAB Button */
+    .m3-fab-power-wrapper {
+      position: relative;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+
+    .m3-fab-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px dashed var(--md-sys-color-outline-variant);
+      animation: rotateRing 20s linear infinite;
+      opacity: 0.6;
+      transition: border-color 0.3s, opacity 0.3s;
+    }
+
+    .m3-hero-card.connected .m3-fab-ring {
+      border-color: var(--md-sys-color-success);
+      opacity: 1;
+      animation: rotateRing 8s linear infinite;
+    }
+
+    @keyframes rotateRing {
+      to { transform: rotate(360deg); }
+    }
+
+    .m3-fab-power {
+      width: 108px;
+      height: 108px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 8px 24px var(--status-active-glow);
+      transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.3s, box-shadow 0.3s;
+      outline: none;
+      position: relative;
+      z-index: 2;
+    }
+
+    .m3-fab-power:active {
+      transform: scale(0.92);
+    }
+
+    .m3-fab-power .material-symbols-rounded {
+      font-size: 46px;
+      transition: transform 0.3s;
+    }
+
+    .m3-fab-power.on {
+      background: var(--md-sys-color-success);
+      color: var(--md-sys-color-on-success);
+      box-shadow: 0 10px 28px var(--status-connected-glow);
+    }
+
+    .m3-fab-power.busy {
+      background: var(--md-sys-color-outline);
+      animation: pulseBusy 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseBusy {
+      from { opacity: 0.6; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1.02); }
+    }
+
+    /* Telemetry Grid inside Hero Card */
+    .m3-telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .m3-telemetry-item {
+      background: var(--md-sys-color-surface);
+      border-radius: 18px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .m3-telemetry-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: var(--md-sys-color-outline);
+      letter-spacing: 0.6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .m3-telemetry-val {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+      font-variant-numeric: tabular-nums;
+      font-family: 'Roboto Mono', monospace;
+      margin-top: 4px;
+    }
+
+    .m3-hint-message {
+      font-size: 13px;
+      color: var(--md-sys-color-outline);
+      margin-top: 14px;
+      max-width: 320px;
+      line-height: 1.4;
+    }
+
+    /* Section Headers */
+    .m3-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--md-sys-color-primary);
+      padding: 16px 8px 8px;
+      margin-top: 8px;
+    }
+
+    .m3-section-title .m3-counter-badge {
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    /* M3 Cards (Outlined and Filled) */
+    .m3-card {
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: 20px;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      overflow: hidden;
+      margin-bottom: 16px;
+      transition: box-shadow 0.2s;
+    }
+
+    .m3-card.elevated {
+      box-shadow: var(--md-sys-elevation-1);
+      background: var(--md-sys-color-surface-container);
+    }
+
+    /* Group Collapsible Header */
+    .m3-group-head {
+      width: 100%;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      cursor: pointer;
+      text-align: left;
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .m3-group-icon {
+      color: var(--md-sys-color-primary);
+    }
+
+    .m3-group-title {
+      flex: 1;
+      font-size: 17px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .m3-chevron {
+      color: var(--md-sys-color-outline);
+      transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    .m3-card.collapsed .m3-chevron {
+      transform: rotate(-90deg);
+    }
+
+    .m3-card.collapsed .m3-group-head {
+      border-bottom: none;
+    }
+
+    .m3-card.collapsed .m3-group-body {
+      grid-template-rows: 0fr;
+    }
+
+    .m3-group-body {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 0.3s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    .m3-group-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Profile Rows (M3 List Item specification) */
+    .m3-profile-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      cursor: pointer;
+      position: relative;
+      transition: background-color 0.15s;
+    }
+
+    .m3-profile-row:last-child {
+      border-bottom: none;
+    }
+
+    .m3-radio {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--md-sys-color-outline);
+      position: relative;
+      display: grid;
+      place-items: center;
+      flex: none;
+      transition: border-color 0.2s;
+    }
+
+    .m3-profile-row.selected .m3-radio {
+      border-color: var(--md-sys-color-primary);
+    }
+
+    .m3-profile-row.selected .m3-radio::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--md-sys-color-primary);
+      animation: popRadio 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    @keyframes popRadio {
+      from { transform: scale(0); }
+      to { transform: scale(1); }
+    }
+
+    .m3-profile-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .m3-profile-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .m3-profile-sub {
+      font-size: 13px;
+      color: var(--md-sys-color-outline);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .m3-row-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: none;
+    }
+
+    .m3-latency-badge {
+      padding: 3px 8px;
+      border-radius: 8px;
+      background: var(--md-sys-color-surface-variant);
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 12px;
+      font-family: 'Roboto Mono', monospace;
+      font-weight: 500;
+    }
+
+    #latency {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      text-align: inherit;
+    }
+    #latency:not(:disabled) { cursor: pointer; }
+    #latency:disabled { cursor: default; opacity: 0.75; }
+    #latency:not(:disabled):active { opacity: 0.7; }
+
+    .m3-latency-badge.good {
+      background: var(--md-sys-color-success-container);
+      color: var(--md-sys-color-on-success-container);
+    }
+
+    .m3-latency-badge.bad {
+      background: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+    }
+
+    /* Log Viewer Card */
+    .m3-log-card {
+      background: var(--md-sys-color-surface-container-low);
+      border-radius: 20px;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .m3-log-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px 12px;
+    }
+
+    .m3-filter-chip {
+      border: 1px solid var(--md-sys-color-outline-variant);
+      background: transparent;
+      color: var(--md-sys-color-on-surface-variant);
+      border-radius: 8px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .m3-filter-chip.active {
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      border-color: var(--md-sys-color-secondary-container);
+    }
+
+    .m3-log-viewport {
+      background: var(--md-sys-color-surface-container-lowest);
+      margin: 0 12px 12px;
+      border-radius: 12px;
+      padding: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--md-sys-color-outline);
+      border: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .log-line.warn { color: #f59f00; font-weight: 500; }
+    .log-line.error { color: var(--md-sys-color-error); font-weight: 500; }
+    .log-line.xray { color: #4dabf7; }
+    .log-line.olcrtc { color: #38d9a9; }
+
+    /* Settings List & Switches */
+    .m3-settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      background: transparent;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+      width: 100%;
+      text-align: left;
+      color: var(--md-sys-color-on-surface);
+      cursor: pointer;
+    }
+
+    .m3-settings-item:last-child {
+      border-bottom: none;
+    }
+
+    .m3-settings-icon {
+      color: var(--md-sys-color-on-surface-variant);
+      flex: none;
+    }
+
+    .m3-settings-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .m3-settings-title {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .m3-settings-caption {
+      font-size: 13px;
+      color: var(--md-sys-color-outline);
+      margin-top: 2px;
+      line-height: 1.35;
+    }
+
+    /* M3 Switch Spec */
+    .m3-switch {
+      width: 52px;
+      height: 32px;
+      border-radius: 100px;
+      background: var(--md-sys-color-surface-variant);
+      border: 2px solid var(--md-sys-color-outline);
+      position: relative;
+      cursor: pointer;
+      transition: background-color 0.2s, border-color 0.2s;
+      flex: none;
+    }
+
+    .m3-switch::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      top: 6px;
+      left: 6px;
+      background: var(--md-sys-color-outline);
+      transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), width 0.2s, height 0.2s, top 0.2s, left 0.2s, background-color 0.2s;
+    }
+
+    .m3-switch.on {
+      background: var(--md-sys-color-primary);
+      border-color: var(--md-sys-color-primary);
+    }
+
+    .m3-switch.on::after {
+      transform: translateX(20px);
+      width: 24px;
+      height: 24px;
+      top: 2px;
+      left: 2px;
+      background: var(--md-sys-color-on-primary);
+    }
+
+    /* Floating Bottom Navigation Bar (M3 Navigation Bar) */
+    .m3-nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: var(--md-sys-color-surface-container);
+      border-top: 1px solid var(--md-sys-color-outline-variant);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      z-index: 40;
+      padding-bottom: max(var(--inset-bottom), env(safe-area-inset-bottom));
+      box-sizing: content-box;
+    }
+
+    .m3-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0 12px;
+      color: var(--md-sys-color-on-surface-variant);
+      transition: color 0.2s;
+      flex: 1;
+      max-width: 120px;
+    }
+
+    .m3-nav-pill {
+      width: 64px;
+      height: 32px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      transition: background-color 0.2s;
+    }
+
+    .m3-nav-item.active .m3-nav-pill {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+
+    .m3-nav-item.active {
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .m3-nav-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    /* Action Buttons (Filled, Tonal, Outlined, Text) */
+    .m3-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 40px;
+      padding: 0 24px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.1px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    .m3-btn:active {
+      transform: scale(0.96);
+    }
+
+    .m3-btn.filled {
+      background: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+      box-shadow: var(--md-sys-elevation-1);
+    }
+
+    .m3-btn.text {
+      background: transparent;
+      color: var(--md-sys-color-primary);
+    }
+
+    .m3-btn.danger {
+      background: var(--md-sys-color-error);
+      color: var(--md-sys-color-on-error);
+    }
+
+    /* Modals & Bottom Sheets (M3 Spec) */
+    .m3-scrim {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .m3-scrim.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .m3-bottom-sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      max-width: 560px;
+      margin: 0 auto;
+      background: var(--md-sys-color-surface-container-high);
+      border-radius: 28px 28px 0 0;
+      padding: 16px 20px calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 20px);
+      z-index: 65;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+      box-shadow: var(--md-sys-elevation-3);
+    }
+
+    .m3-bottom-sheet.open {
+      transform: translateY(0);
+    }
+
+    .m3-sheet-handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--md-sys-color-outline-variant);
+      margin: 0 auto 16px;
+    }
+
+    .m3-sheet-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .m3-sheet-action-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .m3-sheet-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: transparent;
+      border: none;
+      color: var(--md-sys-color-on-surface);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
+    }
+
+    .m3-sheet-row.danger {
+      color: var(--md-sys-color-error);
+    }
+
+    /* M3 Dialog */
+    .m3-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.92);
+      width: calc(100% - 32px);
+      max-width: 440px;
+      background: var(--md-sys-color-surface-container-high);
+      border-radius: 28px;
+      padding: 24px;
+      z-index: 70;
+      box-shadow: var(--md-sys-elevation-3);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+    }
+
+    .m3-dialog.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .m3-dialog-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--md-sys-color-on-surface);
+      margin-bottom: 12px;
+    }
+
+    .m3-dialog-content {
+      font-size: 15px;
+      color: var(--md-sys-color-on-surface-variant);
+      line-height: 1.45;
+      margin-bottom: 24px;
+    }
+
+    .m3-dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* Full Screen Picker Modal */
+    .m3-full-picker {
+      position: fixed;
+      inset: 0;
+      background: var(--md-sys-color-background);
+      z-index: 80;
+      display: none;
+      flex-direction: column;
+    }
+
+    .m3-full-picker.open {
+      display: flex;
+    }
+
+    .m3-search-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--md-sys-color-surface-container-high);
+      border-radius: 100px;
+      padding: 0 16px;
+      margin: 12px 16px;
+      height: 52px;
+    }
+
+    .m3-search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--md-sys-color-on-surface);
+      font-size: 16px;
+      font-family: inherit;
+    }
+
+    /* Form Fields & Inputs */
+    .m3-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .m3-form-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .m3-text-field {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--md-sys-color-outline);
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .m3-text-field:focus {
+      border-color: var(--md-sys-color-primary);
+      box-shadow: 0 0 0 2px var(--status-active-glow);
+    }
+
+    .m3-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Snackbar (M3 Pill Shape) */
+    .m3-snackbar {
+      position: fixed;
+      bottom: calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 92px);
+      left: 20px;
+      right: 20px;
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--md-sys-color-on-surface);
+      color: var(--md-sys-color-surface);
+      border-radius: 14px;
+      padding: 12px 18px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--md-sys-elevation-3);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(16px);
+      transition: all 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+      z-index: 55;
+    }
+
+    .m3-snackbar.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .m3-spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: m3Spin 0.8s linear infinite;
+    }
+
+    @keyframes m3Spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Quick Actions Segmented Pill Bar */
+    .m3-segmented-control {
+      display: flex;
+      background: var(--md-sys-color-surface-container);
+      border-radius: 100px;
+      padding: 4px;
+      margin-bottom: 16px;
+      border: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .m3-segment-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 100px;
+      background: transparent;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--md-sys-color-on-surface-variant);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .m3-segment-btn.active {
+      background: var(--md-sys-color-surface-container-highest);
+      color: var(--md-sys-color-on-surface);
+      box-shadow: var(--md-sys-elevation-1);
+    }
+
+    /* ================= Дополнения для рабочей логики ================= */
+    [hidden] { display: none !important; }
+
+    .material-symbols-rounded svg { display: block; width: 100%; height: 100%; }
+
+    .m3-btn:disabled { opacity: 0.5; cursor: default; }
+    .m3-btn.small { height: 34px; padding: 0 14px; font-size: 13px; }
+    .m3-icon-button.danger-icon { color: var(--md-sys-color-error); }
+
+    /* Радио-метка (режимы split-tunneling) */
+    .m3-radio.on { border-color: var(--md-sys-color-primary); }
+    .m3-radio.on::after {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--md-sys-color-primary);
+      animation: popRadio 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .m3-profile-row.live .m3-radio { border-color: var(--md-sys-color-success); }
+    .m3-profile-row.live.selected .m3-radio::after { background: var(--md-sys-color-success); }
+    .m3-profile-row.live .m3-profile-title { color: var(--md-sys-color-success); }
+
+    /* Статус-пилюля */
+    .m3-hero-pill-status.busy .dot { background: var(--md-sys-color-primary); animation: pulseBusy 1s ease-in-out infinite alternate; }
+    .m3-hero-pill-status.error { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+    .m3-hero-pill-status.error .dot { background: var(--md-sys-color-error); }
+    .m3-fab-power:disabled { cursor: default; }
+
+    /* Группы профилей */
+    .m3-counter-badge:empty { display: none; }
+    .m3-group-head .m3-spinner { width: 18px; height: 18px; border-width: 2px; }
+    .m3-spinner.dark {
+      border-color: var(--md-sys-color-outline-variant);
+      border-top-color: var(--md-sys-color-primary);
+    }
+    .m3-snackbar .m3-spinner { border-color: rgba(128, 128, 128, 0.4); border-top-color: var(--md-sys-color-surface); }
+    .m3-empty { padding: 18px; text-align: center; color: var(--md-sys-color-outline); font-size: 14px; line-height: 1.4; }
+    .m3-profile-row:focus-visible, .m3-group-head:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: -2px; }
+
+    .m3-latency-badge:empty { display: none; }
+    .m3-latency-badge.active { opacity: 0.6; }
+    .ping-btn.stop { color: var(--md-sys-color-error); }
+    .ping-btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* Журнал */
+    .m3-log-card.collapsed .m3-chevron { transform: rotate(-90deg); }
+    .m3-log-card.collapsed .m3-group-head { border-bottom: none; }
+    .m3-log-card.collapsed .m3-group-body { grid-template-rows: 0fr; }
+    .m3-log-hint { margin-left: auto; font-size: 12px; color: var(--md-sys-color-outline); }
+    .log-line { word-break: break-word; }
+
+    /* Обновление */
+    .m3-progress { height: 6px; border-radius: 3px; background: rgba(128, 128, 128, 0.3); overflow: hidden; }
+    .m3-progress .progress-bar { height: 100%; width: 0; background: var(--md-sys-color-primary); transition: width 0.2s linear; }
+
+    /* Настройки */
+    .sub-row { cursor: default; }
+    .m3-settings-item.checking .m3-settings-icon { animation: m3Spin 1s linear infinite; }
+    #updateCheckCaption.ok { color: var(--md-sys-color-success); }
+    #updateCheckCaption.err { color: var(--md-sys-color-error); }
+    .m3-settings-value { font-family: 'Roboto Mono', monospace; font-size: 14px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); }
+
+    /* Шторки и диалоги */
+    .m3-bottom-sheet { max-height: 88vh; overflow-y: auto; }
+    .m3-sheet-row.current { color: var(--md-sys-color-primary); }
+    .m3-sheet-body { max-height: 38vh; overflow-y: auto; margin-bottom: 12px; padding: 0 4px; }
+    .m3-detail { display: flex; gap: 12px; padding: 6px 0; font-size: 14px; line-height: 1.35; }
+    .m3-detail .k { flex: 0 0 84px; color: var(--md-sys-color-outline); }
+    .m3-detail .v { flex: 1; min-width: 0; word-break: break-all; color: var(--md-sys-color-on-surface); }
+
+    .m3-dialog { max-height: 88vh; overflow-y: auto; overscroll-behavior: contain; }
+    .m3-dialog-actions.sticky {
+      position: sticky;
+      bottom: -24px;
+      margin: 16px -24px -24px;
+      padding: 12px 24px 24px;
+      background: var(--md-sys-color-surface-container-high);
+    }
+    .m3-form-error {
+      background: var(--md-sys-color-error-container);
+      color: var(--md-sys-color-on-error-container);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .m3-notice {
+      background: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 14px;
+    }
+    .m3-check-row { display: flex; align-items: center; gap: 12px; font-size: 14px; cursor: pointer; margin-bottom: 14px; }
+    .m3-check-row input { width: 20px; height: 20px; accent-color: var(--md-sys-color-primary); flex: none; margin: 0; }
+    select.m3-text-field { appearance: auto; }
+
+    /* Снэкбар */
+    .m3-snackbar { z-index: 90; }
+    .m3-snackbar.error { background: var(--md-sys-color-error); color: var(--md-sys-color-on-error); }
+    #snackbarIcon { font-weight: 700; }
+    #snackbarIcon:empty { display: none; }
+
+    /* Выбор приложений */
+    .m3-full-picker { padding-top: 0; }
+    .m3-picker-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .m3-search-clear { width: 36px; height: 36px; flex: none; }
+    .m3-picker-system { margin: 0 20px 8px; }
+    .m3-picker-loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; color: var(--md-sys-color-outline); font-size: 14px; }
+    .m3-picker-list { flex: 1; overflow-y: auto; padding: 0 16px calc(max(var(--inset-bottom), env(safe-area-inset-bottom)) + 16px); }
+    .m3-picker-group { display: flex; align-items: center; justify-content: space-between; padding: 12px 4px 6px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--md-sys-color-primary); }
+    .m3-app-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 10px 4px; background: none; border: none; border-bottom: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface); text-align: left; cursor: pointer; font-family: inherit; }
+    .m3-app-icon { width: 40px; height: 40px; border-radius: 10px; flex: none; background: var(--md-sys-color-surface-variant); object-fit: cover; }
+    .m3-app-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .m3-app-name { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .m3-app-pkg { font-size: 12px; color: var(--md-sys-color-outline); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  </style>
+<body data-page="pageHome">
+
+<!-- Верхняя панель -->
+<header class="m3-top-bar" id="topAppBar">
+  <div class="m3-top-bar-title">
+    <div class="m3-top-bar-logo">
+      <span class="material-symbols-rounded">cloud</span>
+    </div>
+    <div class="m3-top-bar-text">
+      <span class="m3-top-bar-headline">NodeTun</span>
+      <span class="m3-top-bar-subtext" id="topBarSub">Защищённый туннель</span>
+    </div>
+  </div>
+  <div class="m3-top-actions">
+    <button class="m3-icon-button filled-tonal" id="quickAddBtn" aria-label="Добавить профиль" title="Добавить профиль">
+      <span class="material-symbols-rounded">add</span>
+    </button>
+  </div>
+</header>
+
+<!-- Баннер обновления -->
+<div class="update-banner" id="updateBanner">
+  <div class="update-header">
+    <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary)">upload</span>
+    <h4>Доступно обновление</h4>
+  </div>
+  <div class="update-body">
+    <p>Версия <span id="updateVersion"></span><span id="updateSize"></span></p>
+  </div>
+  <div class="m3-progress" id="updateProgress" hidden><div class="progress-bar"></div></div>
+  <div class="update-actions">
+    <button class="m3-btn text" id="updateCloseBtn">Закрыть</button>
+    <button class="m3-btn filled" id="updateBtn">Обновить</button>
+  </div>
+</div>
+
+<!-- ================= ГЛАВНАЯ ================= -->
+<main class="page active" id="pageHome">
+
+  <section class="m3-hero-card" id="heroCard">
+    <div class="m3-hero-pill-status" id="statusChip">
+      <span class="dot"></span>
+      <span id="statusText">Отключено</span>
+    </div>
+
+    <div class="m3-fab-power-wrapper">
+      <div class="m3-fab-ring"></div>
+      <button class="m3-fab-power" id="powerBtn" aria-label="Подключение">
+        <span class="material-symbols-rounded">power_settings_new</span>
+      </button>
+    </div>
+
+    <div class="m3-telemetry-grid">
+      <div class="m3-telemetry-item">
+        <span class="m3-telemetry-label">
+          <span class="material-symbols-rounded" style="font-size:14px;">timer</span>
+          Время сессии
+        </span>
+        <span class="m3-telemetry-val" id="uptime">00:00:00</span>
+      </div>
+      <div class="m3-telemetry-item">
+        <span class="m3-telemetry-label">
+          <span class="material-symbols-rounded" style="font-size:14px;">network_ping</span>
+          Отклик
+        </span>
+        <button type="button" class="m3-telemetry-val" id="latency" aria-label="Проверить отклик">— мс</button>
+      </div>
+    </div>
+
+    <div class="m3-hint-message" id="statusHint">Выберите профиль и нажмите кнопку питания</div>
+  </section>
+
+  <div class="m3-section-title">
+    <span>Серверы</span>
+    <span class="m3-counter-badge" id="profilesCount"></span>
+  </div>
+
+  <div id="subscriptions"></div>
+  <div id="localGroup"></div>
+
+  <!-- Журнал -->
+  <div class="m3-card m3-log-card" id="logCard" hidden>
+    <div class="m3-group-head" id="logHead" role="button" tabindex="0">
+      <span class="material-symbols-rounded m3-group-icon">terminal</span>
+      <div class="m3-group-title">Журнал</div>
+      <span class="material-symbols-rounded m3-chevron">expand_more</span>
+    </div>
+    <div class="m3-group-body">
+      <div class="m3-group-inner">
+        <div class="m3-log-filter-bar" id="logFilter">
+          <button class="m3-filter-chip active" data-level="all">Все</button>
+          <button class="m3-filter-chip" data-level="problems">Проблемы</button>
+          <span class="m3-log-hint" id="logHint"></span>
+        </div>
+        <div class="m3-log-viewport" id="logBody"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ================= МАРШРУТЫ (split-tunneling) ================= -->
+<main class="page" id="pageSplit">
+  <div class="m3-section-title"><span>Раздельное туннелирование</span></div>
+
+  <div class="m3-card elevated">
+    <button class="m3-settings-item" id="splitAll">
+      <span class="material-symbols-rounded m3-settings-icon">public</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title">Все приложения</div>
+        <div class="m3-settings-caption">Все приложения идут через туннель</div>
+      </div>
+      <div class="m3-radio"></div>
+    </button>
+
+    <button class="m3-settings-item" id="splitAllow">
+      <span class="material-symbols-rounded m3-settings-icon">filter_alt</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title">Приложения через VPN</div>
+        <div class="m3-settings-caption">Только выбранные приложения идут через туннель, остальные напрямую</div>
+      </div>
+      <div class="m3-radio"></div>
+    </button>
+
+    <button class="m3-settings-item" id="splitExclude">
+      <span class="material-symbols-rounded m3-settings-icon">do_not_disturb_on</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title">Приложения в обход VPN</div>
+        <div class="m3-settings-caption">Выбранные приложения идут напрямую, остальные через туннель</div>
+      </div>
+      <div class="m3-radio"></div>
+    </button>
+  </div>
+
+  <div style="margin-top: 12px;">
+    <button class="m3-btn filled" style="width: 100%; height: 50px;" id="splitPick" hidden>
+      <span class="material-symbols-rounded">apps</span>
+      <span id="splitPickLabel">Выбрать приложения</span>
+    </button>
+  </div>
+</main>
+
+<!-- ================= НАСТРОЙКИ ================= -->
+<main class="page" id="pageSettings">
+  <div class="m3-section-title"><span>Подписки</span></div>
+  <div class="m3-card" id="subAdmin"></div>
+
+  <div class="m3-section-title"><span>Импорт</span></div>
+  <div class="m3-card">
+    <button class="m3-settings-item" id="importProfiles">
+      <span class="material-symbols-rounded m3-settings-icon">content_paste</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title">Добавить из буфера</div>
+        <div class="m3-settings-caption">Ссылки VLESS, OLCRTC или URL подписки</div>
+      </div>
+    </button>
+    <button class="m3-settings-item" id="scanQrProfiles">
+      <span class="material-symbols-rounded m3-settings-icon">qr_code_scanner</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title">Сканировать QR</div>
+        <div class="m3-settings-caption">Камера для быстрого импорта профиля</div>
+      </div>
+    </button>
+  </div>
+
+  <div class="m3-section-title"><span>Диагностика</span></div>
+  <div class="m3-card">
+    <button class="m3-settings-item" id="journalRow">
+      <span class="material-symbols-rounded m3-settings-icon">bug_report</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title">Логи</div>
+        <div class="m3-settings-caption">Вывод ядер olcrtc и Xray и события подключения</div>
+      </div>
+      <div class="m3-switch" id="journalSwitch"></div>
+    </button>
+  </div>
+
+  <div class="m3-section-title"><span>Оформление</span></div>
+  <div class="m3-card">
+    <button class="m3-settings-item" id="themeRow">
+      <span class="material-symbols-rounded m3-settings-icon">palette</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title">Тема</div>
+        <div class="m3-settings-caption">Светлая, тёмная или как в системе</div>
+      </div>
+      <span class="m3-settings-value" id="themeValue" style="font-family:inherit;">Как в системе</span>
+    </button>
+  </div>
+
+  <div class="m3-section-title"><span>О приложении</span></div>
+  <div class="m3-card">
+    <div class="m3-settings-item" style="cursor:default;">
+      <div class="m3-settings-content"><div class="m3-settings-title">Ядро Xray</div></div>
+      <span class="m3-settings-value" id="coreVersion">—</span>
+    </div>
+    <div class="m3-settings-item" style="cursor:default;">
+      <div class="m3-settings-content"><div class="m3-settings-title">Ядро olcrtc</div></div>
+      <span class="m3-settings-value" id="olcrtcVersion">—</span>
+    </div>
+    <div class="m3-settings-item" style="cursor:default;">
+      <div class="m3-settings-content"><div class="m3-settings-title">Версия приложения</div></div>
+      <span class="m3-settings-value" id="appVersion">—</span>
+    </div>
+    <button class="m3-settings-item" id="checkUpdateBtn">
+      <span class="material-symbols-rounded m3-settings-icon">sync</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title">Проверить обновления</div>
+        <div class="m3-settings-caption" id="updateCheckCaption" hidden></div>
+      </div>
+    </button>
+    <div class="m3-settings-item" id="updateInline" hidden style="cursor:default;">
+      <span class="material-symbols-rounded m3-settings-icon" style="color:var(--md-sys-color-primary)">system_update</span>
+      <div class="m3-settings-content">
+        <div class="m3-settings-title" id="updateInlineText"></div>
+        <div class="m3-progress" id="updateInlineProgress" hidden style="margin-top:8px;"><div class="progress-bar"></div></div>
+      </div>
+      <button class="m3-btn filled small" id="updateInlineBtn">Обновить</button>
+    </div>
+  </div>
+</main>
+
+<!-- ================= НИЖНЯЯ НАВИГАЦИЯ ================= -->
+<nav class="m3-nav-bar" id="bottomNav">
+  <button class="m3-nav-item active" data-target="pageHome">
+    <div class="m3-nav-pill"><span class="material-symbols-rounded">home</span></div>
+    <span class="m3-nav-label">Главная</span>
+  </button>
+  <button class="m3-nav-item" data-target="pageSplit">
+    <div class="m3-nav-pill"><span class="material-symbols-rounded">alt_route</span></div>
+    <span class="m3-nav-label">Маршруты</span>
+  </button>
+  <button class="m3-nav-item" data-target="pageSettings">
+    <div class="m3-nav-pill"><span class="material-symbols-rounded">settings</span></div>
+    <span class="m3-nav-label">Настройки</span>
+  </button>
+</nav>
+
+<!-- ================= ШТОРКИ И ДИАЛОГИ ================= -->
+<div class="m3-scrim" id="scrim"></div>
+
+<!-- Добавление -->
+<div class="m3-bottom-sheet" id="sheet">
+  <div class="m3-sheet-handle"></div>
+  <div class="m3-sheet-title">Добавить подключение</div>
+  <div class="m3-sheet-action-list">
+    <button class="m3-sheet-row" data-action="import">
+      <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary)">content_paste</span>
+      Добавить из буфера
+    </button>
+    <button class="m3-sheet-row" data-action="scan">
+      <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary)">qr_code_scanner</span>
+      Сканировать QR
+    </button>
+    <button class="m3-sheet-row" data-action="manual">
+      <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary)">tune</span>
+      Создать вручную
+    </button>
+  </div>
+</div>
+
+<!-- Тема -->
+<div class="m3-bottom-sheet" id="themeSheet">
+  <div class="m3-sheet-handle"></div>
+  <div class="m3-sheet-title">Тема оформления</div>
+  <div class="m3-sheet-action-list">
+    <button class="m3-sheet-row" data-theme-mode="system">
+      <span class="material-symbols-rounded">contrast</span>Как в системе
+    </button>
+    <button class="m3-sheet-row" data-theme-mode="light">
+      <span class="material-symbols-rounded">light_mode</span>Светлая
+    </button>
+    <button class="m3-sheet-row" data-theme-mode="dark">
+      <span class="material-symbols-rounded">dark_mode</span>Тёмная
+    </button>
+  </div>
+</div>
+
+<!-- Профиль -->
+<div class="m3-bottom-sheet" id="modal">
+  <div class="m3-sheet-handle"></div>
+  <div class="m3-sheet-title" id="modalTitle">Профиль</div>
+  <div class="m3-sheet-body" id="modalBody"></div>
+  <div class="m3-sheet-action-list">
+    <button class="m3-sheet-row" id="modalConnect" data-action="modal-connect">
+      <span class="material-symbols-rounded" style="color:var(--md-sys-color-primary)">bolt</span>
+      <span id="modalConnectLabel">Подключиться</span>
+    </button>
+    <button class="m3-sheet-row" data-action="modal-edit">
+      <span class="material-symbols-rounded">edit</span>
+      Редактировать
+    </button>
+    <button class="m3-sheet-row" data-action="modal-share">
+      <span class="material-symbols-rounded">share</span>
+      Поделиться ссылкой
+    </button>
+    <button class="m3-sheet-row danger" data-action="modal-remove">
+      <span class="material-symbols-rounded">delete</span>
+      Удалить
+    </button>
+  </div>
+</div>
+
+<!-- Создание / редактирование профиля -->
+<div class="m3-dialog" id="editModal">
+  <div class="m3-dialog-title" id="editModalTitle">Профиль</div>
+  <div class="m3-notice" id="subWarning" hidden>Профиль из подписки. При её обновлении изменения будут перезаписаны.</div>
+
+  <div class="m3-form-group">
+    <label class="m3-form-label" for="editName">Название</label>
+    <input type="text" class="m3-text-field" id="editName" placeholder="Сервер 1">
+  </div>
+
+  <div class="m3-segmented-control">
+    <button type="button" class="m3-segment-btn active" id="schemeVlessBtn">VLESS</button>
+    <button type="button" class="m3-segment-btn" id="schemeOlcrtcBtn">OLCRTC</button>
+  </div>
+
+  <div id="vlessFields">
+    <div class="m3-grid-2">
+      <div class="m3-form-group"><label class="m3-form-label" for="vlessAddress">Сервер</label>
+        <input type="text" class="m3-text-field" id="vlessAddress" placeholder="example.com" autocapitalize="off" autocomplete="off"></div>
+      <div class="m3-form-group"><label class="m3-form-label" for="vlessPort">Порт</label>
+        <input type="number" class="m3-text-field" id="vlessPort" placeholder="443" min="1" max="65535"></div>
+    </div>
+    <div class="m3-form-group"><label class="m3-form-label" for="vlessId">UUID</label>
+      <input type="text" class="m3-text-field" id="vlessId" placeholder="00000000-0000-0000-0000-000000000000" autocapitalize="off" autocomplete="off"></div>
+    <div class="m3-grid-2">
+      <div class="m3-form-group"><label class="m3-form-label" for="vlessSecurity">Защита</label>
+        <select id="vlessSecurity" class="m3-text-field"><option value="none">none</option><option value="tls">tls</option><option value="reality">reality</option></select></div>
+      <div class="m3-form-group"><label class="m3-form-label" for="vlessNetwork">Сеть</label>
+        <select id="vlessNetwork" class="m3-text-field"><option value="tcp">tcp</option><option value="ws">ws</option><option value="grpc">grpc</option><option value="h2">h2</option><option value="httpupgrade">httpupgrade</option><option value="xhttp">xhttp</option></select></div>
+    </div>
+    <div class="m3-form-group"><label class="m3-form-label" for="vlessSni">SNI</label>
+      <input type="text" class="m3-text-field" id="vlessSni" placeholder="example.com" autocapitalize="off"></div>
+    <div class="m3-form-group"><label class="m3-form-label" for="vlessPath">Path</label>
+      <input type="text" class="m3-text-field" id="vlessPath" placeholder="/" autocapitalize="off"></div>
+    <div class="m3-form-group"><label class="m3-form-label" for="vlessMode">Режим (mode)</label>
+      <select id="vlessMode" class="m3-text-field"><option value="">— не задано</option><option>auto</option><option>packet-up</option><option>stream-up</option><option>stream-one</option><option>multi</option><option>gun</option></select></div>
+    <div class="m3-form-group"><label class="m3-form-label" for="vlessFlow">Поток (flow)</label>
+      <select id="vlessFlow" class="m3-text-field"><option value="">— не задано</option><option>xtls-rprx-vision</option><option>xtls-rprx-vision-udp443</option></select></div>
+    <div id="realityFields" hidden>
+      <div class="m3-form-group"><label class="m3-form-label" for="vlessPbk">Public Key (pbk)</label>
+        <input type="text" class="m3-text-field" id="vlessPbk" placeholder="reality public key" autocapitalize="off" autocomplete="off"></div>
+      <div class="m3-grid-2">
+        <div class="m3-form-group"><label class="m3-form-label" for="vlessSid">Short ID (sid)</label>
+          <input type="text" class="m3-text-field" id="vlessSid" placeholder="short id" autocapitalize="off"></div>
+        <div class="m3-form-group"><label class="m3-form-label" for="vlessSpx">SpiderX (spx)</label>
+          <input type="text" class="m3-text-field" id="vlessSpx" placeholder="/" autocapitalize="off"></div>
+      </div>
+    </div>
+    <div class="m3-form-group"><label class="m3-form-label" for="vlessFp">Fingerprint (fp)</label>
+      <select id="vlessFp" class="m3-text-field"><option value="">— не задано</option><option>chrome</option><option>firefox</option><option>safari</option><option>ios</option><option>android</option><option>edge</option><option>360</option><option>qq</option><option>random</option><option>randomized</option></select></div>
+    <label class="m3-check-row" for="vlessInsecure">
+      <input type="checkbox" id="vlessInsecure">
+      <span>Разрешить незащищённое соединение (allowInsecure)</span>
+    </label>
+  </div>
+
+  <div id="olcrtcFields" hidden>
+    <div class="m3-grid-2">
+      <div class="m3-form-group"><label class="m3-form-label" for="olcrtcProvider">Провайдер</label>
+        <select id="olcrtcProvider" class="m3-text-field"><option>jitsi</option><option>telemost</option><option>wbstream</option><option>vkcalls</option><option>salutejazz</option><option>none</option></select></div>
+      <div class="m3-form-group"><label class="m3-form-label" for="olcrtcTransport">Транспорт</label>
+        <select id="olcrtcTransport" class="m3-text-field"><option>datachannel</option><option>vp8channel</option><option>seichannel</option><option>videochannel</option></select></div>
+    </div>
+    <div class="m3-form-group"><label class="m3-form-label" for="olcrtcRoom">Комната (ID / URL)</label>
+      <input type="text" class="m3-text-field" id="olcrtcRoom" placeholder="room-01" autocapitalize="off" autocomplete="off"></div>
+    <div class="m3-form-group"><label class="m3-form-label" for="olcrtcKey">Ключ шифрования (64 hex)</label>
+      <input type="text" class="m3-text-field" id="olcrtcKey" placeholder="64 hex symbols" autocapitalize="off" autocomplete="off"></div>
+    <div class="m3-form-group"><label class="m3-form-label" for="olcrtcPayload">Параметры транспорта (payload)</label>
+      <input type="text" class="m3-text-field" id="olcrtcPayload" placeholder="vp8-fps=60&amp;vp8-batch=64" autocapitalize="off"></div>
+  </div>
+
+  <div class="m3-form-error" id="editError" hidden></div>
+
+  <div class="m3-dialog-actions sticky">
+    <button class="m3-btn text" id="cancelEditBtn">Отмена</button>
+    <button class="m3-btn filled" id="saveProfileBtn">Сохранить</button>
+  </div>
+</div>
+
+<!-- Подтверждение / информация -->
+<div class="m3-dialog" id="alert" role="alertdialog" aria-modal="true">
+  <div class="m3-dialog-title" id="alertTitle"></div>
+  <div class="m3-dialog-content" id="alertText"></div>
+  <div class="m3-dialog-actions">
+    <button class="m3-btn text" id="alertCancel">Отмена</button>
+    <button class="m3-btn danger" id="alertOk">Удалить</button>
+  </div>
+</div>
+
+<!-- Выбор приложений -->
+<div class="m3-full-picker" id="appPicker">
+  <header class="m3-top-bar">
+    <div class="m3-picker-head">
+      <button class="m3-icon-button" id="pickerClose" aria-label="Отмена">
+        <span class="material-symbols-rounded">arrow_back</span>
+      </button>
+      <span class="m3-top-bar-headline" id="pickerTitle">Приложения</span>
+    </div>
+    <button class="m3-btn filled small" id="pickerDone">Готово</button>
+  </header>
+
+  <div class="m3-search-bar">
+    <span class="material-symbols-rounded" style="color:var(--md-sys-color-outline);">search</span>
+    <input type="text" class="m3-search-input" id="pickerQuery" placeholder="Поиск приложения" aria-label="Поиск приложения" autocomplete="off" autocapitalize="off">
+    <button class="m3-icon-button m3-search-clear" id="pickerSearchClear" type="button" hidden aria-label="Очистить поиск">
+      <span class="material-symbols-rounded" style="font-size:20px;">close</span>
+    </button>
+  </div>
+
+  <label class="m3-check-row m3-picker-system" for="pickerSystem">
+    <input type="checkbox" id="pickerSystem">
+    <span>Показывать системные</span>
+  </label>
+
+  <div class="m3-picker-loading" id="pickerLoading" hidden><span class="m3-spinner dark"></span><span>Загрузка приложений…</span></div>
+  <div class="m3-picker-list" id="pickerList"></div>
+</div>
+
+<!-- Уведомление -->
+<div class="m3-snackbar" id="snackbar" role="status" aria-live="polite">
+  <span class="m3-spinner" id="snackbarSpinner" hidden></span>
+  <span id="snackbarIcon" aria-hidden="true"></span>
+  <span id="snackbarText"></span>
+</div>
+
+<script src="dev-mock.js"></script>
+<script>
+  (() => {
+  'use strict';
+
+  /* ================= Мост и утилиты ================= */
+  const native = window.NodewayVpn || null;
+  const call = (name, ...args) => (native && typeof native[name] === 'function') ? native[name](...args) : null;
+  const $ = id => document.getElementById(id);
+  const parse = json => {
+    if (json && typeof json === 'object') return json;
+    try { return JSON.parse(json); } catch (e) { return null; }
+  };
+  const pad = n => String(n).padStart(2, '0');
+  const clear = node => { node.textContent = ''; };
+  const keys = obj => Object.keys(obj);
+  const dec = s => { try { return decodeURIComponent(s); } catch (e) { return s; } };
+  const h = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+  const store = {
+    get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } },
+    set(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+  };
+
+  /* ================= Иконки (инлайн SVG, без внешних шрифтов) ================= */
+  const ICONS = {
+    power_settings_new: '<path d="M12 3.5v8"/><path d="M7 6.8a7.5 7.5 0 1 0 10 0"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
+    add: '<path d="M12 5v14M5 12h14"/>',
+    upload: '<path fill="currentColor" stroke="none" d="M7,20V18H17v2H7Zm4-4V7.82L8.4,10.4L7,9l5-5l5,5l-1.4,1.4L13,7.82V16H11Z"/>',
+    home: '<path fill="currentColor" stroke="none" d="M6,19H9V13h6v6h3V10L12,5.5L6,10v9ZM4,21V9l8-6l8,6V21H13V15H11v6H4Zm8-8.75Z"/>',
+    alt_route: '<path fill="currentColor" stroke="none" d="M11,22V17q0-1.4-0.42-2.08T9.45,13.6l1.42-1.43q0.3,0.28 0.58,0.59T12,13.43q0.35-0.47 0.71-0.84q0.36-0.36 0.74-0.71Q14.4,11 15.18,9.85T16,5.82L14.43,7.4L13,6l4-4l4,4L19.6,7.4L18,5.82q-0.05,3.57-1.1,5.09t-2.1,2.46Q14,14.1 13.5,14.79T13,17v5H11ZM6.2,8.17q-0.1-0.5-0.14-1.1T6,5.82L4.4,7.4L3,6L7,2l4,4L9.58,7.4L8,5.85Q8,6.38 8.05,6.84T8.15,7.7L6.2,8.17Zm2.15,4.4q-0.5-0.53-0.96-1.22T6.58,9.63L8.5,9.15Q8.75,9.82 9.08,10.3t0.7,0.85L8.35,12.58Z"/>',
+    settings: '<path fill="currentColor" stroke="none" d="M9.25,22l-0.4-3.2q-0.32-0.13-0.61-0.3T7.68,18.13L4.7,19.38L1.95,14.63l2.58-1.95Q4.5,12.5 4.5,12.34q0-0.16 0-0.34t0-0.34t0.03-0.34L1.95,9.38L4.7,4.63L7.68,5.88Q7.95,5.68 8.25,5.5t0.6-0.3L9.25,2h5.5l0.4,3.2q0.33,0.13 0.61,0.3t0.56,0.38L19.3,4.63l2.75,4.75l-2.57,1.95q0.02,0.18 0.02,0.34t0,0.34t0,0.34t-0.05,0.34l2.57,1.95l-2.75,4.75l-2.95-1.25q-0.27,0.2-0.57,0.38t-0.6,0.3L14.75,22H9.25ZM11,20h1.98l0.35-2.65q0.78-0.2 1.44-0.59t1.21-0.94l2.47,1.03l0.98-1.7l-2.15-1.63q0.13-0.35 0.17-0.74T17.5,12t-0.05-0.79q-0.05-0.39-0.17-0.74l2.15-1.63l-0.98-1.7L15.98,8.2q-0.55-0.57-1.21-0.96T13.33,6.65L13,4H11.03L10.68,6.65Q9.9,6.85 9.24,7.24T8.03,8.17L5.55,7.15L4.58,8.85l2.15,1.6Q6.6,10.83 6.55,11.2T6.5,12q0,0.4 0.05,0.77t0.17,0.75L4.58,15.15l0.98,1.7L8.03,15.8q0.55,0.58 1.21,0.96t1.44,0.59L11,20Zm1.05-4.5q1.45,0 2.47-1.03T15.55,12T14.53,9.52T12.05,8.5q-1.47,0-2.49,1.02T8.55,12t1.01,2.47t2.49,1.03ZM12,12Z"/>',
+    close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    expand_more: '<path d="M6 9.5l6 6 6-6"/>',
+    more_vert: '<circle cx="12" cy="5.5" r="1.8" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="12" cy="18.5" r="1.8" fill="currentColor" stroke="none"/>',
+    arrow_back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+    dark_mode: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+    light_mode: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
+    contrast: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+    timer: '<circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M9.5 3h5"/>',
+    network_ping: '<path d="M3 12h3.5l2-6 3.5 12 2.5-8 1.5 2H21"/>',
+    dns: '<rect x="4" y="4" width="16" height="6.5" rx="2"/><rect x="4" y="13.5" width="16" height="6.5" rx="2"/><path d="M7.5 7.25h.01M7.5 16.75h.01"/>',
+    cloud: '<path d="M7.5 18.5h9.5a3.7 3.7 0 0 0 .5-7.4 5.5 5.5 0 0 0-10.6-1.3A4.4 4.4 0 0 0 7.5 18.5z"/>',
+    speed: '<path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 14l4-5"/>',
+    terminal: '<rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M7.5 10l3 2.5-3 2.5M13 15h4"/>',
+    public: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.3 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.3-3.5-8.5s1-6 3.5-8.5z"/>',
+    filter_alt: '<path d="M4 5h16l-6.2 7.6V19l-3.6 1.6v-8z"/>',
+    do_not_disturb_on: '<circle cx="12" cy="12" r="8.5"/><path d="M8 12h8"/>',
+    apps: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
+    content_paste: '<rect x="5" y="4.5" width="14" height="16.5" rx="2.5"/><path d="M9 4.5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v.5"/><path d="M8.5 11h7M8.5 15h5"/>',
+    qr_code_scanner: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M4 12h16"/>',
+    palette: '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-1 1.5-2.2-.5-1.2.3-2.3 1.6-2.3H17a3.5 3.5 0 0 0 3.5-3.5C20.5 7 16.7 3.5 12 3.5z"/><path d="M8 11h.01M11 7.8h.01M15 8.5h.01"/>',
+    bug_report: '<ellipse cx="12" cy="13.5" rx="4.5" ry="6"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0M12 8v11.5M3.5 13h4M16.5 13h4M5 7.5l3 2.5M19 7.5L16 10M5 19.5l3-2.5M19 19.5l-3-2.5"/>',
+    sync: '<path d="M20 11a8 8 0 0 0-14-4.5L4 9M4 4v5h5"/><path d="M4 13a8 8 0 0 0 14 4.5L20 15M20 20v-5h-5"/>',
+    tune: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+    bolt: '<path d="M13 3L5.5 13.5h6L10.5 21l8-10.5h-6z"/>',
+    edit: '<path d="M4 20l1-4.2L16.6 4.2a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.2 19z"/><path d="M14.5 6.3l3.2 3.2"/>',
+    share: '<circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="6" r="2.5"/><circle cx="17.5" cy="18" r="2.5"/><path d="M8.7 10.8l6.6-3.6M8.7 13.2l6.6 3.6"/>',
+    refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
+    delete: '<path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13a1.5 1.5 0 0 0 1.5 1.4h6a1.5 1.5 0 0 0 1.5-1.4l1-13M10 10.5v6M14 10.5v6"/>',
+    system_update: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M12 8v6M9.5 11.8l2.5 2.5 2.5-2.5"/>'
+  };
+  const icon = (name, size) => '<svg viewBox="0 0 24 24"' + (size ? ' width="' + size + '" height="' + size + '"' : '') +
+    ' fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+  const mi = (name, cls) => {
+    const node = h('span', 'material-symbols-rounded' + (cls ? ' ' + cls : ''));
+    node.innerHTML = icon(name);
+    node.dataset.ready = '1';
+    return node;
+  };
+  /* В разметке иконки записаны именем (<span class="material-symbols-rounded">add</span>) — заменяем на SVG. */
+  const hydrateIcons = root => root.querySelectorAll('.material-symbols-rounded:not([data-ready])').forEach(node => {
+    node.innerHTML = icon(node.textContent.trim());
+    node.dataset.ready = '1';
+  });
+  const ICON_PING = icon('speed', 22);
+  const ICON_STOP = icon('stop', 22);
+  const chevron = () => mi('expand_more', 'm3-chevron');
+  hydrateIcons(document);
+
+  /* ================= Состояние ================= */
+  const STATE_TEXT = { disconnected: 'Отключено', connecting: 'Подключение', connected: 'Подключено', disconnecting: 'Отключение', error: 'Ошибка' };
+  const THEME_NAMES = { system: 'Как в системе', light: 'Светлая', dark: 'Тёмная' };
+  const MAX_LOG_LINES = 200;
+  const MAX_JOURNAL = 400;
+
+  const normalizeModel = data => {
+    const m = Object.assign({ profiles: [], subscriptions: [], selectedProfileId: '', activeProfileId: '', connectedAt: 0 }, data);
+    if (!Array.isArray(m.profiles)) m.profiles = [];
+    if (!Array.isArray(m.subscriptions)) m.subscriptions = [];
+    return m;
+  };
+  const normalizePing = raw => {
+    const results = {};
+    keys((raw && raw.results) || {}).forEach(k => { results[k] = Number(raw.results[k]); });
+    return {
+      running: !!(raw && raw.running),
+      index: Number(raw && raw.index) || 0,
+      total: Number(raw && raw.total) || 0,
+      profileId: (raw && raw.profileId) || '',
+      results
+    };
+  };
+
+  let state = 'disconnected';
+  let lastMessage = '';
+  let latencyMs = 0;
+  let model = normalizeModel();
+  let ping = normalizePing();
+  let pingStopping = false;
+  let pingStartKey = '';
+  let modalProfileId = '';
+  let themeMode = 'system';
+  let currentPage = 'pageHome';
+
+  const IDS = ['powerBtn', 'uptime', 'latency', 'statusText', 'statusHint', 'statusChip', 'subscriptions', 'localGroup', 'subAdmin',
+    'logBody', 'logCard', 'logFilter', 'logHint', 'journalRow', 'journalSwitch', 'scrim', 'sheet', 'themeSheet',
+    'themeRow', 'themeValue', 'modal', 'modalTitle', 'modalBody', 'modalConnect', 'editModal', 'coreVersion', 'olcrtcVersion',
+    'appVersion', 'updateBanner', 'updateVersion', 'updateSize', 'updateProgress', 'updateBtn', 'updateCloseBtn',
+    'alert', 'alertTitle', 'alertText', 'alertOk', 'alertCancel', 'snackbar', 'snackbarText', 'snackbarIcon', 'snackbarSpinner', 'heroCard', 'profilesCount', 'modalConnectLabel'];
+  const el = {};
+  IDS.forEach(id => { el[id] = $(id); });
+  el.updateProgressBar = el.updateProgress.querySelector('.progress-bar');
+
+  /* Свёрнутые группы */
+  const COLLAPSED_KEY = 'nodeway.collapsed';
+  const collapsed = (() => {
+    const saved = parse(store.get(COLLAPSED_KEY)) || {};
+    return { subscriptions: saved.subscriptions || {}, local: !!saved.local, log: !!saved.log };
+  })();
+  const saveCollapsed = () => store.set(COLLAPSED_KEY, JSON.stringify(collapsed));
+
+  /* ================= Уведомления и диалоги ================= */
+  let toastTimer = null;
+  function toast(message, o = {}) {
+    if (!message) return;
+    clearTimeout(toastTimer);
+    const kind = o.spinner ? '' : o.error ? 'error' : o.success ? 'success' : o.warning ? 'warning' : o.info ? 'info' : '';
+    el.snackbar.className = 'm3-snackbar visible' + (kind ? ' ' + kind : '');
+    el.snackbarSpinner.hidden = !o.spinner;
+    el.snackbarIcon.textContent = o.spinner ? '' : ({ error: '✕', warning: '⚠', info: 'ℹ' }[kind] || '✓');
+    el.snackbarText.textContent = message;
+    if (!o.sticky) toastTimer = setTimeout(hideToast, o.error ? 5000 : 2600);
+  }
+  function hideToast() { clearTimeout(toastTimer); el.snackbar.classList.remove('visible'); }
+
+  function showReply(reply) {
+    if (!reply || !reply.message) return;
+    if (reply.loading) toast(reply.message, { spinner: true, sticky: true });
+    else toast(reply.message, { error: reply.ok === false, success: reply.ok === true });
+  }
+
+  const OVERLAYS = ['sheet', 'themeSheet', 'modal', 'editModal', 'alert', 'scrim'];
+  function closeOverlays() { OVERLAYS.forEach(id => el[id].classList.remove('open')); }
+  function openOverlay(node) { node.classList.add('open'); el.scrim.classList.add('open'); }
+
+  function dialog(title, text, okLabel, onOk) {
+    closeOverlays();
+    el.alertTitle.textContent = title;
+    el.alertText.textContent = text || '';
+    el.alertText.hidden = !text;
+    el.alertOk.textContent = okLabel;
+    el.alertOk.className = 'm3-btn ' + (onOk ? 'danger' : 'filled');
+    el.alertCancel.hidden = !onOk;
+    el.alertOk.onclick = () => { closeOverlays(); if (onOk) onOk(); };
+    el.alertCancel.onclick = closeOverlays;
+    openOverlay(el.alert);
+  }
+  const askDelete = (title, text, onYes) => dialog(title, text, 'Удалить', onYes);
+
+  /* ================= Журнал ================= */
+  let journal = [];
+  let journalEnabled = false;
+  let logFilter = 'all';
+  let renderedUpTo = 0;
+  let renderFull = true;
+
+  const visibleIn = e => logFilter === 'all' || e.l === 'warn' || e.l === 'error';
+  const clockOf = ms => { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
+
+  function appendJournal(entries, reset) {
+    if (!journalEnabled) { journal = []; renderFull = true; return; }
+    journal = reset ? (entries || []).slice() : journal.concat(entries || []);
+    if (reset) { renderedUpTo = 0; renderFull = true; }
+    const over = journal.length - MAX_JOURNAL;
+    if (over > 0) { journal = journal.slice(over); renderedUpTo = Math.max(0, renderedUpTo - over); }
+    renderJournal();
+  }
+
+  function renderJournal() {
+    const shown = journal.filter(visibleIn).length;
+    el.logHint.textContent = shown === journal.length ? '' : shown + ' из ' + journal.length;
+    if (!journalEnabled || collapsed.log) return;
+
+    if (renderFull || renderedUpTo > journal.length) { clear(el.logBody); renderedUpTo = 0; renderFull = false; }
+    for (let i = renderedUpTo; i < journal.length; i++) {
+      const e = journal[i];
+      if (!visibleIn(e)) continue;
+      const source = e.s || 'app';
+      el.logBody.appendChild(h('div', 'log-line ' + source + ' ' + (e.l || 'info'),
+        clockOf(e.t) + '  ' + (source === 'app' ? '' : source + ' · ') + e.m));
+    }
+    renderedUpTo = journal.length;
+    while (el.logBody.childElementCount > MAX_LOG_LINES) el.logBody.removeChild(el.logBody.firstChild);
+    el.logBody.scrollTop = el.logBody.scrollHeight;
+  }
+
+  function log(message) {
+    if (message && journalEnabled) appendJournal([{ t: Date.now(), s: 'app', l: 'info', m: message }], false);
+  }
+
+  function applyJournalEnabled(value) {
+    journalEnabled = !!value;
+    el.journalSwitch.classList.toggle('on', journalEnabled);
+    el.logCard.hidden = !journalEnabled;
+    journal = [];
+    renderFull = true;
+    clear(el.logBody);
+  }
+
+  function applyLogCollapsed() {
+    el.logCard.classList.toggle('collapsed', collapsed.log);
+  }
+
+  /* ================= Главная: питание, аптайм, пинг ================= */
+  const profileById = id => model.profiles.find(p => p.id === id) || null;
+  const selectedProfile = () => profileById(model.selectedProfileId);
+
+  function pluralProfiles(n) {
+    if (!n) return '';
+    const m10 = n % 10, m100 = n % 100;
+    const word = m10 === 1 && m100 !== 11 ? 'профиль' : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) ? 'профиля' : 'профилей';
+    return n + ' ' + word;
+  }
+
+  function formatUptime(ms) {
+    const t = Math.max(0, Math.floor(ms / 1000));
+    return pad(Math.floor(t / 3600)) + ':' + pad(Math.floor(t % 3600 / 60)) + ':' + pad(t % 60);
+  }
+
+  function renderUptime() {
+    const running = !ping.running && state === 'connected' && model.connectedAt > 0;
+    el.uptime.textContent = running ? formatUptime(Date.now() - model.connectedAt) : '00:00:00';
+  }
+
+  let latencyChecking = false;
+  let latencyTimer = null;
+  const canProbeLatency = () => !!(native && typeof native.probeLatency === 'function');
+  function stopLatencyCheck() { latencyChecking = false; clearTimeout(latencyTimer); }
+  function renderLatency() {
+    const connected = state === 'connected';
+    const idle = connected && !ping.running;
+    el.latency.textContent = latencyChecking && idle ? '…' : (connected && latencyMs > 0 ? latencyMs + ' мс' : '— мс');
+    const clickable = idle && canProbeLatency() && !latencyChecking;
+    el.latency.disabled = !clickable;
+    el.latency.title = clickable ? 'Нажмите, чтобы проверить отклик' : '';
+  }
+
+  function renderPower() {
+    const on = state === 'connected';
+    const busy = state === 'connecting' || state === 'disconnecting';
+    const checking = ping.running;
+
+    el.powerBtn.className = 'm3-fab-power' + (on ? ' on' : '') + (busy || checking ? ' busy' : '');
+    el.powerBtn.disabled = busy || checking;
+    el.powerBtn.setAttribute('aria-label', on ? 'Отключить' : 'Подключить');
+    el.heroCard.classList.toggle('connected', on);
+
+    el.statusChip.className = 'm3-hero-pill-status' + (checking || busy ? ' busy' : on ? ' on' : state === 'error' ? ' error' : '');
+    el.statusText.textContent = checking
+      ? (pingStopping ? 'Остановка…' : 'Проверка: ' + (ping.index + 1) + ' из ' + ping.total)
+      : STATE_TEXT[state] || STATE_TEXT.disconnected;
+
+    let hint;
+    if (checking) {
+      const current = profileById(ping.profileId);
+      hint = current ? 'Проверяем: ' + current.name : 'Проверяем профиль…';
+    } else if (state === 'error') {
+      hint = lastMessage || 'Не удалось подключиться';
+    } else if (on && profileById(model.activeProfileId)) {
+      hint = profileById(model.activeProfileId).name;
+    } else {
+      const sel = selectedProfile();
+      hint = sel ? 'Выбрано: ' + sel.name : 'Выберите профиль и нажмите кнопку питания';
+    }
+    el.statusHint.textContent = hint;
+  }
+
+  function updatePingBadges() {
+    document.querySelectorAll('.m3-profile-row[data-profile-id]').forEach(row => {
+      const badge = row.querySelector('.m3-latency-badge');
+      const id = row.dataset.profileId;
+      const ms = ping.results[id];
+      const current = ping.running && ping.profileId === id;
+      const known = typeof ms === 'number' && !isNaN(ms);
+      badge.className = 'm3-latency-badge' + (current ? ' active' : '') + (known ? (ms < 0 || ms >= 250 ? ' bad' : ms < 150 ? ' good' : '') : '');
+      badge.textContent = current ? '…' : known ? (ms < 0 ? '—' : ms + ' мс') : '';
+    });
+  }
+
+  function updatePingButtons() {
+    if (!ping.running) { pingStopping = false; pingStartKey = ''; }
+    const buttons = Array.from(document.querySelectorAll('.ping-btn'));
+    let owners = ping.running ? buttons.filter(btn => {
+      const ids = btn._pingIds || [];
+      return ping.profileId ? ids.includes(ping.profileId) : !!pingStartKey && ids.join(',') === pingStartKey;
+    }) : [];
+    if (ping.running && !owners.length && ping.profileId) owners = buttons;
+
+    buttons.forEach(btn => {
+      const isOwner = owners.includes(btn);
+      const stop = ping.running && isOwner;
+      btn.classList.toggle('stop', stop);
+      btn.disabled = ping.running && (!isOwner || pingStopping);
+      if (btn._stop !== stop) {
+        btn._stop = stop;
+        btn.innerHTML = stop ? ICON_STOP : ICON_PING;
+        btn.setAttribute('aria-label', stop ? 'Остановить проверку' : btn._idleLabel);
+      }
+    });
+  }
+
+  function startPing(ids) {
+    if (!ids.length || ping.running) return;
+    pingStartKey = ids.join(',');
+    call('pingProfiles', JSON.stringify(ids));
+  }
+
+  function stopPing() {
+    if (!ping.running || pingStopping) return;
+    pingStopping = true;
+    call('cancelPing');
+    renderPower();
+    updatePingButtons();
+  }
+
+  /* ================= Список профилей ================= */
+  let rowsSignature = null;
+  let subsSignature = null;
+
+  function render() {
+    renderPower();
+    renderUptime();
+    renderLatency();
+    el.profilesCount.textContent = pluralProfiles(model.profiles.length);
+
+    const rows = JSON.stringify([model.profiles, model.selectedProfileId,
+      model.subscriptions.map(s => [s.id, s.name, s.count, !!s.loading])]);
+    if (rows !== rowsSignature) {
+      rowsSignature = rows;
+      renderSubscriptions();
+      renderLocals();
+    }
+    syncActiveRows();
+
+    const subs = JSON.stringify(model.subscriptions);
+    if (subs !== subsSignature) { subsSignature = subs; renderSubAdmin(); }
+
+    updatePingBadges();
+    updatePingButtons();
+  }
+
+  function syncActiveRows() {
+    document.querySelectorAll('.m3-profile-row[data-profile-id]').forEach(row => {
+      row.classList.toggle('live', row.dataset.profileId === model.activeProfileId);
+    });
+  }
+
+  function profileGroup(o, group) {
+    group = group || h('div');
+    group.className = 'm3-card elevated' + (o.collapsed ? ' collapsed' : '');
+
+    const head = h('div', 'm3-group-head');
+    head.setAttribute('role', 'button');
+    head.tabIndex = 0;
+    head.appendChild(mi(o.icon || 'dns', 'm3-group-icon'));
+    head.appendChild(h('div', 'm3-group-title', o.title));
+
+    if (o.loading) head.appendChild(h('span', 'm3-spinner dark'));
+    if (o.pingable) {
+      const ids = o.rows.map(p => p.id);
+      const btn = h('button', 'm3-icon-button ping-btn');
+      btn.type = 'button';
+      btn._pingIds = ids;
+      btn._stop = false;
+      btn._idleLabel = 'Проверить профили группы «' + o.title + '»';
+      btn.setAttribute('aria-label', btn._idleLabel);
+      btn.innerHTML = ICON_PING;
+      btn.onclick = e => { e.stopPropagation(); if (ping.running) stopPing(); else startPing(ids); };
+      head.appendChild(btn);
+    }
+    head.appendChild(chevron());
+
+    head.onclick = () => {
+      group.classList.toggle('collapsed');
+      o.remember(group.classList.contains('collapsed'));
+      saveCollapsed();
+    };
+    head.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === head) { e.preventDefault(); head.click(); } };
+
+    const inner = h('div', 'm3-group-inner');
+    if (o.rows.length) o.rows.forEach(p => inner.appendChild(profileRow(p)));
+    else inner.appendChild(h('div', 'm3-empty', o.emptyText));
+
+    const body = h('div', 'm3-group-body');
+    body.appendChild(inner);
+    group.append(head, body);
+    return group;
+  }
+
+  function renderSubscriptions() {
+    clear(el.subscriptions);
+    if (!model.subscriptions.length) {
+      el.subscriptions.appendChild(h('div', 'm3-empty', 'Подписок нет — добавьте ссылку подписки из буфера обмена'));
+      return;
+    }
+    model.subscriptions.forEach(sub => {
+      const name = sub.name || 'Подписка';
+      const rows = model.profiles.filter(p => p.subscriptionId === sub.id);
+      el.subscriptions.appendChild(profileGroup({
+        title: name.replace(/^☁️?\s*/, ''),
+        icon: 'cloud',
+        pingable: true,
+        collapsed: collapsed.subscriptions[sub.id],
+        remember: v => { collapsed.subscriptions[sub.id] = v; },
+        rows,
+        loading: !!sub.loading,
+        emptyText: sub.loading ? 'Загрузка подписки…' : 'Пока нет профилей'
+      }));
+    });
+  }
+
+  function renderLocals() {
+    clear(el.localGroup);
+    const rows = model.profiles.filter(p => !p.fromSubscription);
+    profileGroup({
+      title: 'Локальные профили',
+      icon: 'dns',
+      pingable: true,
+      collapsed: collapsed.local,
+      remember: v => { collapsed.local = v; },
+      rows,
+      emptyText: 'Профилей нет — скопируйте vless- или olcrtc-ссылку и импортируйте из буфера'
+    }, el.localGroup);
+  }
+
+  function profileRow(profile) {
+    const row = h('div', 'm3-profile-row' + (profile.id === model.selectedProfileId ? ' selected' : ''));
+    row.dataset.profileId = profile.id;
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
+
+    row.appendChild(h('div', 'm3-radio'));
+
+    const info = h('div', 'm3-profile-info');
+    info.appendChild(h('div', 'm3-profile-title', profile.name));
+    info.appendChild(h('div', 'm3-profile-sub', profile.type === 'olcrtc'
+      ? 'OLCRTC / ' + (profile.provider || '—').toUpperCase() + ' / ' + (profile.transport || '—')
+      : 'VLESS / ' + (profile.network || 'tcp').toUpperCase() + ' / ' + (profile.security || 'none').toUpperCase()));
+    row.appendChild(info);
+
+    const actions = h('div', 'm3-row-actions');
+    actions.appendChild(h('span', 'm3-latency-badge'));
+    const more = h('button', 'm3-icon-button info-action');
+    more.type = 'button';
+    more.setAttribute('aria-label', 'Подробнее о профиле');
+    more.appendChild(mi('more_vert'));
+    more.onclick = e => { e.stopPropagation(); openModal(profile.id); };
+    actions.appendChild(more);
+    row.appendChild(actions);
+
+    row.onclick = () => { if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id); };
+    row.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === row) { e.preventDefault(); row.click(); } };
+    return row;
+  }
+
+  /* ================= Подписки (настройки) ================= */
+  let countdownTimer = null;
+
+  function countdownText(sub) {
+    const minutes = sub.refreshMinutes || 0;
+    if (minutes <= 0) return '';
+    let due;
+    if (typeof sub.nextRefreshAt === 'number') due = sub.nextRefreshAt;
+    else {
+      const since = sub.updatedAt > 0 ? sub.updatedAt : (sub.addedAt || 0);
+      if (!since) return '—';
+      due = since + minutes * 60000;
+    }
+    const left = Math.floor((due - Date.now()) / 1000);
+    if (left <= 0) return 'сейчас';
+    if (left < 60) return left + ' сек';
+    if (left < 3600) return Math.floor(left / 60) + ' мин';
+    return Math.ceil(left / 3600) + ' ч';
+  }
+
+  const countdownNodes = () => el.subAdmin.querySelectorAll('[data-refresh-minutes]');
+
+  function syncCountdownTimer() {
+    const need = currentPage === 'pageSettings' && countdownNodes().length > 0;
+    if (!need) { clearInterval(countdownTimer); countdownTimer = null; return; }
+    if (countdownTimer) return;
+    countdownTimer = setInterval(() => {
+      countdownNodes().forEach(node => {
+        const d = node.dataset;
+        node.textContent = 'Обновление через: ' + countdownText({
+          refreshMinutes: +d.refreshMinutes, updatedAt: +d.updatedAt, addedAt: +d.addedAt,
+          nextRefreshAt: d.nextRefreshAt === undefined ? undefined : +d.nextRefreshAt
+        });
+      });
+    }, 1000);
+  }
+
+  function renderSubAdmin() {
+    clear(el.subAdmin);
+    if (!model.subscriptions.length) {
+      el.subAdmin.appendChild(h('div', 'm3-empty', 'Подписок нет'));
+      syncCountdownTimer();
+      return;
+    }
+    model.subscriptions.forEach(sub => {
+      const name = sub.name || 'Подписка';
+      const row = h('div', 'm3-settings-item sub-row');
+      row.appendChild(mi('cloud', 'm3-settings-icon'));
+
+      const info = h('div', 'm3-settings-content');
+      info.appendChild(h('div', 'm3-settings-title', name));
+      info.appendChild(h('div', 'm3-settings-caption', 'Профилей: ' + (sub.count || 0)));
+      if (sub.refreshMinutes > 0) {
+        const left = h('div', 'm3-settings-caption', 'Обновление через: ' + countdownText(sub));
+        Object.assign(left.dataset, { refreshMinutes: sub.refreshMinutes, updatedAt: sub.updatedAt || 0, addedAt: sub.addedAt || 0 });
+        if (typeof sub.nextRefreshAt === 'number') left.dataset.nextRefreshAt = sub.nextRefreshAt;
+        info.appendChild(left);
+      }
+      row.appendChild(info);
+
+      const actions = h('div', 'm3-row-actions');
+      const refresh = h('button', 'm3-icon-button');
+      refresh.type = 'button';
+      refresh.setAttribute('aria-label', 'Обновить подписку');
+      refresh.title = 'Обновить';
+      if (sub.loading) { refresh.disabled = true; refresh.appendChild(h('span', 'm3-spinner dark')); }
+      else {
+        refresh.appendChild(mi('refresh'));
+        refresh.onclick = () => { log('обновляем «' + name + '»'); call('refreshSubscription', sub.id); };
+      }
+      actions.appendChild(refresh);
+
+      const remove = h('button', 'm3-icon-button danger-icon');
+      remove.type = 'button';
+      remove.setAttribute('aria-label', 'Удалить подписку');
+      remove.title = 'Удалить';
+      remove.appendChild(mi('delete'));
+      remove.onclick = () => {
+        const count = sub.count || 0;
+        askDelete('Удалить подписку?',
+          'Подписка «' + name + '» и её профили' + (count ? ' (' + count + ')' : '') + ' будут удалены без возможности восстановления.',
+          () => { call('removeSubscription', sub.id); log('подписка удалена'); });
+      };
+      actions.appendChild(remove);
+      row.appendChild(actions);
+
+      el.subAdmin.appendChild(row);
+    });
+    syncCountdownTimer();
+  }
+
+  /* ================= Карточка профиля ================= */
+  function openModal(profileId) {
+    const p = profileById(profileId);
+    if (!p) return;
+    modalProfileId = profileId;
+    el.modalTitle.textContent = p.name;
+    clear(el.modalBody);
+
+    const source = p.fromSubscription ? (p.subscriptionName || 'подписка') : (p.source === 'manual' ? 'вручную' : 'буфер обмена');
+    const details = (p.type === 'olcrtc' ? [
+      ['Тип', 'OLCRTC'], ['Провайдер', (p.provider || '—').toUpperCase()], ['Транспорт', p.transport], ['Комната', p.room]
+    ] : [
+      ['Адрес', p.address + (p.port ? ':' + p.port : '')], ['Сеть', (p.network || 'tcp').toUpperCase()],
+      ['Защита', (p.security || 'none').toUpperCase()], ['SNI', p.sni]
+    ]).concat([['Источник', source]]);
+
+    details.forEach(([k, v]) => {
+      const row = h('div', 'm3-detail');
+      row.append(h('span', 'k', k), h('span', 'v', v || '—'));
+      el.modalBody.appendChild(row);
+    });
+
+    el.modalConnectLabel.textContent = p.id === model.activeProfileId ? 'Отключиться' : 'Подключиться';
+    openOverlay(el.modal);
+  }
+
+  /* ================= Редактор профиля ================= */
+  const F = id => $(id);
+  const val = id => F(id).value.trim();
+  const setVal = (id, v) => { F(id).value = v == null ? '' : v; };
+  let editingProfileId = null;
+  let currentScheme = 'vless';
+  let vlessExtra = {};
+
+  function setScheme(scheme) {
+    currentScheme = scheme;
+    const isVless = scheme === 'vless';
+    F('schemeVlessBtn').classList.toggle('active', isVless);
+    F('schemeOlcrtcBtn').classList.toggle('active', !isVless);
+    F('vlessFields').hidden = !isVless;
+    F('olcrtcFields').hidden = isVless;
+    showEditError('');
+  }
+
+  function showEditError(text) {
+    const node = F('editError');
+    node.textContent = text;
+    node.hidden = !text;
+  }
+
+  /* Выставляет значение select; неизвестное значение добавляется как временная опция, чтобы не потерять его при сохранении. */
+  function setSelectValue(id, value) {
+    const node = F(id);
+    const wanted = value || '';
+    node.querySelectorAll('option[data-custom]').forEach(o => o.remove());
+    if (!Array.from(node.options).some(o => o.value === wanted)) {
+      const custom = h('option', null, wanted || '— не задано');
+      custom.value = wanted;
+      custom.dataset.custom = '';
+      node.appendChild(custom);
+    }
+    node.value = wanted;
+  }
+
+  function clearEditFields() {
+    setVal('vlessAddress', ''); setVal('vlessPort', '443'); setVal('vlessId', '');
+    setSelectValue('vlessSecurity', 'none'); setSelectValue('vlessNetwork', 'tcp');
+    setVal('vlessSni', ''); setVal('vlessPath', '');
+    setSelectValue('vlessMode', ''); setSelectValue('vlessFlow', ''); setSelectValue('vlessFp', '');
+    setVal('vlessPbk', ''); setVal('vlessSid', ''); setVal('vlessSpx', '/');
+    F('vlessInsecure').checked = false;
+    F('realityFields').hidden = true;
+    setSelectValue('olcrtcProvider', 'jitsi'); setSelectValue('olcrtcTransport', 'datachannel');
+    setVal('olcrtcRoom', ''); setVal('olcrtcKey', ''); setVal('olcrtcPayload', '');
+    vlessExtra = {};
+  }
+
+  const VLESS_MANAGED = ['security', 'type', 'sni', 'path', 'mode', 'flow', 'encryption', 'pbk', 'sid', 'spx', 'fp', 'allowInsecure'];
+
+  function parseLinkToFields(link) {
+    const raw = (link || '').trim();
+    let m;
+    if ((m = /^vless:\/\/([^@]*)@([^?#]*)(?:\?([^#]*))?/.exec(raw))) {
+      setScheme('vless');
+      const hp = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(m[2]) || [];
+      const params = {};
+      (m[3] || '').split('&').forEach(pair => {
+        const i = pair.indexOf('=');
+        const k = i < 0 ? pair : pair.slice(0, i);
+        if (k) params[dec(k)] = i < 0 ? '' : dec(pair.slice(i + 1));
+      });
+      vlessExtra = {};
+      keys(params).forEach(k => { if (!VLESS_MANAGED.includes(k)) vlessExtra[k] = params[k]; });
+
+      const security = params.security || 'none';
+      let net = (params.type || 'tcp').toLowerCase();
+      if (net === 'splithttp') net = 'xhttp';
+      if (net === 'http') net = 'h2';
+
+      setVal('vlessId', dec(m[1]));
+      setVal('vlessAddress', (hp[1] || '').replace(/^\[|\]$/g, ''));
+      setVal('vlessPort', hp[2] || '443');
+      setSelectValue('vlessSecurity', security);
+      setSelectValue('vlessNetwork', net);
+      setVal('vlessSni', params.sni);
+      setVal('vlessPath', params.path);
+      setSelectValue('vlessMode', params.mode);
+      setSelectValue('vlessFlow', params.flow);
+      setVal('vlessPbk', params.pbk);
+      setVal('vlessSid', params.sid);
+      setVal('vlessSpx', params.spx || '/');
+      setSelectValue('vlessFp', params.fp);
+      F('vlessInsecure').checked = params.allowInsecure === '1' || params.allowInsecure === 'true';
+      F('realityFields').hidden = security !== 'reality';
+    } else if ((m = /^olcrtc:\/\/([^?]*)\?([^<@]*)(?:<([^>]*)>)?@([^#]*)#([^$]*)/.exec(raw))) {
+      setScheme('olcrtc');
+      setSelectValue('olcrtcProvider', m[1] || 'jitsi');
+      setSelectValue('olcrtcTransport', m[2] || 'datachannel');
+      setVal('olcrtcPayload', m[3]);
+      setVal('olcrtcRoom', m[4]);
+      setVal('olcrtcKey', m[5]);
+    }
+  }
+
+  function buildLinkFromFields() {
+    const name = val('editName');
+    if (currentScheme === 'olcrtc') {
+      const payload = val('olcrtcPayload');
+      return 'olcrtc://' + F('olcrtcProvider').value + '?' + F('olcrtcTransport').value +
+        (payload ? '<' + payload + '>' : '') + '@' + val('olcrtcRoom') + '#' + val('olcrtcKey') + (name ? '$' + name : '');
+    }
+
+    let addr = val('vlessAddress');
+    if (addr.includes(':') && !addr.startsWith('[')) addr = '[' + addr + ']';
+    const params = ['encryption=none'];
+    const add = (k, v) => { if (v) params.push(k + '=' + encodeURIComponent(v)); };
+    const security = F('vlessSecurity').value;
+    const network = F('vlessNetwork').value;
+    const path = val('vlessPath');
+    const spx = val('vlessSpx');
+
+    if (network !== 'tcp') add('type', network);
+    if (security !== 'none') add('security', security);
+    add('sni', val('vlessSni'));
+    if (path !== '/') add('path', path);
+    add('mode', F('vlessMode').value);
+    add('flow', F('vlessFlow').value);
+    if (security === 'reality') {
+      add('pbk', val('vlessPbk'));
+      add('sid', val('vlessSid'));
+      if (spx !== '/') add('spx', spx);
+    }
+    add('fp', F('vlessFp').value);
+    if (F('vlessInsecure').checked) params.push('allowInsecure=1');
+    keys(vlessExtra).forEach(k => add(encodeURIComponent(k), vlessExtra[k]));
+
+    return 'vless://' + val('vlessId') + '@' + addr + ':' + (val('vlessPort') || '443') +
+      '?' + params.join('&') + (name ? '#' + encodeURIComponent(name) : '');
+  }
+
+  function validateFields() {
+    if (currentScheme === 'olcrtc') {
+      if (!val('olcrtcRoom')) return 'Укажите комнату';
+      if (!val('olcrtcKey')) return 'Укажите ключ шифрования';
+      return '';
+    }
+    if (!val('vlessAddress')) return 'Укажите адрес сервера';
+    if (!val('vlessId')) return 'Укажите UUID';
+    const port = Number(val('vlessPort') || 443);
+    if (!(port >= 1 && port <= 65535)) return 'Порт должен быть от 1 до 65535';
+    return '';
+  }
+
+  function openEditModal(profileId) {
+    closeOverlays();
+    editingProfileId = profileId;
+    const p = profileById(profileId);
+    showEditError('');
+    clearEditFields();
+    F('editModalTitle').textContent = p ? 'Редактирование профиля' : 'Новый профиль';
+    F('subWarning').hidden = !(p && p.fromSubscription);
+    setVal('editName', p ? p.name : '');
+    setScheme(p && p.type === 'olcrtc' ? 'olcrtc' : 'vless');
+    if (p) parseLinkToFields(p.link);
+    el.editModal.scrollTop = 0;
+    openOverlay(el.editModal);
+  }
+
+  function saveProfile() {
+    const problem = validateFields();
+    if (problem) { showEditError(problem); return; }
+    const reply = parse(call('saveProfile', editingProfileId, buildLinkFromFields(), val('editName')));
+    if (reply && reply.ok) {
+      closeOverlays();
+      log(reply.message || 'Профиль сохранён');
+    } else {
+      showEditError((reply && reply.message) || 'Ошибка сохранения профиля');
+    }
+  }
+
+  /* ================= Тема ================= */
+  function renderTheme() {
+    el.themeValue.textContent = THEME_NAMES[themeMode] || THEME_NAMES.system;
+    el.themeSheet.querySelectorAll('[data-theme-mode]').forEach(item => {
+      item.classList.toggle('current', item.dataset.themeMode === themeMode);
+    });
+  }
+
+  /* ================= Раздельное туннелирование ================= */
+  let splitMode = 'all';
+  let splitPackages = {};
+  let pickerSnapshot = null;
+  let lastApps = [];
+  let pickerRequest = 0;
+  let loadingTimer = null;
+  let searchTimer = null;
+
+  const sp = {
+    all: $('splitAll'), allow: $('splitAllow'), exclude: $('splitExclude'), pick: $('splitPick'),
+    picker: $('appPicker'), list: $('pickerList'), loading: $('pickerLoading'), query: $('pickerQuery'),
+    searchClear: $('pickerSearchClear'), system: $('pickerSystem'), title: $('pickerTitle')
+  };
+  const packageCount = () => keys(splitPackages).length;
+
+  function renderSplit() {
+    [['all', sp.all], ['allow', sp.allow], ['exclude', sp.exclude]].forEach(([mode, row]) => {
+      row.querySelector('.m3-radio').classList.toggle('on', splitMode === mode);
+    });
+    const count = packageCount();
+    sp.pick.hidden = splitMode === 'all';
+    $('splitPickLabel').textContent = count ? 'Выбрать приложения · ' + count : 'Выбрать приложения';
+    const clearBtn = sp.list.querySelector('.picker-clear');
+    if (clearBtn) clearBtn.disabled = count === 0;
+  }
+
+  function loadSplit() {
+    const data = parse(call('getSplitTunnelSettings'));
+    if (data) {
+      splitMode = data.mode || 'all';
+      splitPackages = {};
+      (data.packages || []).forEach(pkg => { splitPackages[pkg] = true; });
+      renderSplit();
+    }
+    const saved = store.get('splitSystemCheckbox');
+    if (saved !== null) sp.system.checked = saved === 'true';
+  }
+
+  function setSplitMode(mode) {
+    if (mode === splitMode) return;
+    const reply = parse(call('setSplitTunnelMode', mode)) || {};
+    if (reply.ok === false) { toast(reply.error || 'Не удалось сменить режим', { error: true }); return; }
+    splitMode = mode;
+    renderSplit();
+  }
+
+  function enforceSplitFallback() {
+    if (splitMode === 'all' || packageCount()) return;
+    splitMode = 'all';
+    call('setSplitTunnelMode', 'all');
+    renderSplit();
+    toast('Режим сброшен: не выбрано ни одного приложения', { info: true });
+  }
+
+  function openPicker() {
+    pickerSnapshot = Object.assign({}, splitPackages);
+    sp.title.textContent = splitMode === 'allow' ? 'Приложения через VPN' : 'Приложения в обход';
+    sp.query.value = '';
+    syncSearchClear();
+    sp.picker.classList.add('open');
+    requestApps();
+  }
+
+  function closePicker() { sp.picker.classList.remove('open'); }
+
+  function requestApps() {
+    const token = ++pickerRequest;
+    clearTimeout(loadingTimer);
+    loadingTimer = setTimeout(() => { sp.loading.hidden = false; }, 150);
+    clear(sp.list);
+    const includeSystem = sp.system.checked;
+    const query = sp.query.value.trim();
+    if (native && native.listInstalledAppsAsync) {
+      native.listInstalledAppsAsync(String(token), includeSystem, query);
+      return;
+    }
+    setTimeout(() => {
+      if (token !== pickerRequest) return;
+      const reply = call('listInstalledApps', includeSystem, query);
+      if (reply && typeof reply.then === 'function') reply.then(data => applyApps(token, data));
+      else applyApps(token, reply);
+    }, 0);
+  }
+
+  function applyApps(token, payload) {
+    if (Number(token) !== pickerRequest) return;
+    clearTimeout(loadingTimer);
+    sp.loading.hidden = true;
+    lastApps = parse(payload) || [];
+    renderApps(lastApps);
+  }
+
+  /* Перерисовка из кэша (без запроса в натив) с сохранением позиции прокрутки по соседней строке. */
+  function rerenderApps() {
+    const list = sp.list;
+    const top = list.getBoundingClientRect().top;
+    const scroll = list.scrollTop;
+    const mainRows = () => Array.from(list.querySelectorAll('.m3-app-row:not([data-dup])'));
+    const anchor = mainRows().find(r => r.getBoundingClientRect().bottom > top + 1);
+    const before = anchor ? anchor.getBoundingClientRect().top - top : 0;
+    renderApps(lastApps);
+    list.scrollTop = scroll;
+    if (!anchor) return;
+    const next = mainRows().find(r => r.dataset.pkg === anchor.dataset.pkg);
+    if (next) list.scrollTop += next.getBoundingClientRect().top - top - before;
+  }
+
+  function pickerGroup(title) { return h('div', 'm3-picker-group', title); }
+
+  function renderApps(apps) {
+    clear(sp.list);
+    const chosen = apps.filter(a => splitPackages[a.pkg]);
+
+    if (chosen.length) {
+      const group = pickerGroup('Выбранные · ' + chosen.length);
+      const clearBtn = h('button', 'picker-clear m3-btn text small', 'Очистить');
+      clearBtn.type = 'button';
+      clearBtn.onclick = () => { splitPackages = {}; renderSplit(); rerenderApps(); };
+      group.appendChild(clearBtn);
+      sp.list.appendChild(group);
+      chosen.forEach(a => sp.list.appendChild(appRow(a, true)));
+      sp.list.appendChild(pickerGroup('Все приложения'));
+    }
+    apps.forEach(a => sp.list.appendChild(appRow(a, false)));
+    if (!apps.length) sp.list.appendChild(h('div', 'm3-empty', sp.query.value.trim() ? 'Ничего не найдено' : 'Нет приложений для выбора'));
+    watchIcons();
+  }
+
+  function appRow(app, duplicate) {
+    const row = h('button', 'm3-app-row' + (splitPackages[app.pkg] ? ' on' : ''));
+    row.type = 'button';
+    row.dataset.pkg = app.pkg;
+    if (duplicate) row.dataset.dup = '1';
+
+    const iconImg = h('img', 'm3-app-icon');
+    iconImg.alt = '';
+    iconImg.dataset.pkg = app.pkg;
+    row.appendChild(iconImg);
+
+    const copy = h('span', 'm3-app-copy');
+    copy.append(h('span', 'm3-app-name', app.label || app.pkg), h('span', 'm3-app-pkg', app.pkg));
+    row.appendChild(copy);
+    row.appendChild(h('span', 'm3-switch' + (splitPackages[app.pkg] ? ' on' : '')));
+
+    row.onclick = () => {
+      if (splitPackages[app.pkg]) delete splitPackages[app.pkg]; else splitPackages[app.pkg] = true;
+      renderSplit();
+      rerenderApps();
+    };
+    return row;
+  }
+
+  const iconUrlFor = pkg => window.__nodewayIconUrl ? window.__nodewayIconUrl(pkg) : 'https://nodeway.internal/icon/' + encodeURIComponent(pkg);
+
+  const iconObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      iconObserver.unobserve(entry.target);
+      const img = entry.target.querySelector('img[data-pkg]');
+      if (img) img.src = iconUrlFor(img.dataset.pkg);
+    });
+  }, { root: sp.list, rootMargin: '240px 0px' }) : null;
+
+  function watchIcons() {
+    const images = sp.list.querySelectorAll('img[data-pkg]');
+    if (!iconObserver) { images.forEach(img => { img.src = iconUrlFor(img.dataset.pkg); }); return; }
+    iconObserver.disconnect();
+    images.forEach(img => { if (!img.getAttribute('src')) iconObserver.observe(img.parentNode); });
+  }
+
+  function syncSearchClear() { sp.searchClear.hidden = !sp.query.value.length; }
+
+  /* ================= Обновление приложения ================= */
+  let updateStage = 'idle'; // idle | downloading | ready
+
+  const inlineBar = $('updateInlineProgress').querySelector('.progress-bar');
+  const checkRow = $('checkUpdateBtn');
+  const checkCaption = $('updateCheckCaption');
+  let checkTimer = null;
+
+  function setUpdateStage(stage) {
+    updateStage = stage;
+    const label = { idle: 'Обновить', downloading: 'Отмена', ready: 'Установить' }[stage];
+    el.updateProgress.hidden = $('updateInlineProgress').hidden = stage !== 'downloading';
+    if (stage !== 'downloading') el.updateProgressBar.style.width = inlineBar.style.width = '0%';
+    el.updateBtn.textContent = $('updateInlineBtn').textContent = label;
+    el.updateBtn.disabled = $('updateInlineBtn').disabled = false;
+  }
+
+  /* Результат ручной проверки показываем прямо в строке «Проверить обновления». */
+  function setCheckState(kind, text) {
+    clearTimeout(checkTimer);
+    checkRow.classList.toggle('checking', kind === 'checking');
+    checkCaption.className = 'm3-settings-caption' + (kind === 'ok' ? ' ok' : kind === 'err' ? ' err' : '');
+    checkCaption.textContent = text || '';
+    checkCaption.hidden = !text;
+  }
+
+  function startCheck() {
+    if (checkRow.classList.contains('checking')) return;
+    setCheckState('checking', 'Проверка…');
+    checkTimer = setTimeout(() => setCheckState('err', 'Нет ответа. Попробуйте позже'), 20000);
+    call('checkUpdate');
+  }
+
+  function onUpdateAction() {
+    if (updateStage === 'downloading') { setUpdateStage('idle'); call('cancelUpdate'); }
+    else if (updateStage === 'ready') call('installUpdate');
+    else call('startUpdate');
+  }
+
+  function showUpdateBanner(visible) {
+    el.updateBanner.classList.toggle('visible', visible);
+    document.body.classList.toggle('has-update', visible);
+  }
+
+  el.updateBtn.onclick = $('updateInlineBtn').onclick = onUpdateAction;
+  el.updateCloseBtn.onclick = () => {
+    showUpdateBanner(false);
+    $('updateInline').hidden = true;
+    setCheckState('', '');
+    setUpdateStage('idle');
+    call('cancelUpdate');
+  };
+
+  /* ================= Навигация ================= */
+  function showPage(id) {
+    if (id !== 'pageSplit') enforceSplitFallback();
+    currentPage = id;
+    document.querySelectorAll('.page').forEach(page => page.classList.toggle('active', page.id === id));
+    document.querySelectorAll('.m3-nav-item').forEach(item => item.classList.toggle('active', item.dataset.target === id));
+    document.body.dataset.page = id;
+    syncCountdownTimer();
+    window.scrollTo(0, 0);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(() => true, () => false);
+    }
+    return new Promise(resolve => {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(area);
+      area.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      area.remove();
+      resolve(ok);
+    });
+  }
+
+  function shareProfile(p) {
+    if (!p.link) { toast('У профиля нет ссылки', { error: true }); return; }
+    if (navigator.share) { navigator.share({ title: p.name, text: p.link }).catch(() => {}); return; }
+    copyText(p.link).then(ok => toast(ok ? 'Ссылка скопирована' : 'Не удалось скопировать', { success: ok, error: !ok }));
+  }
+
+  function importClipboard() {
+    const reply = parse(call('importFromClipboard'));
+    if (reply) log(reply.message);
+    showReply(reply);
+  }
+
+  /* ================= Обработчики ================= */
+  el.powerBtn.onclick = () => {
+    if (state === 'connected') { call('requestDisconnect'); return; }
+    const profile = selectedProfile() || model.profiles[0];
+    if (!profile) {
+      toast('Сначала добавьте профиль', { info: true });
+      openOverlay(el.sheet);
+      return;
+    }
+    if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id);
+    call('requestConnect', profile.id);
+  };
+
+  $('quickAddBtn').onclick = () => openOverlay(el.sheet);
+  document.querySelectorAll('.m3-nav-item').forEach(item => { item.onclick = () => showPage(item.dataset.target); });
+  window.addEventListener('scroll', () => $('topAppBar').classList.toggle('scrolled', window.scrollY > 4), { passive: true });
+  el.scrim.onclick = closeOverlays;
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlays(); });
+
+  $('logHead').onclick = () => {
+    collapsed.log = !collapsed.log;
+    applyLogCollapsed();
+    saveCollapsed();
+    if (!collapsed.log) { renderFull = true; renderJournal(); }
+  };
+  el.logFilter.onclick = e => {
+    const button = e.target.closest('button');
+    if (!button) return;
+    logFilter = button.dataset.level;
+    el.logFilter.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === button));
+    renderFull = true;
+    renderJournal();
+  };
+  el.journalRow.onclick = () => {
+    const wasEnabled = journalEnabled;
+    const reply = parse(call('setJournalEnabled', !journalEnabled));
+    if (!reply) return;
+    applyJournalEnabled(reply.enabled);
+    if (!wasEnabled && state === 'connected') log('вывод Xray появится со следующего подключения');
+  };
+
+  checkRow.onclick = startCheck;
+  $('importProfiles').onclick = importClipboard;
+  $('scanQrProfiles').onclick = () => call('scanQr');
+
+  el.themeRow.onclick = () => { renderTheme(); openOverlay(el.themeSheet); };
+  el.themeSheet.addEventListener('click', e => {
+    const btn = e.target.closest('.m3-sheet-row');
+    if (!btn) return;
+    closeOverlays();
+    if (btn.dataset.themeMode) call('setThemeMode', btn.dataset.themeMode);
+  });
+
+  el.sheet.addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    closeOverlays();
+    if (action === 'manual') openEditModal(null);
+    else if (action === 'import') importClipboard();
+    else if (action === 'scan') call('scanQr');
+  });
+
+  el.modal.addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const profile = profileById(modalProfileId);
+    if (action === 'modal-close') closeOverlays();
+    else if (action === 'modal-edit') openEditModal(modalProfileId);
+    else if (!profile) closeOverlays();
+    else if (action === 'modal-share') { closeOverlays(); shareProfile(profile); }
+    else if (action === 'modal-connect') {
+      closeOverlays();
+      if (profile.id === model.activeProfileId) call('requestDisconnect');
+      else {
+        if (profile.id !== model.selectedProfileId) call('selectProfile', profile.id);
+        call('requestConnect', profile.id);
+      }
+    } else if (action === 'modal-remove') {
+      askDelete('Удалить профиль?', 'Профиль «' + profile.name + '» будет удалён без возможности восстановления.', () => {
+        call('removeProfile', profile.id);
+        log('профиль «' + profile.name + '» удалён');
+      });
+    }
+  });
+
+  F('schemeVlessBtn').onclick = () => setScheme('vless');
+  F('schemeOlcrtcBtn').onclick = () => setScheme('olcrtc');
+  F('vlessSecurity').onchange = function () { F('realityFields').hidden = this.value !== 'reality'; };
+  F('saveProfileBtn').onclick = saveProfile;
+  F('cancelEditBtn').onclick = closeOverlays;
+
+  sp.all.onclick = () => setSplitMode('all');
+  sp.allow.onclick = () => setSplitMode('allow');
+  sp.exclude.onclick = () => setSplitMode('exclude');
+  sp.pick.onclick = openPicker;
+  $('pickerClose').onclick = () => {
+    if (pickerSnapshot) splitPackages = pickerSnapshot;
+    pickerSnapshot = null;
+    renderSplit();
+    closePicker();
+  };
+  $('pickerDone').onclick = () => {
+    const packages = keys(splitPackages);
+    const reply = parse(call('setSelectedPackages', JSON.stringify(packages))) || {};
+    if (reply.ok === false) { toast(reply.error || 'Не удалось сохранить список', { error: true }); return; }
+    pickerSnapshot = null;
+    closePicker();
+    log('в списке приложений: ' + packages.length);
+    enforceSplitFallback();
+  };
+  sp.system.onchange = () => { store.set('splitSystemCheckbox', sp.system.checked); requestApps(); };
+  sp.query.oninput = () => { clearTimeout(searchTimer); syncSearchClear(); searchTimer = setTimeout(requestApps, 250); };
+  sp.searchClear.onclick = () => {
+    clearTimeout(searchTimer);
+    sp.query.value = '';
+    syncSearchClear();
+    requestApps();
+    sp.query.focus();
+  };
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !sp.picker.classList.contains('open')) enforceSplitFallback();
+  });
+
+  /* ================= Вызовы из нативного кода ================= */
+  window.setInsets = (top, bottom) => {
+    const root = document.documentElement.style;
+    root.setProperty('--inset-top', (top || 0) + 'px');
+    root.setProperty('--inset-bottom', (bottom || 0) + 'px');
+  };
+  window.setUiMode = mode => document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+  window.onThemeMode = mode => { themeMode = mode || 'system'; renderTheme(); };
+  window.onOlcrtcVersion = v => { el.olcrtcVersion.textContent = v || '—'; };
+
+  window.onJournalEnabled = applyJournalEnabled;
+  window.onJournalReset = payload => { renderFull = true; journal = []; appendJournal(parse(payload), true); };
+  window.onJournalEntries = payload => appendJournal(parse(payload), false);
+
+  window.onUpdateAvailable = (version, fileName, sizeText) => {
+    const size = String(sizeText || '').trim();
+    el.updateVersion.textContent = version || '';
+    el.updateSize.textContent = size ? (size[0] === '(' ? ' ' : ' · ') + size : '';
+    setUpdateStage('idle');
+    showUpdateBanner(true);
+    $('updateInlineText').textContent = 'Доступна версия ' + (version || '') + (size ? (size[0] === '(' ? ' ' : ' · ') + size : '');
+    $('updateInline').hidden = false;
+    if (currentPage === 'pageSettings' && checkRow.classList.contains('checking')) window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    setCheckState('ok', 'Найдена новая версия');
+  };
+  window.onUpdateDownloading = downloading => {
+    if (downloading) setUpdateStage('downloading');
+    else if (updateStage !== 'ready') setUpdateStage('idle');
+  };
+  window.onUpdateProgress = percent => { el.updateProgressBar.style.width = inlineBar.style.width = percent + '%'; };
+  window.onUpdateDownloaded = () => setUpdateStage('ready');
+  window.onUpdateNotAvailable = () => setCheckState('ok', 'У вас последняя версия');
+
+  window.onVpnState = payload => {
+    const data = parse(payload);
+    if (!data) return;
+    state = data.state;
+    lastMessage = data.message || '';
+    latencyMs = Number(data.latency) || 0;
+    stopLatencyCheck();
+    if (data.ping) {
+      const next = normalizePing(data.ping);
+      if (next.total > 0) ping = next;
+      else Object.assign(ping, { running: next.running, index: next.index, total: next.total, profileId: next.profileId }, { results: Object.assign(ping.results, next.results) });
+    }
+    renderPower();
+    renderUptime();
+    renderLatency();
+    updatePingBadges();
+    updatePingButtons();
+  };
+
+  el.latency.onclick = () => {
+    if (el.latency.disabled) return;
+    latencyChecking = true;
+    clearTimeout(latencyTimer);
+    latencyTimer = setTimeout(() => { latencyChecking = false; renderLatency(); }, 10000); // ядро не ответило
+    renderLatency();
+    call('probeLatency');
+  };
+
+  window.onProfilesChanged = payload => {
+    const data = parse(payload);
+    if (!data) return;
+    const scrollY = window.scrollY;
+    model = normalizeModel(data);
+    render();
+    window.scrollTo(0, scrollY);
+  };
+
+  window.onImportResult = window.onScanQrResult = payload => {
+    const data = parse(payload);
+    if (!data) return;
+    if (!data.loading) log(data.message);
+    showReply(data);
+  };
+
+  window.onSplitApps = applyApps;
+
+  /* ================= Старт ================= */
+  applyLogCollapsed();
+
+  if (native) {
+    const initial = parse(call('getInitialState'));
+    if (initial) {
+      model = normalizeModel(initial.state);
+      state = model.vpnState || 'disconnected';
+      latencyMs = Number(model.latency) || 0;
+      ping = normalizePing(model.ping);
+      applyJournalEnabled(!!initial.journalEnabled);
+      el.coreVersion.textContent = initial.coreVersion || '—';
+      el.olcrtcVersion.textContent = initial.olcrtcVersion || '—';
+      if (initial.appVersion) el.appVersion.textContent = initial.appVersion;
+      if (initial.appVersion) $('topBarSub').textContent = 'Версия ' + initial.appVersion;
+    }
+    loadSplit();
+    log('интерфейс готов');
+  }
+
+  render();
+  setInterval(() => { if (!document.hidden) renderUptime(); }, 1000);
+  })();
+</script>
+</body>
+</html>
