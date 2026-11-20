@@ -2020,7 +2020,7 @@
       hint = profileById(model.activeProfileId).name;
     } else {
       const sel = selectedProfile();
-      hint = sel ? 'Выбрано: ' + sel.name : 'Выберите профиль и нажмите кнопку питания';
+      hint = sel ? sel.name : 'Выберите профиль и нажмите кнопку питания';
     }
     el.statusHint.textContent = hint;
   }

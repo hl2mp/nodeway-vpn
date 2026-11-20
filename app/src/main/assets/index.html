@@ -2075,7 +2075,7 @@
                 hint = active.name;
             } else {
                 var selected = selectedProfile();
-                hint = selected ? 'Выбрано: ' + selected.name : 'Выберите профиль и нажмите кнопку питания';
+                hint = selected ? selected.name : 'Выберите профиль и нажмите кнопку питания';
             }
         }
         el.statusHint.textContent = hint;
