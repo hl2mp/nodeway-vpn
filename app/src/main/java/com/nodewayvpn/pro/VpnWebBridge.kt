@@ -124,6 +124,15 @@ class VpnWebBridge(private val host: Host) {
          */
         fun onSetJournalEnabledRequested(enabled: Boolean): String
 
+        /** Отправляется ли HWID устройства серверам подписок. */
+        fun hwidEnabled(): Boolean
+
+        /** Включает или выключает отправку HWID. */
+        fun onSetHwidEnabledRequested(enabled: Boolean): String
+
+        /** Идентификатор устройства для отображения в UI. */
+        fun hwid(): String
+
         /**
          * Выбор темы оформления: "system", "light" или "dark".
          *
@@ -238,6 +247,9 @@ class VpnWebBridge(private val host: Host) {
     @JavascriptInterface
     fun setJournalEnabled(enabled: Boolean): String = host.onSetJournalEnabledRequested(enabled)
 
+    @JavascriptInterface
+    fun setHwidEnabled(enabled: Boolean): String = host.onSetHwidEnabledRequested(enabled)
+
     /** Тема оформления. Режим сразу применяется, ответ приходит в onThemeMode. */
     @JavascriptInterface
     fun setThemeMode(mode: String) = host.onSetThemeModeRequested(mode)
@@ -264,5 +276,7 @@ class VpnWebBridge(private val host: Host) {
         put("olcrtcVersion", host.olcrtcVersion())
         put("appVersion", host.appVersion())
         put("journalEnabled", host.journalEnabled())
+        put("hwidEnabled", host.hwidEnabled())
+        put("hwid", host.hwid())
     }.toString()
 }

@@ -26,7 +26,10 @@ import kotlin.coroutines.resume
  *    было видно, timeout это, reset или EOF;
  *  - отмена мгновенная: блокирующий сокет корутина сама не прерывает, поэтому при
  *    отмене (кнопка «стоп» или таймаут профиля) сокет закрывается снаружи, и
- *    чтение немедленно падает вместо ожидания до [ATTEMPT_TIMEOUT_MS].
+ *    чтение немедленно падает вместо ожидания до [ATTEMPT_TIMEOUT_MS];
+ *  - замеры переиспользуют одно TCP-соединение (и один DNS-резолв на стороне
+ *    туннеля): CONNECT выполняется один раз, дальше идут несколько HTTP-запросов
+ *    с keep-alive; соединение переоткрывается только если сервер его закрыл.
  */
 object TunnelProbe {
 
@@ -47,7 +50,7 @@ object TunnelProbe {
     private val REQUEST = (
             "GET /generate_204 HTTP/1.1\r\n" +
                     "Host: $HOST\r\n" +
-                    "Connection: close\r\n" +
+                    "Connection: keep-alive\r\n" +
                     "Cache-Control: no-cache\r\n" +
                     "\r\n"
             ).toByteArray(Charsets.US_ASCII)
@@ -58,32 +61,50 @@ object TunnelProbe {
      * @return отклик в мс либо null, если туннель не ответил ни в одной из попыток прогрева.
      */
     suspend fun measure(socksPort: Int?): Int? = withContext(Dispatchers.IO) {
+        var socket: Socket? = null
         var warmup: Int? = null
         for (attempt in 1..WARMUP_ATTEMPTS) {
-            warmup = probeOnce(socksPort, attempt)
-            if (warmup != null) break
+            if (socket == null) {
+                socket = openSocket(socksPort)
+            }
+            if (socket == null) {
+                if (attempt < WARMUP_ATTEMPTS) delay(RETRY_PAUSE_MS)
+                continue
+            }
+            val (measured, ok) = measureOn(socket, attempt)
+            if (ok && measured != null) {
+                warmup = measured
+                break
+            }
+            // Соединение умерло — закрываем и переоткроем в следующей попытке.
+            runCatching { socket?.close() }
+            socket = null
             if (attempt < WARMUP_ATTEMPTS) delay(RETRY_PAUSE_MS)
         }
         val first = warmup ?: return@withContext null
 
         val results = ArrayList<Int>(MEASUREMENT_COUNT)
         repeat(MEASUREMENT_COUNT) { index ->
-            probeOnce(socksPort, index + 1)?.let(results::add)
+            if (socket == null) {
+                socket = openSocket(socksPort)
+            }
+            if (socket == null) return@repeat
+            val (measured, ok) = measureOn(socket, index + 1)
+            if (ok && measured != null) {
+                results.add(measured)
+            } else {
+                runCatching { socket?.close() }
+                socket = null
+            }
         }
+        runCatching { socket?.close() }
+
         // Прогрев уже доказал, что профиль жив: не превращаем его в «не отвечает».
         results.minOrNull() ?: first
     }
 
-    /**
-     * Один запрос с мгновенной отменой.
-     *
-     * Блокирующая работа идёт прямо в теле `suspendCancellableCoroutine`, а
-     * обработчик отмены вызывается на потоке того, кто отменяет, и закрывает
-     * сокет: connect/read выходят с исключением сразу. Результат отменённой
-     * корутины всё равно отбрасывается, поэтому ошибку закрытия не логируем.
-     */
-    private suspend fun probeOnce(socksPort: Int?, attempt: Int): Int? =
-        suspendCancellableCoroutine<Int?> { cont ->
+    private suspend fun openSocket(socksPort: Int?): Socket? =
+        suspendCancellableCoroutine<Socket?> { cont ->
             val socket = runCatching { createSocket(socksPort) }.getOrNull()
             if (socket == null) {
                 cont.resume(null)
@@ -92,12 +113,51 @@ object TunnelProbe {
             cont.invokeOnCancellation { runCatching { socket.close() } }
 
             val result = try {
-                socket.use { blockingProbe(it, socksPort, attempt) }
+                socket.soTimeout = ATTEMPT_TIMEOUT_MS
+                socket.tcpNoDelay = true
+
+                val target = if (socksPort == null) {
+                    InetSocketAddress(HOST, PORT)
+                } else {
+                    InetSocketAddress.createUnresolved(HOST, PORT)
+                }
+                socket.connect(target, ATTEMPT_TIMEOUT_MS)
+                socket
             } catch (e: Exception) {
                 if (!cont.isCancelled) {
-                    Log.i(TAG, "attempt $attempt failed via ${routeName(socksPort)}: ${e.javaClass.simpleName}: ${e.message}")
+                    Log.i(TAG, "connect failed via ${routeName(socksPort)}: ${e.javaClass.simpleName}: ${e.message}")
                 }
+                runCatching { socket?.close() }
                 null
+            }
+            cont.resume(result)
+        }
+
+    private suspend fun measureOn(socket: Socket, attempt: Int): Pair<Int?, Boolean> =
+        suspendCancellableCoroutine<Pair<Int?, Boolean>> { cont ->
+            cont.invokeOnCancellation { runCatching { socket.close() } }
+
+            val result = try {
+                val startedAt = System.nanoTime()
+                socket.getOutputStream().apply {
+                    write(REQUEST)
+                    flush()
+                }
+                val status = socket.getInputStream().bufferedReader(Charsets.US_ASCII).readLine()
+                val elapsedMs = ((System.nanoTime() - startedAt) / 1_000_000).toInt()
+
+                if (status == null || !status.startsWith("HTTP/")) {
+                    Log.i(TAG, "attempt $attempt: bad reply (${status ?: "EOF"})")
+                    Pair(null, false)
+                } else {
+                    Log.d(TAG, "attempt $attempt: $status in ${elapsedMs}ms")
+                    Pair(elapsedMs, true)
+                }
+            } catch (e: Exception) {
+                if (!cont.isCancelled) {
+                    Log.i(TAG, "attempt $attempt failed: ${e.javaClass.simpleName}: ${e.message}")
+                }
+                Pair(null, false)
             }
             cont.resume(result)
         }
@@ -110,33 +170,4 @@ object TunnelProbe {
         }
 
     private fun routeName(socksPort: Int?): String = socksPort?.let { "socks:$it" } ?: "direct"
-
-    /** connect + отправка + первая строка ответа. Исключения уходят вызывающему. */
-    private fun blockingProbe(socket: Socket, socksPort: Int?, attempt: Int): Int? {
-        socket.soTimeout = ATTEMPT_TIMEOUT_MS
-        socket.tcpNoDelay = true
-
-        // Через SOCKS5 имя отдаём прокси неразрешённым: резолвит туннель.
-        val target = if (socksPort == null) {
-            InetSocketAddress(HOST, PORT)
-        } else {
-            InetSocketAddress.createUnresolved(HOST, PORT)
-        }
-
-        val startedAt = System.nanoTime()
-        socket.connect(target, ATTEMPT_TIMEOUT_MS)
-        socket.getOutputStream().apply {
-            write(REQUEST)
-            flush()
-        }
-        val status = socket.getInputStream().bufferedReader(Charsets.US_ASCII).readLine()
-        val elapsedMs = ((System.nanoTime() - startedAt) / 1_000_000).toInt()
-
-        if (status == null || !status.startsWith("HTTP/")) {
-            Log.i(TAG, "attempt $attempt: bad reply (${status ?: "EOF"})")
-            return null
-        }
-        Log.d(TAG, "attempt $attempt: $status in ${elapsedMs}ms via ${routeName(socksPort)}")
-        return elapsedMs
-    }
 }

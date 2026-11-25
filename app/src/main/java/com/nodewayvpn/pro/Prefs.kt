@@ -32,6 +32,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean(KEY_JOURNAL, false)
         set(value) = sp.edit().putBoolean(KEY_JOURNAL, value).apply()
 
+    /** Отправлять ли HWID устройства серверам подписок. */
+    var hwidEnabled: Boolean
+        get() = sp.getBoolean(KEY_HWID, false)
+        set(value) = sp.edit().putBoolean(KEY_HWID, value).apply()
+
     /**
      * Выбор темы оформления: "system", "light" или "dark".
      *
@@ -89,6 +94,7 @@ class Prefs(context: Context) {
         const val KEY_TUNNEL_MODE = "tunnel_mode"
         const val KEY_SPLIT_PACKAGES = "split_packages"
         const val KEY_JOURNAL = "journal_enabled"
+        const val KEY_HWID = "hwid_enabled"
         const val KEY_THEME = "theme_mode"
         const val TUNNEL_MODE_ALL = "all"
         const val THEME_SYSTEM = "system"

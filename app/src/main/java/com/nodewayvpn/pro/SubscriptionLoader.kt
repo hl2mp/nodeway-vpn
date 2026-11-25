@@ -25,7 +25,7 @@ object SubscriptionLoader {
         val raw: String,
     )
 
-    fun fetch(url: String): Loaded {
+    fun fetch(url: String, hwid: String? = null): Loaded {
         require(url.startsWith("https://") || url.startsWith("http://")) {
             "Подписка должна быть http(s)-ссылкой"
         }
@@ -37,6 +37,7 @@ object SubscriptionLoader {
             instanceFollowRedirects = true
             setRequestProperty("User-Agent", USER_AGENT)
             setRequestProperty("Accept", "*/*")
+            if (!hwid.isNullOrBlank()) setRequestProperty("X-HWID", hwid)
         }
 
         try {

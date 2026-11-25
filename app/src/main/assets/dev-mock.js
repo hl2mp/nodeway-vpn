@@ -272,6 +272,8 @@
      * Переключается кнопкой «логи» в панели внизу.
      */
     journalEnabled: true,
+    hwidEnabled: false,
+    hwid: 'DEV-MOCK-HWID-123456',
 
     /**
      * Состояние обновления в демо: имитирует наличие новой версии.
@@ -610,7 +612,9 @@ window.NodewayVpn = {
         coreVersion: '26.9.30 (mock)',
         olcrtcVersion: 'v0.12.0 (mock)',
         appVersion: '1.0',
-        journalEnabled: state.journalEnabled
+        journalEnabled: state.journalEnabled,
+        hwidEnabled: state.hwidEnabled,
+        hwid: state.hwid
       });
     },
 
@@ -623,6 +627,12 @@ window.NodewayVpn = {
       if (state.journalEnabled) emitJournalReset();
       if (window.onJournalEnabled) window.onJournalEnabled(state.journalEnabled);
       return JSON.stringify({ enabled: state.journalEnabled });
+    },
+
+    setHwidEnabled: function (enabled) {
+      state.hwidEnabled = !!enabled;
+      if (window.onHwidEnabled) window.onHwidEnabled(state.hwidEnabled);
+      return JSON.stringify({ enabled: state.hwidEnabled });
     },
 
     /* ---------- тема оформления ---------- */

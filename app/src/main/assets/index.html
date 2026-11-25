@@ -1266,6 +1266,14 @@
       </button>
     </div>
 
+    <h3 class="section-title">Идентификация</h3>
+    <div class="group">
+      <button class="settings-row" id="hwidRow">
+        <span>HWID<small>Отправлять идентификатор устройства серверам подписок</small></span>
+        <span class="switch" id="hwidSwitch"></span>
+      </button>
+    </div>
+
     <h3 class="section-title">Оформление</h3>
     <div class="group">
       <button class="settings-row" id="themeRow">
@@ -1580,6 +1588,8 @@
 
     /** Ведётся ли журнал — выключатель из настроек. */
     var journalEnabled = false;
+    var hwidEnabled = false;
+    var hwid = '';
 
     /** Сколько записей из буфера уже выведено в #logBody. */
     var renderedUpTo = 0;
@@ -1634,6 +1644,8 @@
         logHint: document.getElementById('logHint'),
         journalRow: document.getElementById('journalRow'),
         journalSwitch: document.getElementById('journalSwitch'),
+        hwidRow: document.getElementById('hwidRow'),
+        hwidSwitch: document.getElementById('hwidSwitch'),
         scrim: document.getElementById('scrim'),
         sheet: document.getElementById('sheet'),
         themeSheet: document.getElementById('themeSheet'),
@@ -1828,8 +1840,17 @@
         el.logBody.textContent = '';
     }
 
+    function applyHwidEnabled(value) {
+        hwidEnabled = !!value;
+        el.hwidSwitch.classList.toggle('on', hwidEnabled);
+    }
+
     window.onJournalEnabled = function (value) {
         applyJournalEnabled(value);
+    };
+
+    window.onHwidEnabled = function (value) {
+        applyHwidEnabled(value);
     };
 
     window.onJournalReset = function (payload) {
@@ -3241,6 +3262,12 @@
         }
     };
 
+    el.hwidRow.onclick = function () {
+        var reply = parse(bridge.setHwidEnabled(!hwidEnabled));
+        if (!reply) return;
+        applyHwidEnabled(reply.enabled);
+    };
+
     document.getElementById('checkUpdateBtn').onclick = function () {
         bridge.checkUpdate();
     };
@@ -3523,6 +3550,7 @@
             coreVersion = initial.coreVersion || '';
             olcrtcVersion = initial.olcrtcVersion || '';
             applyJournalEnabled(!!initial.journalEnabled);
+            if (initial.hwidEnabled !== undefined) applyHwidEnabled(!!initial.hwidEnabled);
             if (initial.appVersion) {
                 document.getElementById('appVersion').textContent = initial.appVersion;
             }

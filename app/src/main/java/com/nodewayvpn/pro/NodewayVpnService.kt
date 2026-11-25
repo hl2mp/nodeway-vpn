@@ -780,10 +780,10 @@ class NodewayVpnService : VpnService() {
         deleteXrayLogFile()
         if (Journal.enabled) xrayLog.start()
 
-        val delegate = ProtectDelegate()
-        XrayCore.registerDialer(delegate)
-        // Register dialer controller for built-in DNS (tcp+local:// servers in JSON config override this)
-        XrayCore.setupDns("1.1.1.1:53", delegate)
+        val delegate = object : libXray.DialerController {
+            override fun protectFd(fd: Long): Boolean = true
+        }
+        // DNS-резолвинг таргета идёт на стороне прокси (AsIs), локальный protect не нужен.
 
         val error = try {
             XrayCore.start(config)

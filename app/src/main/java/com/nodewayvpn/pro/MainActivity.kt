@@ -73,6 +73,9 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
     /** Пользовательские настройки: последняя ссылка и раздельное туннелирование. */
     private lateinit var prefs: Prefs
 
+    private val hwid: String
+        get() = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
+
     /** Список установленных приложений, пересчитывается только после смены настроек. */
     @Volatile
     private var installedAppsCache: List<InstalledApp>? = null
@@ -988,6 +991,25 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         return JSONObject().apply { put("enabled", Journal.enabled) }.toString()
     }
 
+    override fun hwidEnabled(): Boolean = prefs.hwidEnabled
+
+    override fun onSetHwidEnabledRequested(enabled: Boolean): String {
+        prefs.hwidEnabled = enabled
+        pushHwidEnabled()
+        return JSONObject().apply { put("enabled", prefs.hwidEnabled) }.toString()
+    }
+
+    override fun hwid(): String = if (prefs.hwidEnabled) hwid else ""
+
+    private fun pushHwidEnabled() {
+        val enabled = if (prefs.hwidEnabled) "true" else "false"
+        runOnUiThread {
+            runCatching {
+                webView.evaluateJavascript("window.onHwidEnabled && window.onHwidEnabled($enabled);", null)
+            }
+        }
+    }
+
     override fun appVersion(): String = BuildConfig.VERSION_NAME
 
     override fun uiState(): String = store.toUiModel(activeProfileId)
@@ -1313,7 +1335,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         store.loadingSubscriptions.add(source.id)
         pushProfiles()
         network.execute {
-            val payload: String = runCatching { SubscriptionLoader.fetch(source.url) }
+            val payload: String = runCatching { SubscriptionLoader.fetch(source.url, if (prefs.hwidEnabled) hwid else null) }
                 .fold(
                     onSuccess = { loaded -> applySubscription(source, loaded, isNew) },
                     onFailure = { error ->
