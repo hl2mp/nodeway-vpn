@@ -952,9 +952,9 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
 
         val parseResult = runCatching {
             when {
-                VlessProfile.isVlessLink(trimmedLink) -> VlessProfile.parse(trimmedLink)
+                XrayProfiles.isXrayLink(trimmedLink) -> XrayProfiles.parse(trimmedLink)
                 OlcrtcProfile.isOlcrtcLink(trimmedLink) -> OlcrtcProfile.parse(trimmedLink)
-                else -> throw IllegalArgumentException("Поддерживаются только ссылки vless:// и olcrtc://")
+                else -> throw IllegalArgumentException("Поддерживаются ссылки vless://, vmess://, trojan://, ss://, socks:// и olcrtc://")
             }
         }
         val error = parseResult.exceptionOrNull()
@@ -1276,10 +1276,10 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
         }
 
         // Одиночная ссылка vless:// или olcrtc:// — сохраняем как профиль.
-        if (VlessProfile.isVlessLink(trimmed) || OlcrtcProfile.isOlcrtcLink(trimmed)) {
+        if (XrayProfiles.isXrayLink(trimmed) || OlcrtcProfile.isOlcrtcLink(trimmed)) {
             val parseResult = runCatching {
                 when {
-                    VlessProfile.isVlessLink(trimmed) -> VlessProfile.parse(trimmed)
+                    XrayProfiles.isXrayLink(trimmed) -> XrayProfiles.parse(trimmed)
                     OlcrtcProfile.isOlcrtcLink(trimmed) -> OlcrtcProfile.parse(trimmed)
                     else -> throw IllegalArgumentException("Неподдерживаемая ссылка")
                 }
@@ -1291,8 +1291,16 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             }
 
             val name = runCatching {
-                if (VlessProfile.isVlessLink(trimmed)) VlessProfile.parse(trimmed).remark.ifBlank { trimmed }
-                else OlcrtcProfile.parse(trimmed).remark.ifBlank { trimmed }
+                if (XrayProfiles.isXrayLink(trimmed)) {
+                    when (val p = XrayProfiles.parse(trimmed)) {
+                        is VlessProfile -> p.remark.ifBlank { trimmed }
+                        is VmessProfile -> p.remark.ifBlank { trimmed }
+                        is TrojanProfile -> p.remark.ifBlank { trimmed }
+                        is ShadowsocksProfile -> p.remark.ifBlank { trimmed }
+                        is SocksProfile -> p.remark.ifBlank { trimmed }
+                        else -> trimmed
+                    }
+                } else OlcrtcProfile.parse(trimmed).remark.ifBlank { trimmed }
             }.getOrDefault(trimmed.take(50))
 
             store.saveProfile(null, trimmed, name)
@@ -1431,8 +1439,14 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             return runCatching { OlcrtcProfile.parse(link).roomLabel }.getOrDefault("olcrtc")
         }
         return runCatching {
-            val parsedLink = VlessProfile.parse(link)
-            parsedLink.remark.ifBlank { parsedLink.address }
+            when (val p = XrayProfiles.parse(link)) {
+                is VlessProfile -> p.remark.ifBlank { p.address }
+                is VmessProfile -> p.remark.ifBlank { p.address }
+                is TrojanProfile -> p.remark.ifBlank { p.address }
+                is ShadowsocksProfile -> p.remark.ifBlank { p.address }
+                is SocksProfile -> p.remark.ifBlank { p.address }
+                else -> ""
+            }
         }.getOrDefault("")
     }
 
@@ -1504,7 +1518,7 @@ class MainActivity : AppCompatActivity(), VpnWebBridge.Host {
             pushState(VpnState.ERROR.code, "Профиль не найден")
             return
         }
-        if (!VlessProfile.isVlessLink(profile.link) && !OlcrtcProfile.isOlcrtcLink(profile.link)) {
+        if (!XrayProfiles.isXrayLink(profile.link) && !OlcrtcProfile.isOlcrtcLink(profile.link)) {
             pushState(VpnState.ERROR.code, "Ссылка должна начинаться с vless:// или olcrtc://")
             return
         }

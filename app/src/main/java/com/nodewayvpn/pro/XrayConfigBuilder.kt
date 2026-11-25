@@ -5,123 +5,82 @@ import org.json.JSONObject
 import java.util.Locale
 
 /**
- * Builds a complete Xray-core configuration for the embedded core:
- * a `tun` inbound bound to the file descriptor obtained from [android.net.VpnService]
- * and a single VLESS outbound taken from the pasted share link.
+ * Builds a complete Xray-core configuration for the embedded core.
  */
 object XrayConfigBuilder {
 
     private const val MTU = 1500
     private const val TUN_NAME = "nodeway0"
 
-    /** Подробные логи нужны для диагностики соединения с сервером. */
     val DEFAULT_LOG_LEVEL = if (BuildConfig.DEBUG) "info" else "warning"
-
-    /** Полное молчание: ядро не пишет ни в файл, ни в logcat. */
     const val LOG_LEVEL_NONE = "none"
 
-    /** DNS servers advertised to the TUN interface; shared with [NodewayVpnService]. */
     val DNS_SERVERS = listOf("1.1.1.1", "8.8.8.8")
-
-    /**
-     * DNS servers for built-in DNS module: TCP через маршрутизацию, то есть через VLESS-туннель.
-     *
-     * Работает только вместе с правилом порта 53, привязанным к входу `tun` (см. [routing]):
-     * без привязки собственные запросы модуля к 1.1.1.1:53 подпадали бы под то же правило,
-     * попадали обратно в `dns-out` и зацикливались — ничего не резолвилось.
-     */
     private val DNS_SERVERS_INTERNAL = listOf("tcp://1.1.1.1", "tcp://8.8.8.8")
 
-    /** Networks used by the TUN inbound to resolve names. */
     private val PRIVATE_CIDRS = listOf(
-        "10.0.0.0/8",
-        "172.16.0.0/12",
-        "192.168.0.0/16",
-        "127.0.0.0/8",
-        "169.254.0.0/16",
-        "224.0.0.0/4",
-        "::1/128",
-        "fc00::/7",
-        "fe80::/10",
+        "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8",
+        "169.254.0.0/16", "224.0.0.0/4", "::1/128", "fc00::/7", "fe80::/10",
     )
 
-    fun build(
-        profile: VlessProfile,
-        tunFd: Int,
-        logLevel: String = DEFAULT_LOG_LEVEL,
-        logFile: String? = null,
-    ): String = assemble(tunFd, logLevel, logFile, vlessOutbound(profile), routing(), dns())
+    // ---- build overloads ----
 
-    /**
-     * Конфиг для olcrtc: Xray не знает протокол, поэтому роль апстрима играет
-     * локальный SOCKS5 от отдельного процесса olcrtc.
-     */
-    fun buildForOlcrtc(
-        socksPort: Int,
-        tunFd: Int,
-        logLevel: String = DEFAULT_LOG_LEVEL,
-        logFile: String? = null,
-    ): String =
+    fun build(profile: VlessProfile, tunFd: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assemble(tunFd, logLevel, logFile, vlessOutbound(profile), routing(), dns())
+
+    fun build(profile: VmessProfile, tunFd: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assemble(tunFd, logLevel, logFile, vmessOutbound(profile), routing(), dns())
+
+    fun build(profile: TrojanProfile, tunFd: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assemble(tunFd, logLevel, logFile, trojanOutbound(profile), routing(), dns())
+
+    fun build(profile: ShadowsocksProfile, tunFd: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assemble(tunFd, logLevel, logFile, shadowsocksOutbound(profile), routing(), dns())
+
+    fun build(profile: SocksProfile, tunFd: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assemble(tunFd, logLevel, logFile, socksOutbound(profile), routing(), dns())
+
+    fun buildForOlcrtc(socksPort: Int, tunFd: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
         assemble(tunFd, logLevel, logFile, socksOutbound(socksPort), olcrtcRouting(), olcrtcDns())
 
-    /**
-     * Конфиг для быстрой проверки VLESS-профиля через локальный SOCKS5.
-     *
-     * Вместо TUN-inbound используем SOCKS5-inbound на localhost.
-     * Это позволяет мерять пинг БЕЗ поднятия VPN-интерфейса и без
-     * разрешения пользователя на VPN.
-     *
-     * @param socksPort порт, на котором Xray будет слушать SOCKS5 (например, 10809)
-     * @return JSON-конфиг для Xray-core
-     */
-    fun buildForSocks5Vless(
-        profile: VlessProfile,
-        socksPort: Int,
-        logLevel: String = DEFAULT_LOG_LEVEL,
-        logFile: String? = null,
-    ): String = assembleSocks5Inbound(
-        socksPort,
-        logLevel,
-        logFile,
-        vlessOutbound(profile),
-        // AsIs, а не IPIfNonMatch: проба просит у SOCKS домен (www.google.com), и при
-        // IPIfNonMatch ядро сначала резолвит его встроенным DNS напрямую, а уже потом
-        // шлёт в прокси. Если 1.1.1.1 по TCP отвечает медленно или не отвечает, это
-        // таймаут DNS (около 4 с) на КАЖДУЮ проверку: она дольше таймаута пробы и
-        // проваливается «через раз», независимо от того, жив ли сервер.
-        routing(domainStrategy = "AsIs"),
-        dns(),
-    )
+    fun buildForSocks5Vless(profile: VlessProfile, socksPort: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assembleSocks5Inbound(socksPort, logLevel, logFile, vlessOutbound(profile), routing(domainStrategy = "AsIs"), dns())
 
-    /**
-     * Собирает конфиг с SOCKS5-inbound (вместо TUN).
-     * Используется для проверки профилей без VPN.
-     */
-    private fun assembleSocks5Inbound(
-        socksPort: Int,
-        logLevel: String,
-        logFile: String?,
-        outbound: JSONObject,
-        routing: JSONObject,
-        dns: JSONObject,
-    ): String {
+    fun buildForSocks5(profile: VmessProfile, socksPort: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assembleSocks5Inbound(socksPort, logLevel, logFile, vmessOutbound(profile), routing(domainStrategy = "AsIs"), dns())
+
+    fun buildForSocks5(profile: TrojanProfile, socksPort: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assembleSocks5Inbound(socksPort, logLevel, logFile, trojanOutbound(profile), routing(domainStrategy = "AsIs"), dns())
+
+    fun buildForSocks5(profile: ShadowsocksProfile, socksPort: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assembleSocks5Inbound(socksPort, logLevel, logFile, shadowsocksOutbound(profile), routing(domainStrategy = "AsIs"), dns())
+
+    fun buildForSocks5(profile: SocksProfile, socksPort: Int, logLevel: String = DEFAULT_LOG_LEVEL, logFile: String? = null): String =
+        assembleSocks5Inbound(socksPort, logLevel, logFile, socksOutbound(profile), routing(domainStrategy = "AsIs"), dns())
+
+    // ---- internals ----
+
+    private fun assemble(tunFd: Int, logLevel: String, logFile: String?, outbound: JSONObject, routing: JSONObject, dns: JSONObject): String {
         val config = JSONObject()
-
+        config.put("env", JSONObject().put("xray.tun.fd", tunFd.toString()))
         config.put("log", logConfig(logLevel, logFile))
+        config.put("inbounds", JSONArray().put(tunInbound()))
+        config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()).put(dnsOutbound()))
+        config.put("routing", routing)
+        config.put("dns", dns)
+        return config.toString()
+    }
 
+    private fun assembleSocks5Inbound(socksPort: Int, logLevel: String, logFile: String?, outbound: JSONObject, routing: JSONObject, dns: JSONObject): String {
+        val config = JSONObject()
+        config.put("log", logConfig(logLevel, logFile))
         config.put("inbounds", JSONArray().put(socksInbound(socksPort)))
         config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()).put(dnsOutbound()))
         config.put("routing", routing)
         config.put("dns", dns)
-
         return config.toString()
     }
 
-    /**
-     * SOCKS5 inbound на localhost для принятия трафика от TunnelProbe.
-     * auth: "noauth" — без аутентификации, так как это локальный loopback.
-     * udp: true — на случай, если понадобится UDP через прокси.
-     */
     private fun socksInbound(port: Int): JSONObject = JSONObject().apply {
         put("tag", "socks-in")
         put("port", port)
@@ -133,60 +92,10 @@ object XrayConfigBuilder {
         })
     }
 
-    private fun assemble(
-        tunFd: Int,
-        logLevel: String,
-        logFile: String?,
-        outbound: JSONObject,
-        routing: JSONObject,
-        dns: JSONObject,
-    ): String {
-        val config = JSONObject()
-
-        // Xray-core applies root level "env" entries with os.Setenv() before building
-        // the config; proxy/tun/tun_android.go reads the descriptor from "xray.tun.fd".
-        config.put("env", JSONObject().put("xray.tun.fd", tunFd.toString()))
-
-        config.put("log", logConfig(logLevel, logFile))
-
-        config.put("inbounds", JSONArray().put(tunInbound()))
-        config.put("outbounds", JSONArray().put(outbound).put(freedomOutbound()).put(dnsOutbound()))
-        config.put("routing", routing)
-        config.put("dns", dns)
-
-        return config.toString()
-    }
-
-    /**
-     * Секция `log`.
-     *
-     * Поле `error` отдаёт ядру файл, который приложение читает и показывает в журнале.
-     * Приёмника логов в AAR нет: gomobile сам пишет вывод Go только в logcat,
-     * откуда его достать штатно нельзя — чтение logcat требует привилегий системы.
-     *
-     * Уровень `none` вместе с пустым путём — это выключенный журнал из настроек:
-     * ядро молчит, файл не создаётся, читать нечего.
-     */
     private fun logConfig(logLevel: String, logFile: String?): JSONObject =
         JSONObject().put("loglevel", logLevel).apply {
             if (!logFile.isNullOrBlank()) put("error", logFile)
         }
-
-    /**
-     * SOCKS5-апстрим на loopback. Настройки стрима нет — SOCKS уже терминирует
-     * TCP, а UDP через него не ходит в принципе.
-     */
-    private fun socksOutbound(port: Int): JSONObject = JSONObject().apply {
-        put("tag", "proxy")
-        put("protocol", "socks")
-        put("settings", JSONObject().apply {
-            put("servers", JSONArray().put(JSONObject().apply {
-                put("address", "127.0.0.1")
-                put("port", port)
-            }))
-        })
-        put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
-    }
 
     private fun tunInbound(): JSONObject = JSONObject().apply {
         put("tag", "tun")
@@ -195,12 +104,6 @@ object XrayConfigBuilder {
             put("name", TUN_NAME)
             put("mtu", MTU)
             put("dns", JSONArray(DNS_SERVERS))
-            // Намеренно БЕЗ `autoOutboundsInterface`. На Android ядро не умеет само
-            // находить физический интерфейс ("auto" там не поддерживается), и тогда
-            // контроллер сокетов отвечает «iface not found» на КАЖДОЕ исходящее
-            // соединение: не проходят ни DNS, ни рукопожатие с сервером, трафик
-            // встаёт целиком. Свои сокеты ядро выводит из туннеля через protect():
-            // см. XrayCore.registerDialer и ProtectDelegate в NodewayVpnService.
         })
     }
 
@@ -214,24 +117,144 @@ object XrayConfigBuilder {
                 put("users", JSONArray().put(JSONObject().apply {
                     put("id", profile.id)
                     put("encryption", "none")
-                    // XTLS Vision работает и с обычным TLS, не только с REALITY.
                     if (profile.flow.isNotBlank()) put("flow", profile.flow)
                 }))
             }))
         })
-        put("streamSettings", streamSettings(profile))
+        put("streamSettings", streamSettings(
+            network = profile.network,
+            security = profile.security,
+            sni = profile.sni,
+            alpn = profile.alpn,
+            fingerprint = profile.fingerprint,
+            allowInsecure = profile.allowInsecure,
+            hostHeader = profile.hostHeader,
+            path = profile.path,
+            serviceName = profile.serviceName,
+            mode = profile.mode,
+            headerType = profile.headerType,
+            flow = profile.flow,
+            publicKey = profile.publicKey,
+            shortId = profile.shortId,
+            spiderX = profile.spiderX,
+        ))
         put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
     }
 
-    /**
-     * Прямой outbound.
-     *
-     * `domainStrategy` переехал из `settings` в `sockopt` (Xray >= 1.8.x):
-     * старый ключ `freedom.settings.domainStrategy` объявлен deprecated и
-     * на каждом старте ядра пишет предупреждение в лог, а в будущих версиях
-     * будет просто удалён. `sockopt` живёт внутри `streamSettings`, поэтому
-     * настройка перенесена туда.
-     */
+    private fun vmessOutbound(profile: VmessProfile): JSONObject = JSONObject().apply {
+        put("tag", "proxy")
+        put("protocol", "vmess")
+        put("settings", JSONObject().apply {
+            put("vnext", JSONArray().put(JSONObject().apply {
+                put("address", profile.address)
+                put("port", profile.port)
+                put("users", JSONArray().put(JSONObject().apply {
+                    put("id", profile.id)
+                    put("alterId", profile.alterId)
+                    put("security", profile.vmessSecurity)
+                }))
+            }))
+        })
+        put("streamSettings", streamSettings(
+            network = profile.network,
+            security = profile.security,
+            sni = profile.sni,
+            alpn = profile.alpn,
+            fingerprint = profile.fingerprint,
+            allowInsecure = profile.allowInsecure,
+            hostHeader = profile.hostHeader,
+            path = profile.path,
+            serviceName = profile.serviceName,
+            mode = profile.mode,
+            headerType = profile.headerType,
+            flow = "",
+        ))
+        put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
+    }
+
+    private fun trojanOutbound(profile: TrojanProfile): JSONObject = JSONObject().apply {
+        put("tag", "proxy")
+        put("protocol", "trojan")
+        put("settings", JSONObject().apply {
+            put("servers", JSONArray().put(JSONObject().apply {
+                put("address", profile.address)
+                put("port", profile.port)
+                put("password", profile.password)
+            }))
+        })
+        put("streamSettings", streamSettings(
+            network = profile.network,
+            security = profile.security,
+            sni = profile.sni,
+            alpn = profile.alpn,
+            fingerprint = profile.fingerprint,
+            allowInsecure = profile.allowInsecure,
+            hostHeader = profile.hostHeader,
+            path = profile.path,
+            serviceName = profile.serviceName,
+            mode = profile.mode,
+            headerType = profile.headerType,
+            flow = "",
+        ))
+        put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
+    }
+
+    private fun shadowsocksOutbound(profile: ShadowsocksProfile): JSONObject = JSONObject().apply {
+        put("tag", "proxy")
+        put("protocol", "shadowsocks")
+        put("settings", JSONObject().apply {
+            put("servers", JSONArray().put(JSONObject().apply {
+                put("address", profile.address)
+                put("port", profile.port)
+                put("method", profile.method)
+                put("password", profile.password)
+            }))
+        })
+        put("streamSettings", streamSettings(
+            network = profile.network,
+            security = "none",
+            sni = profile.sni,
+            alpn = emptyList(),
+            fingerprint = "",
+            allowInsecure = false,
+            hostHeader = profile.hostHeader,
+            path = profile.path,
+            serviceName = "",
+            mode = "",
+            headerType = "none",
+            flow = "",
+        ))
+        put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
+    }
+
+    private fun socksOutbound(profile: SocksProfile): JSONObject = JSONObject().apply {
+        put("tag", "proxy")
+        put("protocol", "socks")
+        put("settings", JSONObject().apply {
+            put("servers", JSONArray().put(JSONObject().apply {
+                put("address", profile.address)
+                put("port", profile.port)
+                if (profile.username.isNotBlank()) put("users", JSONArray().put(JSONObject().apply {
+                    put("user", profile.username)
+                    put("pass", profile.password)
+                }))
+            }))
+        })
+        put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
+    }
+
+    private fun socksOutbound(port: Int): JSONObject = JSONObject().apply {
+        put("tag", "proxy")
+        put("protocol", "socks")
+        put("settings", JSONObject().apply {
+            put("servers", JSONArray().put(JSONObject().apply {
+                put("address", "127.0.0.1")
+                put("port", port)
+            }))
+        })
+        put("mux", JSONObject().put("enabled", false).put("concurrency", -1))
+    }
+
     private fun freedomOutbound(): JSONObject = JSONObject().apply {
         put("tag", "direct")
         put("protocol", "freedom")
@@ -240,103 +263,80 @@ object XrayConfigBuilder {
         })
     }
 
-    /**
-     * DNS outbound для перехвата DNS-трафика из TUN.
-     *
-     * Без своих правил: ядро само отправляет A/AAAA во встроенный DNS-модуль
-     * (настроенный в top-level `dns`), а остальные типы запросов (HTTPS/SVCB, TXT…)
-     * закрывает пустым ответом RCODE 0. Прежняя пара правил `hijack` («domain:
-     * geoip:private» и «всё остальное») ничего не давала: `geoip:` в списке доменов
-     * не работает, а `hijack` без `qtype` на каждый не-A/AAAA запрос писал в лог
-     * ошибку «can only hijack A/AAAA records».
-     */
     private fun dnsOutbound(): JSONObject = JSONObject().apply {
         put("tag", "dns-out")
         put("protocol", "dns")
     }
 
-    private fun streamSettings(profile: VlessProfile): JSONObject = JSONObject().apply {
-        put("network", profile.network)
-        put("security", profile.security)
+    private fun streamSettings(
+        network: String,
+        security: String,
+        sni: String,
+        alpn: List<String>,
+        fingerprint: String,
+        allowInsecure: Boolean,
+        hostHeader: String,
+        path: String,
+        serviceName: String,
+        mode: String,
+        headerType: String,
+        flow: String,
+        publicKey: String = "",
+        shortId: String = "",
+        spiderX: String = "/",
+    ): JSONObject = JSONObject().apply {
+        put("network", network)
+        put("security", security)
 
-        // `raw` — новое имя того же TCP-транспорта (начиная с Xray 24.9.30), старые
-        // клиенты присылают `tcp`. Обе строки обязаны вести в одно место: без `raw`
-        // блок транспорта просто не попал бы в конфиг, и обфускация headerType
-        // потерялась бы молча.
-        when (profile.network) {
-            "ws" -> put("wsSettings", wsLikeSettings(profile))
-            "httpupgrade" -> put("httpupgradeSettings", wsLikeSettings(profile))
-            "xhttp" -> put("xhttpSettings", xhttpSettings(profile))
+        when (network) {
+            "ws" -> put("wsSettings", wsLikeSettings(path, hostHeader))
+            "httpupgrade" -> put("httpupgradeSettings", wsLikeSettings(path, hostHeader))
+            "xhttp" -> put("xhttpSettings", xhttpSettings(path, hostHeader, sni, mode))
             "grpc" -> put("grpcSettings", JSONObject().apply {
-                put("serviceName", profile.serviceName)
-                put("multiMode", profile.mode.equals("multi", ignoreCase = true))
-                if (profile.fingerprint.isNotBlank()) put("fingerprint", profile.fingerprint)
+                put("serviceName", serviceName)
+                put("multiMode", mode.equals("multi", ignoreCase = true))
+                if (fingerprint.isNotBlank()) put("fingerprint", fingerprint)
             })
             "http" -> put("httpSettings", JSONObject().apply {
-                put("path", profile.path)
-                hostHeader(profile)?.let { put("host", JSONArray().put(it)) }
+                put("path", path)
+                if (hostHeader.isNotBlank()) put("host", JSONArray().put(hostHeader))
             })
             "tcp", "raw" -> put("tcpSettings", JSONObject().apply {
-                put("header", JSONObject().put("type", profile.headerType))
+                put("header", JSONObject().put("type", headerType))
             })
         }
 
+        val isReality = security.equals("reality", ignoreCase = true)
+        val isTls = security.equals("tls", ignoreCase = true)
         when {
-            profile.isReality -> put("realitySettings", JSONObject().apply {
-                put("serverName", profile.sni)
-                put("fingerprint", profile.fingerprint.ifBlank { "chrome" })
-                put("publicKey", profile.publicKey)
-                put("shortId", profile.shortId)
-                put("spiderX", profile.spiderX)
+            isReality -> put("realitySettings", JSONObject().apply {
+                put("serverName", sni)
+                put("fingerprint", fingerprint.ifBlank { "chrome" })
+                put("publicKey", publicKey)
+                put("shortId", shortId)
+                put("spiderX", spiderX)
             })
-
-            profile.isTls -> put("tlsSettings", JSONObject().apply {
-                put("serverName", profile.sni)
-                put("allowInsecure", profile.allowInsecure)
-                if (profile.alpn.isNotEmpty()) put("alpn", JSONArray(profile.alpn))
-                // uTLS-отпечаток живёт именно здесь, внутри tlsSettings. На верхнем
-                // уровне streamSettings такого поля нет, и Go молча выбрасывает
-                // неизвестный ключ: ядро уходит в TLS без маскировки, и Cloudflare
-                // режет рукопожатие — хотя тот же профиль на REALITY работает,
-                // потому что там отпечаток клался в правильный блок.
-                if (profile.fingerprint.isNotBlank()) put("fingerprint", profile.fingerprint)
+            isTls -> put("tlsSettings", JSONObject().apply {
+                put("serverName", sni)
+                put("allowInsecure", allowInsecure)
+                if (alpn.isNotEmpty()) put("alpn", JSONArray(alpn))
+                if (fingerprint.isNotBlank()) put("fingerprint", fingerprint)
             })
         }
     }
 
-    private fun wsLikeSettings(profile: VlessProfile): JSONObject = JSONObject().apply {
-        put("path", profile.path)
-        hostHeader(profile)?.let { put("headers", JSONObject().put("Host", it)) }
+    private fun wsLikeSettings(path: String, hostHeader: String): JSONObject = JSONObject().apply {
+        put("path", path)
+        if (hostHeader.isNotBlank()) put("headers", JSONObject().put("Host", hostHeader))
     }
 
-    /**
-     * XHTTP требует явный `mode` (иначе ядро не сможет откатиться на другой
-     * транспорт) и Host-заголовок; для REALITY он должен совпадать с SNI.
-     */
-    private fun xhttpSettings(profile: VlessProfile): JSONObject = JSONObject().apply {
-        put("path", profile.path)
-        val host = profile.hostHeader.ifBlank { profile.sni }
+    private fun xhttpSettings(path: String, hostHeader: String, sni: String, mode: String): JSONObject = JSONObject().apply {
+        put("path", path)
+        val host = hostHeader.ifBlank { sni }
         if (host.isNotBlank()) put("host", host)
-        put("mode", profile.mode.lowercase(Locale.ROOT).ifBlank { "auto" })
+        put("mode", mode.lowercase(Locale.ROOT).ifBlank { "auto" })
     }
 
-    private fun hostHeader(profile: VlessProfile): String? =
-        profile.hostHeader.ifBlank { null }
-
-    /**
-     * Порядок правил важен: первое совпадение выигрывает.
-     *
-     * 1. Приватные сети — напрямую (через direct outbound).
-     * 2. DNS (порт 53) ИЗ TUN — перехватываем через dns-out outbound: запрос
-     *    устройства уходит во встроенный DNS-модуль, а тот спрашивает серверы
-     *    из [DNS_SERVERS_INTERNAL] уже через VLESS-туннель. Правило привязано к
-     *    входу `tun`: запросы самого модуля под него не попадают и идут дальше
-     *    по умолчанию — в прокси; без привязки они бы зацикливались в dns-out.
-     * 3. Всё остальное — и TCP, и UDP (QUIC, WebRTC, игры) — через VLESS-прокси:
-     *    отдельного правила для UDP нет, трафик уходит в outbound по умолчанию.
-     *    Сервер должен разрешать UDP; при `flow=xtls-rprx-vision` ядро само отбрасывает
-     *    UDP на порт 443, и браузер откатывается с QUIC на TCP.
-     */
     private fun routing(domainStrategy: String = "IPIfNonMatch"): JSONObject = JSONObject().apply {
         put("domainStrategy", domainStrategy)
         put("rules", JSONArray().apply {
@@ -355,36 +355,15 @@ object XrayConfigBuilder {
         })
     }
 
-    /**
-     * DNS для VLESS: запросы приложений резолвит встроенный DNS-модуль, и идут они
-     * через VLESS-туннель (`tcp://`, через маршрутизацию). Адрес самого VLESS-сервера
-     * резолвится не здесь, а системным резолвером Go (см. XrayCore.setupDns) напрямую,
-     * поэтому петли «туннелю нужен DNS, а DNS нужен туннель» нет.
-     * queryStrategy=UseIPv4 — VLESS-эндпойнты обычно IPv4.
-     * hosts — предотвращает петлю резолва доменных имён DNS-серверов.
-     */
     private fun dns(): JSONObject = JSONObject().apply {
         put("servers", JSONArray(DNS_SERVERS_INTERNAL))
         put("queryStrategy", "UseIPv4")
         put("hosts", JSONObject().apply {
-            // Cloudflare DNS
             put("one.one.one.one", JSONArray().put("1.1.1.1"))
-            // Google DNS
             put("dns.google", JSONArray().put("8.8.8.8"))
         })
     }
 
-    /**
-     * Роутинг для olcrtc.
-     *
-     * Отличие от VLESS — прямой DNS не годится: сеть, где работает WebRTC-туннель,
-     * обычно блокирует и его тоже. Поэтому DNS уходит в туннель (см. [olcrtcDns]),
-     * приватные сети идут напрямую, остальное — в туннель.
-     *
-     * UDP при этом остаётся прямым. SOCKS5 UDP не перевозит, и если завернуть его
-     * в туннель, резолвер начнёт сыпать ошибками, а QUIC-запросы — падать без
-     * шанса на TCP-фолбэк. Для обхода блокировок достаточно TCP.
-     */
     private fun olcrtcRouting(): JSONObject = JSONObject().apply {
         put("domainStrategy", "IPIfNonMatch")
         put("rules", JSONArray().apply {
@@ -393,10 +372,6 @@ object XrayConfigBuilder {
                 put("outboundTag", "direct")
                 put("ip", JSONArray(PRIVATE_CIDRS))
             })
-            // DNS из TUN — во встроенный DNS-модуль, ДО правила про прямой UDP,
-            // иначе запросы устройства уходили бы напрямую и обходили туннель.
-            // Правило привязано к входу `tun`: собственные запросы модуля (olcrtcDns)
-            // под него не попадают и идут дальше — по умолчанию в SOCKS olcrtc.
             put(JSONObject().apply {
                 put("type", "field")
                 put("inboundTag", JSONArray().put("tun"))
@@ -412,14 +387,8 @@ object XrayConfigBuilder {
         })
     }
 
-    /**
-     * DNS для olcrtc идёт через туннель, поэтому только TCP: UDP-резолвер
-     * через SOCKS работать не будет. Адрес обязан быть вида `tcp://1.1.1.1`:
-     * запись `tcp+1.1.1.1` ядро принимает за имя хоста UDP-сервера, и резолвер
-     * молча не работает.
-     */
     private fun olcrtcDns(): JSONObject = JSONObject().apply {
         put("servers", JSONArray(DNS_SERVERS.map { "tcp://$it" }))
-        put("queryStrategy", "UseIP")
+        put("queryStrategy", "UseIPv4")
     }
 }

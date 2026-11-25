@@ -1629,11 +1629,13 @@
   </div>
 
   <div class="m3-segmented-control">
-    <button type="button" class="m3-segment-btn active" id="schemeVlessBtn">VLESS</button>
+    <button type="button" class="m3-segment-btn active" id="schemeVlessBtn">XRAY</button>
     <button type="button" class="m3-segment-btn" id="schemeOlcrtcBtn">OLCRTC</button>
   </div>
 
   <div id="vlessFields">
+    <div class="m3-form-group"><label class="m3-form-label" for="xrayProtocol">Протокол</label>
+      <select id="xrayProtocol" class="m3-text-field"><option value="vless">VLESS</option><option value="vmess">VMess</option><option value="trojan">Trojan</option><option value="ss">Shadowsocks</option><option value="socks">SOCKS</option></select></div>
     <div class="m3-grid-2">
       <div class="m3-form-group"><label class="m3-form-label" for="vlessAddress">Сервер</label>
         <input type="text" class="m3-text-field" id="vlessAddress" placeholder="example.com" autocapitalize="off" autocomplete="off"></div>
@@ -1672,6 +1674,42 @@
       <input type="checkbox" id="vlessInsecure">
       <span>Разрешить незащищённое соединение (allowInsecure)</span>
     </label>
+
+    <div id="vmessExtra" hidden>
+      <div class="m3-grid-2">
+        <div class="m3-form-group"><label class="m3-form-label" for="vmessAid">Alter ID (aid)</label>
+          <input type="number" class="m3-text-field" id="vmessAid" placeholder="0" min="0"></div>
+        <div class="m3-form-group"><label class="m3-form-label" for="vmessScy">Шифрование (scy)</label>
+          <select id="vmessScy" class="m3-text-field"><option value="auto">auto</option><option value="aes-128-gcm">aes-128-gcm</option><option value="chacha20-poly1305">chacha20-poly1305</option><option value="none">none</option></select></div>
+      </div>
+    </div>
+
+    <div id="trojanExtra" hidden>
+      <div class="m3-form-group"><label class="m3-form-label" for="trojanPassword">Пароль</label>
+        <input type="text" class="m3-text-field" id="trojanPassword" placeholder="password" autocapitalize="off" autocomplete="off"></div>
+    </div>
+
+    <div id="ssExtra" hidden>
+      <div class="m3-grid-2">
+        <div class="m3-form-group"><label class="m3-form-label" for="ssMethod">Метод</label>
+          <select id="ssMethod" class="m3-text-field"><option>aes-256-gcm</option><option>aes-128-gcm</option><option>chacha20-ietf-poly1305</option><option>xchacha20-ietf-poly1305</option><option>2022-blake3-aes-128-gcm</option><option>2022-blake3-aes-256-gcm</option><option>2022-blake3-chacha20-poly1305</option></select></div>
+        <div class="m3-form-group"><label class="m3-form-label" for="ssPassword">Пароль</label>
+          <input type="text" class="m3-text-field" id="ssPassword" placeholder="password" autocapitalize="off" autocomplete="off"></div>
+      </div>
+      <div class="m3-form-group"><label class="m3-form-label" for="ssPlugin">Плагин (необяз.)</label>
+        <input type="text" class="m3-text-field" id="ssPlugin" placeholder="obfs=http;obfs-host=..." autocapitalize="off"></div>
+    </div>
+
+    <div id="socksExtra" hidden>
+      <div class="m3-grid-2">
+        <div class="m3-form-group"><label class="m3-form-label" for="socksVersion">Версия</label>
+          <select id="socksVersion" class="m3-text-field"><option value="5">5</option><option value="4">4</option></select></div>
+        <div class="m3-form-group"><label class="m3-form-label" for="socksUser">Логин</label>
+          <input type="text" class="m3-text-field" id="socksUser" placeholder="user" autocapitalize="off"></div>
+      </div>
+      <div class="m3-form-group"><label class="m3-form-label" for="socksPass">Пароль</label>
+        <input type="text" class="m3-text-field" id="socksPass" placeholder="password" autocapitalize="off"></div>
+    </div>
   </div>
 
   <div id="olcrtcFields" hidden>
@@ -2215,7 +2253,7 @@
     info.appendChild(h('div', 'm3-profile-title', profile.name));
     info.appendChild(h('div', 'm3-profile-sub', profile.type === 'olcrtc'
       ? 'OLCRTC / ' + (profile.provider || '—').toUpperCase() + ' / ' + (profile.transport || '—')
-      : 'VLESS / ' + (profile.network || 'tcp').toUpperCase() + ' / ' + (profile.security || 'none').toUpperCase()));
+      : (profile.type || 'xray').toUpperCase() + ' / ' + (profile.network ? profile.network.toUpperCase() : '') + (profile.security ? ' / ' + profile.security.toUpperCase() : '')));
     row.appendChild(info);
 
     const actions = h('div', 'm3-row-actions');
@@ -2368,6 +2406,34 @@
     showEditError('');
   }
 
+  function syncXrayProtocolUI() {
+    const proto = F('xrayProtocol').value;
+    const isVless = proto === 'vless';
+    const isVmess = proto === 'vmess';
+    const isTrojan = proto === 'trojan';
+    const isSs = proto === 'ss';
+    const isSocks = proto === 'socks';
+    // UUID field only for vless/vmess
+    F('vlessId').closest('.m3-form-group').hidden = !(isVless || isVmess);
+    F('vlessSecurity').closest('.m3-form-group').hidden = isSs || isSocks;
+    F('vlessNetwork').closest('.m3-form-group').hidden = isSs || isSocks;
+    F('vlessSni').closest('.m3-form-group').hidden = isSs || isSocks;
+    F('vlessPath').closest('.m3-form-group').hidden = isSs || isSocks;
+    F('vlessMode').closest('.m3-form-group').hidden = isSs || isSocks;
+    F('vlessFlow').closest('.m3-form-group').hidden = !isVless;
+    F('vlessFp').closest('.m3-form-group').hidden = isSs || isSocks;
+    F('vlessInsecure').closest('.m3-check-row').hidden = isSs || isSocks;
+    F('realityFields').hidden = !(isVless && F('vlessSecurity').value === 'reality');
+    F('vmessExtra').hidden = !isVmess;
+    F('trojanExtra').hidden = !isTrojan;
+    F('ssExtra').hidden = !isSs;
+    F('socksExtra').hidden = !isSocks;
+    // address/port always shown; id label
+    if (isTrojan || isSs || isSocks) {
+      // password shown in extra; id not needed
+    }
+  }
+
   function showEditError(text) {
     const node = F('editError');
     node.textContent = text;
@@ -2396,6 +2462,9 @@
     setVal('vlessPbk', ''); setVal('vlessSid', ''); setVal('vlessSpx', '/');
     F('vlessInsecure').checked = false;
     F('realityFields').hidden = true;
+    setVal('trojanPassword', ''); setVal('ssPassword', ''); setVal('ssPlugin', '');
+    setVal('socksUser', ''); setVal('socksPass', '');
+    setVal('vmessAid', '0');
     setSelectValue('olcrtcProvider', 'jitsi'); setSelectValue('olcrtcTransport', 'datachannel');
     setVal('olcrtcRoom', ''); setVal('olcrtcKey', ''); setVal('olcrtcPayload', '');
     vlessExtra = {};
@@ -2406,8 +2475,99 @@
   function parseLinkToFields(link) {
     const raw = (link || '').trim();
     let m;
+    const proto = raw.split('://')[0].toLowerCase();
+    if (proto === 'vmess' || proto === 'trojan' || proto === 'ss' || proto === 'socks' || proto === 'socks4' || proto === 'socks5') {
+      setScheme('vless');
+      F('xrayProtocol').value = proto === 'socks4' || proto === 'socks5' ? 'socks' : (proto === 'ss' ? 'ss' : proto);
+      if (proto === 'socks4' || proto === 'socks5') F('socksVersion').value = proto === 'socks4' ? '4' : '5';
+      // parse vmess/trojan/ss/socks fields
+      if (proto.startsWith('vmess')) {
+        try {
+          const body = raw.substring(raw.indexOf('://') + 3);
+          if (body.includes('@')) {
+            const [uuid, rest] = body.split('@');
+            const hp = rest.split('?')[0];
+            const params = {};
+            (rest.split('?')[1] || '').split('&').forEach(p => { const i=p.indexOf('='); if(i>0) params[dec(p.slice(0,i))]=dec(p.slice(i+1)); });
+            setVal('vlessId', dec(uuid));
+            const hpm = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(hp);
+            setVal('vlessAddress', (hpm?.[1]||'').replace(/^\[|\]$/g,''));
+            setVal('vlessPort', hpm?.[2] || '443');
+            setSelectValue('vlessSecurity', params.security || 'none');
+            let net = (params.type || 'tcp').toLowerCase();
+            if (net === 'splithttp') net = 'xhttp'; if (net === 'http') net = 'h2';
+            setSelectValue('vlessNetwork', net);
+            setVal('vlessSni', params.sni); setVal('vlessPath', params.path);
+            setSelectValue('vlessMode', params.mode); setSelectValue('vlessFlow', params.flow);
+            setVal('vlessPbk', params.pbk); setVal('vlessSid', params.sid);
+            setVal('vlessSpx', params.spx || '/'); setSelectValue('vlessFp', params.fp);
+            F('vlessInsecure').checked = params.allowInsecure === '1' || params.allowInsecure === 'true';
+            setVal('vmessAid', params.aid || params.alterId || '0');
+            setSelectValue('vmessScy', params.encryption || params.scy || 'auto');
+          } else {
+            // base64 json
+            const b = body.split('#')[0];
+            const decStr = atob(b.replace(/-/g,'+').replace(/_/g,'/'));
+            const j = JSON.parse(decStr);
+            setVal('vlessId', j.id || j.uuid || '');
+            setVal('vlessAddress', j.add || j.address || '');
+            setVal('vlessPort', j.port || '443');
+            setSelectValue('vlessSecurity', j.tls === 'tls' ? 'tls' : 'none');
+            setSelectValue('vlessNetwork', (j.net || 'tcp').toLowerCase());
+            setVal('vlessSni', j.sni || ''); setVal('vlessPath', j.path || '/');
+            setVal('vlessHost', j.host || '');
+            setVal('vmessAid', j.aid || 0);
+            setSelectValue('vmessScy', j.scy || 'auto');
+          }
+        } catch(e) {}
+      }
+      if (proto === 'trojan') {
+        // trojan://password@host:port?...#remark
+        const body = raw.substring(raw.indexOf('://')+3);
+        const [cred, rest] = body.split('@');
+        const hp = (rest||'').split('?')[0].split('#')[0];
+        const hpm = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(hp);
+        setVal('trojanPassword', dec(cred));
+        setVal('vlessAddress', (hpm?.[1]||'').replace(/^\[|\]$/g,''));
+        setVal('vlessPort', hpm?.[2] || '443');
+        const params = {};
+        ((rest||'').split('?')[1]||'').split('#')[0].split('&').forEach(p=>{const i=p.indexOf('=');if(i>0)params[dec(p.slice(0,i))]=dec(p.slice(i+1));});
+        setSelectValue('vlessSecurity', params.security || 'tls');
+        let net = (params.type || 'tcp').toLowerCase(); if(net==='splithttp')net='xhttp'; if(net==='http')net='h2';
+        setSelectValue('vlessNetwork', net);
+        setVal('vlessSni', params.sni); setVal('vlessPath', params.path);
+        setSelectValue('vlessFp', params.fp);
+        F('vlessInsecure').checked = params.allowInsecure === '1' || params.allowInsecure === 'true';
+      }
+      if (proto === 'ss') {
+        // best-effort: address/port from after @
+        const body = raw.substring(raw.indexOf('://')+3);
+        const afterAt = body.includes('@') ? body.split('@')[1] : body;
+        const hp = afterAt.split('?')[0].split('#')[0];
+        const hpm = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(hp);
+        setVal('vlessAddress', (hpm?.[1]||'').replace(/^\[|\]$/g,''));
+        setVal('vlessPort', hpm?.[2] || '443');
+      }
+      if (proto === 'socks' || proto === 'socks4' || proto === 'socks5') {
+        const body = raw.substring(raw.indexOf('://')+3);
+        if (body.includes('@')) {
+          const idx = body.lastIndexOf('@');
+          const ui = body.substring(0, idx);
+          const parts = ui.split(':');
+          setVal('socksUser', dec(parts[0] || ''));
+          setVal('socksPass', dec(parts.slice(1).join(':') || ''));
+        }
+        const afterAt = body.includes('@') ? body.split('@').slice(-1)[0] : body;
+        const hp = afterAt.split('?')[0].split('#')[0];
+        const hpm = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(hp);
+        setVal('vlessAddress', (hpm?.[1]||'').replace(/^\[|\]$/g,''));
+        setVal('vlessPort', hpm?.[2] || '443');
+      }
+      syncXrayProtocolUI();
+    }
     if ((m = /^vless:\/\/([^@]*)@([^?#]*)(?:\?([^#]*))?/.exec(raw))) {
       setScheme('vless');
+      F('xrayProtocol').value = 'vless';
       const hp = /^(\[[^\]]+\]|[^:]+)(?::(\d+))?$/.exec(m[2]) || [];
       const params = {};
       (m[3] || '').split('&').forEach(pair => {
@@ -2450,6 +2610,7 @@
 
   function buildLinkFromFields() {
     const name = val('editName');
+    const proto = F('xrayProtocol').value;
     if (currentScheme === 'olcrtc') {
       const payload = val('olcrtcPayload');
       return 'olcrtc://' + F('olcrtcProvider').value + '?' + F('olcrtcTransport').value +
@@ -2480,18 +2641,64 @@
     if (F('vlessInsecure').checked) params.push('allowInsecure=1');
     keys(vlessExtra).forEach(k => add(encodeURIComponent(k), vlessExtra[k]));
 
+    if (proto === 'vmess') {
+      const scy = F('vmessScy').value || 'auto';
+      const aid = val('vmessAid') || '0';
+      // remove default encryption=none placeholder
+      for (let i = params.length - 1; i >= 0; i--) if (params[i].startsWith('encryption=')) params.splice(i, 1);
+      params.push('encryption=' + encodeURIComponent(scy));
+      if (aid && aid !== '0') params.push('aid=' + encodeURIComponent(aid));
+      // ensure encryption param present
+      const hasEnc = params.some(p => p.startsWith('encryption='));
+      if (!hasEnc) params.unshift('encryption=none');
+      return 'vmess://' + val('vlessId') + '@' + addr + ':' + (val('vlessPort') || '443') +
+        '?' + params.join('&') + (name ? '#' + encodeURIComponent(name) : '');
+    }
+    if (proto === 'trojan') {
+      const pwd = val('trojanPassword') || val('vlessId');
+      params.length = 0; // rebuild without encryption/vless specifics
+      if (network !== 'tcp') add('type', network);
+      if (security !== 'none') add('security', security);
+      add('sni', val('vlessSni'));
+      if (path !== '/') add('path', path);
+      add('mode', F('vlessMode').value);
+      add('fp', F('vlessFp').value);
+      if (F('vlessInsecure').checked) params.push('allowInsecure=1');
+      return 'trojan://' + encodeURIComponent(pwd) + '@' + addr + ':' + (val('vlessPort') || '443') +
+        (params.length ? '?' + params.join('&') : '') + (name ? '#' + encodeURIComponent(name) : '');
+    }
+    if (proto === 'ss') {
+      const method = F('ssMethod').value;
+      const pwd = val('ssPassword');
+      const plugin = val('ssPlugin');
+      let link = 'ss://' + btoa(method + ':' + pwd).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'') + '@' + addr + ':' + (val('vlessPort') || '443');
+      if (plugin) link += '?plugin=' + encodeURIComponent(plugin);
+      if (name) link += '#' + encodeURIComponent(name);
+      return link;
+    }
+    if (proto === 'socks') {
+      const user = val('socksUser');
+      const pass = val('socksPass');
+      const scheme = F('socksVersion').value === '4' ? 'socks4' : 'socks5';
+      const ui = (user || pass) ? encodeURIComponent(user) + ':' + encodeURIComponent(pass) + '@' : '';
+      return scheme + '://' + ui + addr + ':' + (val('vlessPort') || '443') + (name ? '#' + encodeURIComponent(name) : '');
+    }
+
     return 'vless://' + val('vlessId') + '@' + addr + ':' + (val('vlessPort') || '443') +
       '?' + params.join('&') + (name ? '#' + encodeURIComponent(name) : '');
   }
 
   function validateFields() {
+    const proto = F('xrayProtocol').value;
     if (currentScheme === 'olcrtc') {
       if (!val('olcrtcRoom')) return 'Укажите комнату';
       if (!val('olcrtcKey')) return 'Укажите ключ шифрования';
       return '';
     }
     if (!val('vlessAddress')) return 'Укажите адрес сервера';
-    if (!val('vlessId')) return 'Укажите UUID';
+    if ((proto === 'vless' || proto === 'vmess') && !val('vlessId')) return 'Укажите UUID';
+    if (proto === 'trojan' && !val('trojanPassword')) return 'Укажите пароль';
+    if (proto === 'ss' && !val('ssPassword')) return 'Укажите пароль';
     const port = Number(val('vlessPort') || 443);
     if (!(port >= 1 && port <= 65535)) return 'Порт должен быть от 1 до 65535';
     return '';
@@ -2507,7 +2714,12 @@
     F('subWarning').hidden = !(p && p.fromSubscription);
     setVal('editName', p ? p.name : '');
     setScheme(p && p.type === 'olcrtc' ? 'olcrtc' : 'vless');
+    if (p && p.type !== 'olcrtc') {
+      const t = p.type;
+      if (t && t !== 'vless') F('xrayProtocol').value = (t === 'vmess' || t === 'trojan' || t === 'ss' || t === 'socks') ? t : 'vless';
+    }
     if (p) parseLinkToFields(p.link);
+    if (p && p.type !== 'olcrtc') syncXrayProtocolUI();
     el.editModal.scrollTop = 0;
     openOverlay(el.editModal);
   }
@@ -2893,7 +3105,8 @@
 
   F('schemeVlessBtn').onclick = () => setScheme('vless');
   F('schemeOlcrtcBtn').onclick = () => setScheme('olcrtc');
-  F('vlessSecurity').onchange = function () { F('realityFields').hidden = this.value !== 'reality'; };
+  F('xrayProtocol').onchange = syncXrayProtocolUI;
+  F('vlessSecurity').onchange = function () { F('realityFields').hidden = this.value !== 'reality'; syncXrayProtocolUI(); };
   F('saveProfileBtn').onclick = saveProfile;
   F('cancelEditBtn').onclick = closeOverlays;
 

@@ -26,7 +26,11 @@ object LinkListParser {
     ) {
         /** Ссылки, которые приложение умеет импортировать. */
         val supported: List<Link>
-            get() = links.filter { it.scheme == SCHEME_VLESS || (it.scheme == SCHEME_OLCRTC) }
+            get() = links.filter {
+                it.scheme == SCHEME_VLESS || it.scheme == SCHEME_VMESS ||
+                    it.scheme == SCHEME_TROJAN || it.scheme == SCHEME_SS ||
+                    it.scheme == SCHEME_SOCKS || it.scheme == SCHEME_OLCRTC
+            }
 
         /** Схемы, которые приложение пока не поддерживает (vmess:// …). */
         val unsupported: List<Link> get() = links - supported.toSet()
@@ -59,6 +63,10 @@ object LinkListParser {
     private val SERVER_FIELD_REGEX = Regex("##([a-zA-Z][a-zA-Z0-9_\\-]*)\\s*:\\s*(.*)")
 
     private const val SCHEME_VLESS = "vless"
+    private const val SCHEME_VMESS = "vmess"
+    private const val SCHEME_TROJAN = "trojan"
+    private const val SCHEME_SS = "ss"
+    private const val SCHEME_SOCKS = "socks"
     private const val SCHEME_OLCRTC = "olcrtc"
 
     fun parse(rawInput: String): Result {

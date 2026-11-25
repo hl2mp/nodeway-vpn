@@ -39,8 +39,15 @@ data class ServerProfile(
         if (isOlcrtc) {
             OlcrtcProfile.parse(link).describe()
         } else {
-            val parsed = VlessProfile.parse(link)
-            "${parsed.address}:${parsed.port} · ${parsed.security.uppercase(Locale.ROOT)}/${parsed.network}"
+            val parsed = XrayProfiles.parse(link)
+            when (parsed) {
+                is VlessProfile -> "${parsed.address}:${parsed.port} · ${parsed.security.uppercase(Locale.ROOT)}/${parsed.network}"
+                is VmessProfile -> "${parsed.address}:${parsed.port} · VMess/${parsed.network}"
+                is TrojanProfile -> "${parsed.address}:${parsed.port} · Trojan/${parsed.network}"
+                is ShadowsocksProfile -> "${parsed.address}:${parsed.port} · SS/${parsed.method}"
+                is SocksProfile -> "${parsed.address}:${parsed.port} · SOCKS${parsed.version}"
+                else -> link
+            }
         }
     }.getOrDefault("Ссылка не распознана")
 
@@ -53,8 +60,16 @@ data class ServerProfile(
     private fun remarkOf(): String = if (isOlcrtc) {
         OlcrtcProfile.parse(link).remark
     } else {
-        val parsed = VlessProfile.parse(link)
-        parsed.remark.ifBlank { parsed.address }
+        runCatching {
+            when (val p = XrayProfiles.parse(link)) {
+                is VlessProfile -> p.remark.ifBlank { p.address }
+                is VmessProfile -> p.remark.ifBlank { p.address }
+                is TrojanProfile -> p.remark.ifBlank { p.address }
+                is ShadowsocksProfile -> p.remark.ifBlank { p.address }
+                is SocksProfile -> p.remark.ifBlank { p.address }
+                else -> ""
+            }
+        }.getOrDefault("")
     }
 
     fun toJson(): JSONObject = JSONObject().apply {

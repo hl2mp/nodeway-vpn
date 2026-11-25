@@ -209,15 +209,18 @@ class NodewayVpnService : VpnService() {
             connectOlcrtc(link)
             return
         }
-        connectVless(link)
+        connectXray(link)
     }
 
-    private fun connectVless(link: String) {
+    private fun connectXray(link: String) {
         // Наш пакет в туннеле при любом режиме, замер пойдёт прямо в TUN.
         probeSocksPort = null
-        val profile = try {
-            VlessProfile.parse(link)
+        val profile: Any = try {
+            XrayProfiles.parse(link)
         } catch (e: IllegalArgumentException) {
+            fail(e.message ?: "Некорректная ссылка")
+            return
+        } catch (e: Exception) {
             fail(e.message ?: "Некорректная ссылка")
             return
         }
@@ -235,9 +238,11 @@ class NodewayVpnService : VpnService() {
         }
         tunDescriptor = descriptor
 
+        val config = XrayProfiles.buildConfig(profile, descriptor.fd, xrayLogLevel(), xrayLogFile())
+        val description = XrayProfiles.describe(profile)
         startCore(
-            config = XrayConfigBuilder.build(profile, descriptor.fd, xrayLogLevel(), xrayLogFile()),
-            description = profile.describe(),
+            config = config,
+            description = description,
         )
     }
 
@@ -758,23 +763,21 @@ class NodewayVpnService : VpnService() {
      * @return замер в мс или null, если профиль не работает
      */
     private suspend fun connectVlessForPing(link: String): Int? {
-        val profile = try {
-            VlessProfile.parse(link)
+        val profile: Any = try {
+            XrayProfiles.parse(link)
         } catch (e: IllegalArgumentException) {
-            Log.w(TAG, "Invalid VLESS link for ping: $link", e)
+            Log.w(TAG, "Invalid Xray link for ping: $link", e)
+            return null
+        } catch (e: Exception) {
+            Log.w(TAG, "Invalid Xray link for ping: $link", e)
             return null
         }
 
         // Берём свободный порт из пула для параллельности в будущем
         val socksPort = findFreeSocksPort()
-        Log.i(TAG, "VLESS (ping) starting Xray on 127.0.0.1:$socksPort")
+        Log.i(TAG, "Xray (ping) starting on 127.0.0.1:$socksPort")
 
-        val config = XrayConfigBuilder.buildForSocks5Vless(
-            profile = profile,
-            socksPort = socksPort,
-            logLevel = xrayLogLevel(),
-            logFile = xrayLogFile(),
-        )
+        val config = XrayProfiles.buildSocks5Config(profile, socksPort, xrayLogLevel(), xrayLogFile())
 
         // Хвост прошлой сессии не должен попасть в журнал
         deleteXrayLogFile()

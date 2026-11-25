@@ -199,7 +199,7 @@ class ProfileStore(
 
         put("profiles", JSONArray().apply {
             profiles.forEach { profile ->
-                val vless = runCatching { VlessProfile.parse(profile.link) }.getOrNull()
+                val xray = runCatching { XrayProfiles.parse(profile.link) }.getOrNull()
                 val olcrtc = runCatching { OlcrtcProfile.parse(profile.link) }.getOrNull()
                 put(JSONObject().apply {
                     put("id", profile.id)
@@ -214,11 +214,50 @@ class ProfileStore(
                     // Тип ядра: UI по нему рисует подпись и поля карточки.
                     put("type", profile.scheme)
                     // Детали для карточки «i» в профиле.
-                    put("address", vless?.address ?: olcrtc?.roomLabel.orEmpty())
-                    put("port", vless?.port ?: 0)
-                    put("network", vless?.network.orEmpty())
-                    put("security", vless?.security.orEmpty())
-                    put("sni", vless?.sni.orEmpty())
+                    put("address", when (xray) {
+                        is VlessProfile -> xray.address
+                        is VmessProfile -> xray.address
+                        is TrojanProfile -> xray.address
+                        is ShadowsocksProfile -> xray.address
+                        is SocksProfile -> xray.address
+                        else -> olcrtc?.roomLabel.orEmpty()
+                    })
+                    put("port", when (xray) {
+                        is VlessProfile -> xray.port
+                        is VmessProfile -> xray.port
+                        is TrojanProfile -> xray.port
+                        is ShadowsocksProfile -> xray.port
+                        is SocksProfile -> xray.port
+                        else -> 0
+                    })
+                    put("network", when (xray) {
+                        is VlessProfile -> xray.network
+                        is VmessProfile -> xray.network
+                        is TrojanProfile -> xray.network
+                        is ShadowsocksProfile -> xray.network
+                        is SocksProfile -> ""
+                        else -> ""
+                    })
+                    put("security", when (xray) {
+                        is VlessProfile -> xray.security
+                        is VmessProfile -> xray.security
+                        is TrojanProfile -> xray.security
+                        else -> ""
+                    })
+                    put("sni", when (xray) {
+                        is VlessProfile -> xray.sni
+                        is VmessProfile -> xray.sni
+                        is TrojanProfile -> xray.sni
+                        else -> ""
+                    })
+                    put("method", when (xray) {
+                        is ShadowsocksProfile -> xray.method
+                        else -> ""
+                    })
+                    put("username", when (xray) {
+                        is SocksProfile -> xray.username
+                        else -> ""
+                    })
                     put("provider", olcrtc?.provider.orEmpty())
                     put("transport", olcrtc?.transport.orEmpty())
                     put("room", olcrtc?.room.orEmpty())
